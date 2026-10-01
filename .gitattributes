@@ -1,0 +1,25 @@
+# Finales de línea consistentes entre Windows, macOS y Linux
+* text=auto eol=lf
+
+# Scripts de Windows conservan CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Scripts de shell y el wrapper de Gradle siempre en LF
+*.sh text eol=lf
+gradlew text eol=lf
+
+# Binarios
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.docx binary
+*.pptx binary
+*.xlsx binary
+*.woff binary
+*.woff2 binary

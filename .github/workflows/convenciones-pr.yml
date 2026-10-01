@@ -1,0 +1,30 @@
+# Valida las convenciones de CONTRIBUTING.md en cada PR.
+# El job "convenciones-pr" es un check obligatorio en main y develop.
+name: Convenciones del PR
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  convenciones:
+    name: convenciones-pr
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener el script de validación
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+
+      - name: Validar título, rama de origen y destino
+        shell: bash
+        env:
+          # Se pasan por variables de entorno para evitar inyección de comandos
+          TITULO: ${{ github.event.pull_request.title }}
+          RAMA_ORIGEN: ${{ github.head_ref }}
+          RAMA_DESTINO: ${{ github.base_ref }}
+        run: bash .github/scripts/validar-pr.sh

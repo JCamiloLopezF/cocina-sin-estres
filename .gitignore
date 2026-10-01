@@ -1,0 +1,55 @@
+# ─── Secretos (el repositorio es público) ───────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*-firebase-adminsdk-*.json
+firebase-service-account*.json
+service-account*.json
+credentials*.json
+gcp-key*.json
+
+# ─── Backend: Java / Gradle ────────────────────────────────────
+backend/.gradle/
+backend/build/
+backend/out/
+backend/bin/
+!backend/gradle/wrapper/gradle-wrapper.jar
+*.class
+hs_err_pid*.log
+backend/src/main/resources/application-local.yml
+
+# ─── Frontend: Node / Vite ─────────────────────────────────────
+node_modules/
+web-app/dist/
+web-app/coverage/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── IDEs y editores ───────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.settings/
+.project
+.classpath
+*.swp
+
+# ─── Sistema operativo ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Logs y temporales ─────────────────────────────────────────
+logs/
+*.log
+tmp/
