@@ -1,0 +1,40 @@
+# Servicios para desarrollo local. No se usa en producción.
+#
+#   docker compose up -d mysql      # levanta MySQL en localhost:3306
+#   docker compose ps               # debe decir "healthy"
+#   docker compose down             # lo apaga (los datos se conservan)
+#   docker compose down -v          # lo apaga y BORRA los datos
+#
+# Usuario y contraseña: se toman de backend/.env (DB_USUARIO, DB_CONTRASENA, DB_ROOT_CONTRASENA)
+# si se ejecuta con: docker compose --env-file backend/.env up -d mysql
+# Sin ese archivo se usan los valores locales de abajo, que solo sirven en tu computador.
+name: cocina-sin-estres
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: cocina-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cocina_sin_estres
+      MYSQL_USER: ${DB_USUARIO:-cocina}
+      MYSQL_PASSWORD: ${DB_CONTRASENA:-cocina_local}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_CONTRASENA:-root_local}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
+    ports:
+      # Solo accesible desde tu computador
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql-datos:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mysql-datos:
