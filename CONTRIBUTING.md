@@ -200,6 +200,26 @@ web-app/src/
 
 Antes de crear un componente, revisa `shared/`. Si un componente se repite en dos módulos, se mueve a `shared/`.
 
+Módulos permitidos (el check `convenciones-pr` rechaza cualquier otro). Se escriben en minúsculas y sin tildes:
+
+| Módulo | Cuándo usarlo |
+| --- | --- |
+| `auth` | Registro, inicio de sesión, recuperación de contraseña, tokens de Firebase y roles |
+| `perfil` | Perfil del hogar: personas, presupuesto, restricciones y onboarding |
+| `despensa` | Despensa virtual: productos del hogar, cantidades, vencimientos y mínimos |
+| `planificador` | Plan semanal, cruce con la despensa, costo, modo rescate y lista de compras |
+| `recetario` | Catálogo de recetas: listar, buscar, filtrar y ver el detalle |
+| `avisos` | Motor de reglas y centro de avisos |
+| `admin` | Gestión de cuentas y roles (rol ADMIN) |
+| `curaduria` | Edición del catálogo de productos y recetas (rol CURADOR) |
+| `web` | Frontend en general: estructura, navegación y componentes compartidos |
+| `api` | Backend en general: configuración, seguridad común y manejo de errores |
+| `db` | Base de datos: migraciones Flyway y carga de datos |
+| `ci` | GitHub Actions, el pipeline y la configuración del repositorio |
+| `docs` | Solo documentación |
+
+Si un cambio toca varios módulos, usa el principal: el esqueleto del backend va con `api` y el del frontend con `web`.
+
 ## 6. Migraciones de base de datos (Flyway)
 
 El esquema **solo** cambia con migraciones (ADR-07). Nadie modifica tablas a mano en ningún ambiente.
