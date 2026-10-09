@@ -40,6 +40,10 @@ docker compose up -d mysql
 ./gradlew test
 ```
 
+**Qué hace cada pieza.** Docker solo sirve para tener un MySQL en tu computador (`docker compose up -d mysql`); no ejecuta nuestro código ni las migraciones. Las migraciones las aplica **Flyway cuando arranca la API** (`bootRun`) o cuando corre la prueba de integración. Hacer `commit` y `push` solo sube los archivos: no toca ninguna base de datos. Para comprobar `V1` y `V2` en tu equipo basta con levantar MySQL y arrancar la API en `dev`; en el log aparece `Successfully applied 2 migrations`.
+
+Si ya habías arrancado la API con una versión anterior de una migración y luego la cambias, Flyway falla por *checksum*. En tu base local se resuelve con `docker compose down -v` (borra los datos locales) y volviendo a arrancar.
+
 ## Autenticación
 
 No hay endpoint de registro ni de inicio de sesión. El frontend entra con Firebase y manda el token en cada petición; el backend lo verifica en un filtro y busca o crea el `usuario` por `firebase_uid` (**alta perezosa**, ADR-05). La primera cuenta cuyo correo coincida con `ADMIN_INICIAL_CORREO` entra con rol `ADMIN`.
@@ -76,8 +80,75 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | --- | --- |
 | `GET /api/salud` | Comprobación de salud. Público. Devuelve estado, versión y hora UTC. |
 | `GET /api/yo` | Devuelve la cuenta autenticada: `id`, `correo`, `rol` y `perfilCompleto`. |
+| `GET /api/curaduria/productos` | Lista los productos activos del catálogo, ordenados por categoría y nombre. `CURADOR` o `ADMIN`. |
+| `GET /api/curaduria/productos/{id}` | Devuelve un producto. 404 si no existe. |
+| `POST /api/curaduria/productos` | Crea un producto del catálogo global. Responde 201 con `Location`. |
+| `PUT /api/curaduria/productos/{id}` | Actualiza un producto. Si no cambia ningún campo, no se modifica el responsable ni se audita. |
+| `DELETE /api/curaduria/productos/{id}` | Desactiva el producto (no lo borra). Responde 204; repetirlo no tiene efecto. |
 
 Cada módulo agrega sus rutas; las convenciones están en [`CONTRIBUTING.md`](../CONTRIBUTING.md#api-rest).
+
+## Curaduría: catálogo de productos con precios de referencia (KAN-17)
+
+El catálogo es la lista de productos que usan la despensa, las recetas y el planificador para calcular costos. Cada producto del catálogo global (`producto.hogar_id` NULL) tiene un **precio de referencia completo**: una unidad de compra, cuánto trae esa unidad (en la unidad base del producto) y su precio en pesos (RNF-02).
+
+**Datos de un producto**
+
+| Campo | Qué es | Regla |
+| --- | --- | --- |
+| `nombre` | Nombre del producto | Obligatorio, hasta 120 caracteres |
+| `categoria` | Categoría | Obligatoria, hasta 60 caracteres |
+| `tipoCantidad` | `CONTABLE` o `GRANEL` | Obligatorio |
+| `unidadBase` | `g`, `ml` o `unidad` | Obligatoria |
+| `unidadCompra` | Presentación de compra, ej. `Bolsa` | Obligatoria, hasta 30 caracteres |
+| `cantidadUnidadCompra` | Cuánto trae la unidad de compra, en unidad base | Obligatoria, mayor que cero, hasta 3 decimales |
+| `precioUnidadCompra` | Precio de referencia de la unidad de compra, en pesos | Obligatorio, no negativo, hasta 2 decimales |
+| `capacidadReferencia` | Cantidad que equivale a "Lleno" | Obligatoria y mayor que cero en `GRANEL`; no se permite en `CONTABLE` |
+| `esBasico` | Si es un producto básico de la despensa | Opcional (por defecto `false`) |
+
+```bash
+# dev: crear un producto (la cuenta debe ser CURADOR o ADMIN)
+curl -X POST http://localhost:8080/api/curaduria/productos \
+  -H 'X-Dev-User: uid-curadora' -H 'Content-Type: application/json' \
+  -d '{
+    "nombre": "Harina de trigo",
+    "categoria": "GRANOS",
+    "tipoCantidad": "GRANEL",
+    "unidadBase": "g",
+    "unidadCompra": "Bolsa",
+    "cantidadUnidadCompra": 1000,
+    "precioUnidadCompra": 4200,
+    "capacidadReferencia": 1000,
+    "esBasico": false
+  }'
+```
+
+**Tener una cuenta con permiso en `dev`.** Toda cuenta nueva entra como `USUARIA`. Para probar la curaduría, arranca la API con el correo de la cuenta simulada como administrador inicial y haz la primera petición con ese `X-Dev-User`:
+
+```bash
+ADMIN_INICIAL_CORREO=uid-curadora@dev.local ./gradlew bootRun --args='--spring.profiles.active=dev'
+```
+
+Solo funciona si esa cuenta aún no existe: el rol se asigna al crearla.
+
+**Auditoría (RNF-24, ADR-23).** Crear, editar y desactivar escriben un registro en `auditoria_catalogo` dentro de la misma transacción: quién, cuándo, qué acción y los campos que cambiaron (`{"campo": {"antes": ..., "despues": ...}}`). Si falla la auditoría, tampoco se guarda el cambio. Por ahora la auditoría solo se escribe; no hay endpoint para consultarla.
+
+**Catálogo inicial (`V2`).** Carga 21 productos con su precio de referencia, básicos de la despensa colombiana (granos, aceites, lácteos, proteínas, verduras y frutas). Los registra un usuario de sistema (`sistema-carga-inicial`, rol `CURADOR`, desactivado, que no puede iniciar sesión) y deja un registro `CREAR` por producto en la auditoría. Los precios son una referencia aproximada que el curador ajusta con `PUT`.
+
+**Errores de validación.** Responden 400 con estos códigos en `codigo`:
+
+| Código | Cuándo |
+| --- | --- |
+| `PRODUCTO_NOMBRE_REQUERIDO`, `PRODUCTO_NOMBRE_LARGO` | Nombre vacío o de más de 120 caracteres |
+| `PRODUCTO_CATEGORIA_REQUERIDA`, `PRODUCTO_CATEGORIA_LARGA` | Categoría vacía o de más de 60 caracteres |
+| `PRODUCTO_TIPO_CANTIDAD_REQUERIDO`, `PRODUCTO_UNIDAD_BASE_REQUERIDA` | Falta el tipo de cantidad o la unidad base |
+| `PRODUCTO_UNIDAD_COMPRA_REQUERIDA`, `PRODUCTO_UNIDAD_COMPRA_LARGA` | Unidad de compra vacía o de más de 30 caracteres |
+| `PRODUCTO_CANTIDAD_COMPRA_REQUERIDA`, `PRODUCTO_CANTIDAD_COMPRA_INVALIDA` | Falta, es cero o negativa, o excede 3 decimales |
+| `PRODUCTO_PRECIO_REQUERIDO`, `PRODUCTO_PRECIO_INVALIDO` | Falta, es negativo o excede 2 decimales |
+| `PRODUCTO_CAPACIDAD_REQUERIDA` | Producto a granel sin capacidad de referencia válida |
+| `PRODUCTO_CAPACIDAD_NO_PERMITIDA` | Producto contable con capacidad de referencia |
+
+Un producto que no existe responde 404 con `RECURSO_NO_ENCONTRADO`.
 
 ## Errores
 
@@ -101,12 +172,12 @@ Organizado por módulo de negocio (RNF-26), paquete raíz `co.edu.uniquindio.coc
 
 ```
 co.edu.uniquindio.cocinasinestres
-├── perfil         ← única entidad JPA por ahora: Usuario
+├── perfil         ← entidad JPA: Usuario
 ├── despensa
 ├── recetario
 ├── planificador
 ├── avisos
-├── curaduria
+├── curaduria      ← entidades JPA: Producto, AuditoriaCatalogo
 ├── admin
 └── comun
     ├── config     Configuración tipada y Firebase Admin SDK
@@ -122,17 +193,24 @@ co.edu.uniquindio.cocinasinestres
 | `recetario` | Catálogo de productos y recetas (lectura) | `comun` |
 | `planificador` | Plan semanal, cruce con la despensa, costo, modo rescate y lista de compras | `perfil`, `despensa`, `recetario` |
 | `avisos` | Motor de reglas y centro de avisos | `despensa`, `planificador` |
-| `curaduria` | Edición del catálogo y auditoría (rol CURADOR) | `recetario` |
+| `curaduria` | Catálogo de productos con precios de referencia, su edición y auditoría (rol CURADOR) | `perfil` (cuenta autenticada) |
 | `admin` | Gestión de cuentas y roles (rol ADMIN) | `perfil` |
 | `comun` | Seguridad, configuración, manejo de errores | `perfil` (para resolver la usuaria autenticada) |
 
 Un módulo no usa las entidades ni los repositorios de otro: llama a su servicio. `domain/` va sin Spring y sin JPA (ADR-09).
 
-**Entidades JPA:** por ahora solo `perfil/model/Usuario`. Las otras 16 tablas de `V1` las mapea cada módulo cuando le toque.
+**Entidades JPA:** `perfil/model/Usuario`, `curaduria/model/Producto` y `curaduria/model/AuditoriaCatalogo`. Las otras 14 tablas de `V1` las mapea cada módulo cuando le toque. Hoy la entidad `Producto` vive en `curaduria`; los demás módulos no la usan directamente: cuando necesiten productos se los piden a un servicio.
 
 ## Migraciones
 
-En `src/main/resources/db/migration/`. Flyway las aplica al arrancar, y Hibernate corre con `ddl-auto=validate`: si una entidad no concuerda con su tabla, la aplicación no arranca. Reglas en [`CONTRIBUTING.md`](../CONTRIBUTING.md#6-migraciones-de-base-de-datos-flyway).
+En `src/main/resources/db/migration/`:
+
+| Migración | Contenido |
+| --- | --- |
+| `V1__esquema_inicial.sql` | Las 17 tablas, con sus llaves y restricciones (KAN-12) |
+| `V2__catalogo_inicial.sql` | Usuario de sistema, 21 productos globales con precio de referencia y su auditoría (KAN-17) |
+
+Flyway las aplica al arrancar, en orden y una sola vez, y Hibernate corre con `ddl-auto=validate`: si una entidad no concuerda con su tabla, la aplicación no arranca. Reglas en [`CONTRIBUTING.md`](../CONTRIBUTING.md#6-migraciones-de-base-de-datos-flyway).
 
 ## Pruebas
 
