@@ -1,0 +1,30 @@
+# Perfil dev: para trabajar en tu computador contra el MySQL del docker-compose.yml
+# de la raíz del repositorio.
+#
+#   docker compose up -d mysql
+#   ./gradlew bootRun --args='--spring.profiles.active=dev'
+#
+# No hace falta Firebase: en este perfil se entra con el encabezado
+#   X-Dev-User: <firebase_uid>
+# que atiende FiltroUsuarioDev (ADR-19). Ese filtro no existe en prod.
+
+spring:
+  datasource:
+    # Valores del docker-compose.yml, que solo sirven en tu computador.
+    url: ${DB_URL:jdbc:mysql://localhost:3306/cocina_sin_estres?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC}
+    username: ${DB_USUARIO:cocina}
+    password: ${DB_CONTRASENA:cocina_local}
+
+  jpa:
+    properties:
+      hibernate:
+        # Las consultas se ven en la consola, con formato y con los parámetros.
+        format_sql: true
+
+logging:
+  level:
+    co.edu.uniquindio.cocinasinestres: ${LOG_NIVEL:DEBUG}
+    org.hibernate.SQL: DEBUG
+    org.flywaydb: INFO
+    # Útil para entender por qué una ruta responde 401 o 403.
+    org.springframework.security: INFO
