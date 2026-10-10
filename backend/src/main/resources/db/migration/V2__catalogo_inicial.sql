@@ -51,7 +51,7 @@ INSERT INTO producto (
 VALUES
 (NULL, 'Aceite vegetal', 'ACEITES', 'GRANEL', 'ml', 'Botella', 1000, 8000.00, 1000, TRUE, TRUE, @sistema),
 (NULL, 'Sal', 'CONDIMENTOS', 'GRANEL', 'g', 'Paquete', 500, 2000.00, 500, TRUE, TRUE, @sistema),
-(NULL, 'Azucar', 'CONDIMENTOS', 'GRANEL', 'g', 'Bolsa', 1000, 4500.00, 1000, TRUE, TRUE, @sistema);
+(NULL, 'Azúcar', 'CONDIMENTOS', 'GRANEL', 'g', 'Bolsa', 1000, 4500.00, 1000, TRUE, TRUE, @sistema);
 
 -- ============================================================
 -- LÁCTEOS
