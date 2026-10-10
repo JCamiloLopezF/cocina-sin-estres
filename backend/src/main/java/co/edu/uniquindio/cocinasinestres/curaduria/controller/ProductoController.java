@@ -21,7 +21,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/curaduria/productos")
-@PreAuthorize("hasAnyRole('CURADOR', 'ADMIN')")
+@PreAuthorize("hasRole('CURADOR')")
 public class ProductoController {
 
     private final ProductoService productoService;
