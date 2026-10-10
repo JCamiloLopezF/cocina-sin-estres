@@ -123,7 +123,13 @@ curl -X POST http://localhost:8080/api/curaduria/productos \
   }'
 ```
 
-**Tener una cuenta con permiso en `dev`.** Toda cuenta nueva entra como `USUARIA`. Para probar la curaduría, arranca la API con el correo de la cuenta simulada como administrador inicial y haz la primera petición con ese `X-Dev-User`:
+**Tener una cuenta con permiso en `dev`.** Toda cuenta nueva entra como `USUARIA`. Para probar la curaduría, arranca la API en `dev`, haz una primera petición con `X-Dev-User: uid-curadora` (por ejemplo `GET /api/yo`) para que se cree la cuenta, y súbela a curadora en tu base local:
+
+```sql
+UPDATE usuario SET rol = 'CURADOR' WHERE correo = 'uid-curadora@dev.local';
+```
+
+El cambio aplica desde la siguiente petición.
 
 ```bash
 ADMIN_INICIAL_CORREO=uid-curadora@dev.local ./gradlew bootRun --args='--spring.profiles.active=dev'
