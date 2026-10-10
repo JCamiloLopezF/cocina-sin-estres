@@ -109,7 +109,8 @@ INSERT INTO producto (
 VALUES
 (NULL, 'Banano', 'FRUTAS', 'CONTABLE', 'unidad', 'Racimo', 6, 5000.00, NULL, FALSE, TRUE, @sistema),
 (NULL, 'Manzana', 'FRUTAS', 'CONTABLE', 'unidad', 'Unidad', 1, 1500.00, NULL, FALSE, TRUE, @sistema),
-(NULL, 'Naranja', 'FRUTAS', 'CONTABLE', 'unidad', 'Unidad', 1, 1000.00, NULL, FALSE, TRUE, @sistema);
+(NULL, 'Naranja', 'FRUTAS', 'CONTABLE', 'unidad', 'Unidad', 1, 1000.00, NULL, FALSE, TRUE, @sistema),
+(NULL, 'Tomate de árbol', 'FRUTAS', 'GRANEL', 'g', 'Libra', 500, 5000.00, 500, FALSE, TRUE, @sistema);
 
 -- ============================================================
 -- AUDITORÍA DE LA CARGA INICIAL
