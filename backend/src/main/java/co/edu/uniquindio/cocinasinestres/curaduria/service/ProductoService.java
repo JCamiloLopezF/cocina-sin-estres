@@ -158,7 +158,7 @@ public class ProductoService {
     }
 
     private Producto buscarOExcepcion(Long id) {
-        return productoRepository.findById(id)
+        return productoRepository.findByIdAndHogarIdIsNull(id)
             .orElseThrow(() ->
                 new RecursoNoEncontradoException(
                     "El producto solicitado no existe."
