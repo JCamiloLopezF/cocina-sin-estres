@@ -44,7 +44,7 @@ public class ProductoService {
 
     @Transactional(readOnly = true)
     public List<ProductoResponse> listar() {
-        return productoRepository.findByActivoTrueOrderByCategoriaAscNombreAsc()
+        return productoRepository.findByHogarIdIsNullAndActivoTrueOrderByCategoriaAscNombreAsc()
             .stream()
             .map(ProductoMapper::aResponse)
             .toList();
