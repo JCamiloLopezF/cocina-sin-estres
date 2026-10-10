@@ -79,7 +79,7 @@ VALUES
 (NULL, 'Huevos', 'PROTEINAS', 'CONTABLE', 'unidad', 'Cubeta', 30, 18000.00, NULL, TRUE, TRUE, @sistema),
 (NULL, 'Pollo', 'PROTEINAS', 'GRANEL', 'g', 'Libra', 500, 12000.00, 500, FALSE, TRUE, @sistema),
 (NULL, 'Carne de res', 'PROTEINAS', 'GRANEL', 'g', 'Libra', 500, 18000.00, 500, FALSE, TRUE, @sistema),
-(NULL, 'Atun', 'PROTEINAS', 'CONTABLE', 'g', 'Lata', 160, 6000.00, NULL, FALSE, TRUE, @sistema);
+(NULL, 'Atún', 'PROTEINAS', 'CONTABLE', 'unidad', 'Lata', 1, 6000.00, NULL, FALSE, TRUE, @sistema);
 
 -- ============================================================
 -- VERDURAS Y TUBÉRCULOS
