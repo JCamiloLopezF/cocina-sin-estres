@@ -27,6 +27,8 @@ Versiones: Spring Boot 4.1.1 (Spring Framework 7, Spring Security 7, Hibernate 7
 
 El repositorio es público: ningún valor real se escribe en el código ni en los `application*.yml` (CONTRIBUTING.md §8).
 
+Los ambientes de la nube (desarrollo y producción) corren con el perfil `prod` y cada uno tiene su propia base en Azure; la conexión y los respaldos están en [`docs/despliegue/base-de-datos.md`](../docs/despliegue/base-de-datos.md). El perfil `dev` es solo para tu computador.
+
 ## Ejecución
 
 ```bash
