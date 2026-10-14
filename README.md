@@ -17,7 +17,7 @@ cocina-sin-estres/
 ├── web-app/      Aplicación web (React + Vite)
 ├── backend/      API REST (Java + Spring Boot + Gradle)
 ├── docs/         Arquitectura C4, ADRs y documentos del curso
-├── infra/        Scripts de la infraestructura en Azure
+├── infra/        Scripts de la infraestructura en Google Cloud
 ├── scripts/      Utilidades del equipo (configuración del repositorio)
 └── .github/      Plantilla de PR y flujos de GitHub Actions
 ```
@@ -30,7 +30,7 @@ Cada módulo tiene su propio `README.md` con instrucciones para ejecutarlo.
 - **Backend:** Java con Spring Boot, API REST, Spring Security, Spring Data JPA.
 - **Base de datos:** MySQL (InnoDB, utf8mb4) con migraciones versionadas en Flyway.
 - **Identidad:** Firebase Authentication; el backend verifica el token en cada petición.
-- **Nube:** Azure (ADR-22). La base de datos es Azure Database for MySQL, con un ambiente de desarrollo y uno de producción ([guía](docs/despliegue/base-de-datos.md)).
+- **Nube:** Google Cloud, en el mismo proyecto de Firebase (ADR-22): Firebase Hosting para el frontend, Cloud Run para el backend y Cloud SQL para MySQL, con un ambiente de desarrollo y uno de producción ([guía de la base de datos](docs/despliegue/base-de-datos.md)).
 
 ## Cómo contribuir
 
