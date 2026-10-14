@@ -95,7 +95,7 @@ VALUES
 (NULL, 'Tomate', 'VERDURAS', 'GRANEL', 'g', 'Libra', 500, 4000.00, 500, TRUE, TRUE, @sistema),
 (NULL, 'Cebolla', 'VERDURAS', 'GRANEL', 'g', 'Libra', 500, 3500.00, 500, TRUE, TRUE, @sistema),
 (NULL, 'Zanahoria', 'VERDURAS', 'GRANEL', 'g', 'Libra', 500, 3000.00, 500, FALSE, TRUE, @sistema);
-(NULL, 'Tomate de arbol', 'FRUTAS', 'GRANEL', 'g', 'Libra', 500, 5000.00, 500, FALSE, TRUE, @sistema);
+
 
 -- ============================================================
 -- FRUTAS
