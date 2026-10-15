@@ -12,7 +12,4 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
 
     Optional<Producto> findByIdAndHogarIdIsNull(Long id);
 
-public interface ProductoRepository extends JpaRepository<Producto, Long> {
-
-    List<Producto> findByActivoTrueOrderByCategoriaAscNombreAsc();
 }
