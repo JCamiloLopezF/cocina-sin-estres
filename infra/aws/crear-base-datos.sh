@@ -5,7 +5,7 @@
 #   - un grupo de seguridad sin entradas abiertas (cocina-sin-estres-mysql);
 #   - un grupo de parámetros que exige conexiones cifradas (require_secure_transport);
 #   - una instancia de Amazon RDS para MySQL 8.4 (db.t4g.micro, 20 GB gp3, una sola
-#     zona, cifrada, respaldo diario con 7 días de retención, protección contra borrado);
+#     zona, cifrada, respaldo diario con 1 día de retención, protección contra borrado);
 #   - las bases cocina_desarrollo y cocina_produccion y un usuario por ambiente
 #     (app_desarrollo, app_produccion) con permisos solo sobre su base.
 #
@@ -26,12 +26,16 @@
 set -euo pipefail
 
 export AWS_DEFAULT_REGION="${REGION:-us-east-1}"
+# Sin paginador: si no, la salida larga se abre en less y el script se detiene.
+export AWS_PAGER=""
 INSTANCIA="${INSTANCIA:-cocina-sin-estres-mysql}"
 GRUPO_SEGURIDAD="${INSTANCIA}"
 GRUPO_PARAMETROS="${INSTANCIA}-tls"
 ADMIN_USUARIO="${ADMIN_USUARIO:-cocinaadmin}"
 CLASE="${CLASE:-db.t4g.micro}"
-RETENCION="${RETENCION:-7}"
+# El plan gratuito de AWS no permite más de 1 día de retención (FreeTierRestrictionError).
+# Con una cuenta de pago se puede subir: RETENCION=7 bash infra/aws/crear-base-datos.sh
+RETENCION="${RETENCION:-1}"
 AMBIENTES=(desarrollo produccion)
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 
@@ -46,14 +50,17 @@ CUENTA="$(aws sts get-caller-identity --query Account --output text)"
 echo "Cuenta:     $CUENTA"
 echo "Región:     $AWS_DEFAULT_REGION"
 echo "Instancia:  $INSTANCIA (RDS, MySQL 8.4, $CLASE, 20 GB gp3, una zona)"
-echo "Respaldo:   diario, $RETENCION días de retención"
+echo "Respaldo:   diario, retención de $RETENCION día(s)"
 echo "Bases:      ${AMBIENTES[*]/#/cocina_}"
 echo
 read -r -p "¿Crear estos recursos? (s/N) " respuesta
 [[ "$respuesta" =~ ^[sS]$ ]] || { echo "Cancelado."; exit 0; }
 
 # ─── Cliente de MySQL para Python (CloudShell no trae cliente mysql) ───────────
-python3 -c "import pymysql" 2>/dev/null || pip3 install --user --quiet pymysql
+# En una carpeta propia: el Python de CloudShell es un entorno virtual y no acepta --user.
+LIBS_PYTHON="$HOME/.cocina-python"
+export PYTHONPATH="$LIBS_PYTHON${PYTHONPATH:+:$PYTHONPATH}"
+python3 -c "import pymysql" 2>/dev/null || python3 -m pip install --quiet --target "$LIBS_PYTHON" pymysql
 
 # ─── Grupo de seguridad (firewall) ─────────────────────────────────────────────
 VPC="$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[0].VpcId' --output text)"
