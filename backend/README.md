@@ -21,13 +21,11 @@ Versiones: Spring Boot 4.1.1 (Spring Framework 7, Spring Security 7, Hibernate 7
 | `PUERTO` | Puerto de la API | Opcional (8080) | Opcional (8080) |
 | `LOG_NIVEL` | Nivel de log de la aplicación | Opcional (DEBUG) | Opcional (INFO) |
 | `FIREBASE_CREDENCIALES_RUTA` | JSON de la cuenta de servicio, **fuera del repositorio** | Se ignora | **Obligatoria**: sin ella la aplicación no arranca |
-| `CIFRADO_CLAVE_V1` | Clave AES-256 en Base64 para datos de salud (ADR-20) | Opcional (usa una clave de desarrollo pública) | **Obligatoria**: sin ella la aplicación no arranca. Se genera con `openssl rand -base64 32` |
+| `CIFRADO_CLAVE_V1` | Clave AES-256 en Base64 para datos de salud (ADR-20) | Opcional mientras no haya datos cifrados | Obligatoria |
 | `ADMIN_INICIAL_CORREO` | Correo que entra como ADMIN la primera vez (ADR-16) | Opcional | Recomendada |
 | `CORS_ORIGENES` | Orígenes del navegador permitidos | Opcional (`http://localhost:5173`) | Obligatoria |
 
 El repositorio es público: ningún valor real se escribe en el código ni en los `application*.yml` (CONTRIBUTING.md §8).
-
-Los ambientes de la nube (desarrollo y producción) corren con el perfil `prod` y cada uno tiene su propia base en Amazon RDS (AWS); la conexión y los respaldos están en [`docs/despliegue/base-de-datos.md`](../docs/despliegue/base-de-datos.md). El perfil `dev` es solo para tu computador.
 
 ## Ejecución
 
@@ -87,6 +85,12 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `POST /api/curaduria/productos` | Crea un producto del catálogo global. Responde 201 con `Location`. |
 | `PUT /api/curaduria/productos/{id}` | Actualiza un producto. Si no cambia ningún campo, no se modifica el responsable ni se audita. |
 | `DELETE /api/curaduria/productos/{id}` | Desactiva el producto (no lo borra). Responde 204; repetirlo no tiene efecto. |
+| `GET /api/items-despensa` | Lista la despensa del hogar de la usuaria. Parámetros opcionales: `filtro` (`TODO`, `POR_VENCER`, `BAJO_MINIMO`) y `buscar`. |
+| `GET /api/items-despensa/resumen` | Totales para la pantalla de inicio: `total`, `porVencer` y `bajoMinimo`. |
+| `GET /api/items-despensa/{id}` | Devuelve un producto de la despensa. 404 si no existe o es de otro hogar. |
+| `POST /api/items-despensa` | Agrega un producto del catálogo a la despensa. Responde 201 con `Location`. |
+| `PUT /api/items-despensa/{id}` | Edita cantidad o nivel, mínimo, vencimiento y ubicación. |
+| `DELETE /api/items-despensa/{id}` | Quita el producto de la despensa. Responde 204. |
 
 Cada módulo agrega sus rutas; las convenciones están en [`CONTRIBUTING.md`](../CONTRIBUTING.md#api-rest).
 
@@ -158,6 +162,64 @@ Solo funciona si esa cuenta aún no existe: el rol se asigna al crearla.
 
 Un producto que no existe responde 404 con `RECURSO_NO_ENCONTRADO`.
 
+## Despensa virtual (KAN-xx)
+
+Productos que la usuaria tiene en casa, con su cantidad, vencimiento y nivel mínimo. Todo se resuelve desde el **hogar de la cuenta autenticada**: el cliente nunca manda un hogar, y un registro de otro hogar responde 404 (RNF-22). Una cuenta que aún no creó su hogar recibe 409 `DESPENSA_HOGAR_REQUERIDO`.
+
+**Cantidad mixta (ADR-11, ADR-15).** Cómo se registra la cantidad depende del `tipoCantidad` del producto. Mezclar los dos modos responde 400.
+
+| Producto | Cantidad | Mínimo (opcional) | Se guarda como |
+| --- | --- | --- | --- |
+| `CONTABLE` | `cantidad`: número en su unidad base, desde 0, hasta 3 decimales | `cantidadMinima`: número | La cantidad tal cual, `es_estimada = FALSE` |
+| `GRANEL` | `nivel`: `AGOTADO`, `POCO`, `MEDIO` o `LLENO` | `nivelMinimo`: `AGOTADO`, `POCO` o `MEDIO` | Proporción de la `capacidad_referencia`, `es_estimada = TRUE` |
+
+**Equivalencia de los niveles.** Cada nivel es una fracción de la capacidad de referencia del producto: `LLENO` = 100 %, `MEDIO` = 50 %, `POCO` = 25 %, `AGOTADO` = 0 %. El nivel que se muestra **no se guarda**: se calcula desde la cantidad y es el más cercano de los cuatro (hasta 37,5 % es `POCO`, hasta 75 % es `MEDIO`, más es `LLENO`; 0 es `AGOTADO`). Así sigue siendo correcto cuando otro proceso cambia la cantidad. Las reglas viven en `despensa/domain/NivelGranel`.
+
+**Vencimiento.** `fechaVencimiento` es opcional (formato `AAAA-MM-DD`). El estado se calcula con la fecha de hoy **en Colombia** (`America/Bogota`, ver `ConfiguracionReloj`):
+
+| `estadoVencimiento` | Cuándo |
+| --- | --- |
+| `SIN_FECHA` | No hay fecha |
+| `VIGENTE` | Vence en más de 7 días |
+| `POR_VENCER` | Vence hoy o dentro de los próximos 7 días |
+| `VENCIDO` | La fecha ya pasó |
+
+**Nivel mínimo.** Un producto está `bajoMinimo` cuando su cantidad **llega** al mínimo o queda por debajo (`cantidad <= cantidadMinima`); sin mínimo registrado nunca lo está. Las reglas de "por vencer" y "bajo mínimo" están en `despensa/domain/ReglasDespensa` para que el motor de avisos las reutilice y signifiquen lo mismo en toda la aplicación.
+
+**Pestañas del listado.** `POR_VENCER` incluye también los ya vencidos y los ordena del que vence antes al que vence después; `BAJO_MINIMO` y `TODO` se ordenan por nombre (y `TODO`, por categoría primero). El buscador no distingue mayúsculas ni tildes.
+
+```bash
+# dev: agregar huevos (contable) y arroz (a granel). Requiere que la cuenta tenga hogar.
+curl -X POST http://localhost:8080/api/items-despensa \
+  -H 'X-Dev-User: uid-mariana' -H 'Content-Type: application/json' \
+  -d '{ "productoId": 12, "cantidad": 12, "cantidadMinima": 4, "fechaVencimiento": "2026-10-20", "ubicacion": "Nevera" }'
+
+curl -X POST http://localhost:8080/api/items-despensa \
+  -H 'X-Dev-User: uid-mariana' -H 'Content-Type: application/json' \
+  -d '{ "productoId": 1, "nivel": "MEDIO", "nivelMinimo": "POCO" }'
+
+# Lo que vence pronto
+curl 'http://localhost:8080/api/items-despensa?filtro=POR_VENCER' -H 'X-Dev-User: uid-mariana'
+```
+
+**Errores de validación.** Responden 400 con estos códigos en `codigo`:
+
+| Código | Cuándo |
+| --- | --- |
+| `DESPENSA_PRODUCTO_REQUERIDO` | No llegó `productoId` |
+| `DESPENSA_CANTIDAD_REQUERIDA`, `DESPENSA_CANTIDAD_INVALIDA` | Producto contable sin cantidad, o negativa / con más de 3 decimales |
+| `DESPENSA_NIVEL_REQUERIDO` | Producto a granel sin nivel |
+| `DESPENSA_CANTIDAD_NO_PERMITIDA`, `DESPENSA_MINIMO_NO_PERMITIDO` | Producto a granel con cantidad o mínimo numérico |
+| `DESPENSA_NIVEL_NO_PERMITIDO`, `DESPENSA_NIVEL_MINIMO_NO_PERMITIDO` | Producto contable con nivel o nivel mínimo |
+| `DESPENSA_MINIMO_INVALIDO` | Mínimo numérico negativo o con más de 3 decimales |
+| `DESPENSA_NIVEL_MINIMO_INVALIDO` | Nivel mínimo `LLENO` (avisaría siempre) |
+| `DESPENSA_UBICACION_LARGA` | Ubicación de más de 40 caracteres |
+| `DESPENSA_FILTRO_INVALIDO` | `filtro` distinto de `TODO`, `POR_VENCER` o `BAJO_MINIMO` |
+
+Además: 404 `RECURSO_NO_ENCONTRADO` si el producto del catálogo no existe, está desactivado o es de otro hogar, o si el registro no es del hogar; 409 `DESPENSA_PRODUCTO_REPETIDO` si ese producto ya está en la despensa (también cuando dos peticiones simultáneas chocan contra `uk_item_despensa_hogar_id_producto_id`).
+
+**Dependencias provisionales.** Para no usar las entidades de otros módulos (RNF-26), despensa define dos puertos en `domain/`: `HogarDeUsuaria` (qué hogar tiene una cuenta) y `CatalogoProductos` (leer productos). Hoy los implementan `HogarDeUsuariaJdbc` y `CatalogoProductosJdbc`, que leen las tablas `hogar` y `producto` con `JdbcClient`. Cuando perfil y curaduría/recetario publiquen un servicio de consulta, solo se reemplazan esas dos clases.
+
 ## Errores
 
 Todos salen en formato *Problem Details* (RFC 9457) desde un único `@RestControllerAdvice` en `comun/error`, con el campo `codigo` estable que el frontend usa para decidir el mensaje. Los controladores no arman respuestas de error: lanzan una `ExcepcionNegocio`.
@@ -181,7 +243,7 @@ Organizado por módulo de negocio (RNF-26), paquete raíz `co.edu.uniquindio.coc
 ```
 co.edu.uniquindio.cocinasinestres
 ├── perfil         ← entidad JPA: Usuario
-├── despensa
+├── despensa       ← entidad JPA: ItemDespensa
 ├── recetario
 ├── planificador
 ├── avisos
@@ -229,22 +291,3 @@ Flyway las aplica al arrancar, en orden y una sola vez, y Hibernate corre con `d
 - **Dominio** (`perfil/domain/RolTest`): JUnit puro, sin contexto de Spring.
 - **Servicios** (`perfil/service/UsuarioActualServiceTest`): dobles de Mockito para los repositorios, sin Spring ni base de datos. Cubre el alta perezosa, el ADMIN inicial, la cuenta desactivada y dos peticiones simultáneas del mismo `firebase_uid`.
 - **Integración** (`comun/seguridad/SeguridadIntegracionTest`): levanta la aplicación con el perfil `dev` contra un MySQL 8.4 en Docker (Testcontainers). Verifica 401 sin credenciales, 200 con `X-Dev-User`, 403 en `/api/admin` y `/api/curaduria` con rol `USUARIA`, y que la ruta de salud sea pública. **Necesita Docker en ejecución**; el solo arranque del contexto comprueba además que Flyway aplica `V1` y que `validate` no encuentra diferencias.
-
-
-## Recetario: estructura de una receta (KAN-13)
-
-Una receta es una fila de `receta` más sus filas de `ingrediente_receta` (tablas de `V1`). Las 8 primeras las carga `V3`; después las edita la curaduría.
-
-| Campo | Qué es | Regla |
-| --- | --- | --- |
-| `nombre` | Nombre de la receta | Obligatorio, hasta 120 caracteres |
-| `descripcion` | Texto corto | Opcional |
-| `tiempoMinutos` | Tiempo total | Mayor que cero |
-| `porciones` | Porciones para las que están calculadas las cantidades | Mayor que cero |
-| `pasos` | Un paso por línea, **sin numerar** | Obligatorio. `PasosReceta` lo convierte a lista |
-| `preparacionPrevia` | Texto del aviso `PREPARACION_PREVIA` | Opcional |
-| `activa` | Si aparece en el catálogo | Las recetas no se borran: se desactivan |
-
-Cada ingrediente es un producto del catálogo global (`productoId`), una `cantidad` en la unidad base del producto y la marca `opcional`. Un producto aparece una sola vez por receta.
-
-**Recetas iniciales (`V3`).** Arroz con pollo y verduras, Lentejas guisadas con papa, Frijoles con arroz, Huevos pericos, Pasta con atún y tomate, Crema de papa con queso, Carne guisada con papa y Batido de banano y leche. Solo usan productos de `V2` (los busca por nombre) y quedan registradas por `sistema-carga-inicial`, con un registro `CREAR` por receta en la auditoría.
