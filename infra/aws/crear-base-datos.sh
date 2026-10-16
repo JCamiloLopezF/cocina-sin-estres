@@ -53,7 +53,10 @@ read -r -p "¿Crear estos recursos? (s/N) " respuesta
 [[ "$respuesta" =~ ^[sS]$ ]] || { echo "Cancelado."; exit 0; }
 
 # ─── Cliente de MySQL para Python (CloudShell no trae cliente mysql) ───────────
-python3 -c "import pymysql" 2>/dev/null || pip3 install --user --quiet pymysql
+# En una carpeta propia: el Python de CloudShell es un entorno virtual y no acepta --user.
+LIBS_PYTHON="$HOME/.cocina-python"
+export PYTHONPATH="$LIBS_PYTHON${PYTHONPATH:+:$PYTHONPATH}"
+python3 -c "import pymysql" 2>/dev/null || python3 -m pip install --quiet --target "$LIBS_PYTHON" pymysql
 
 # ─── Grupo de seguridad (firewall) ─────────────────────────────────────────────
 VPC="$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[0].VpcId' --output text)"

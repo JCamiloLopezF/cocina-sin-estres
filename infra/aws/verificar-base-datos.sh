@@ -59,7 +59,10 @@ read -r -p "¿Revisar permisos y migraciones? Pide la contraseña del administra
 [[ "$respuesta" =~ ^[sS]$ ]] || exit 0
 read -r -s -p "Contraseña del administrador: " ADMIN_CONTRASENA; echo
 
-python3 -c "import pymysql" 2>/dev/null || pip3 install --user --quiet pymysql
+# En una carpeta propia: el Python de CloudShell es un entorno virtual y no acepta --user.
+LIBS_PYTHON="$HOME/.cocina-python"
+export PYTHONPATH="$LIBS_PYTHON${PYTHONPATH:+:$PYTHONPATH}"
+python3 -c "import pymysql" 2>/dev/null || python3 -m pip install --quiet --target "$LIBS_PYTHON" pymysql
 CA="$HOME/rds-global-bundle.pem"
 [[ -s "$CA" ]] || curl -fsS -o "$CA" https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 HOST="$(aws rds describe-db-instances --db-instance-identifier "$INSTANCIA" \
