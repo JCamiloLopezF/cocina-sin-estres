@@ -139,13 +139,14 @@ Para MySQL Workbench o DBeaver: host = el de la `DB_URL`, puerto 3306, SSL en *R
 
 RDS hace los respaldos solo; no hay que programar nada:
 
-- **Un respaldo automático completo al día**, entre las 08:00 y las 08:30 UTC (3:00 a. m. en Colombia), y se conservan los de los **últimos 7 días**.
-- Además guarda el registro de transacciones: se puede **restaurar a cualquier minuto** de esos 7 días.
+- **Un respaldo automático completo al día**, entre las 08:00 y las 08:30 UTC (3:00 a. m. en Colombia).
+- **Retención de 1 día**: es el máximo que permite el plan gratuito de AWS. Se conserva el respaldo más reciente y el registro de transacciones, así que se puede **restaurar a cualquier minuto del último día**.
+- Para tener historial, Juan saca una **instantánea manual** cada semana (**RDS → Bases de datos → cocina-sin-estres-mysql → Acciones → Tomar instantánea**, nombre `semanal-AAAA-MM-DD`) y borra la de hace dos semanas. Ocupan poco y quedan como evidencia.
 - Los respaldos son de la instancia completa, así que cubren las dos bases.
 
 ### Evidencia para la sustentación
 
-1. `bash infra/aws/verificar-base-datos.sh` muestra la retención (`RetencionRespaldoDias: 7`), hasta qué minuto se puede restaurar y la lista de respaldos automáticos con su fecha, uno por día.
+1. `bash infra/aws/verificar-base-datos.sh` muestra la retención (`RetencionRespaldoDias: 1`), hasta qué minuto se puede restaurar y el respaldo automático más reciente con su fecha, que cambia cada día.
 2. En la consola, **RDS → Bases de datos → cocina-sin-estres-mysql → Mantenimiento y copias de seguridad** muestra lo mismo. Toma una captura cada semana y súbela a KAN-9 en Jira.
 
 ### Prueba de restauración (una vez, antes de la sustentación)
@@ -161,7 +162,7 @@ Comprobar que el respaldo sirve es mejor evidencia que mostrar que existe.
 | Síntoma | Causa y solución |
 | --- | --- |
 | El registro de la cuenta se queda esperando | La activación puede tardar horas. Espera el correo de AWS antes de crear recursos. |
-| Error al crear la instancia por la retención de respaldos | El plan gratuito puede limitarla. Ejecuta `RETENCION=1 bash infra/aws/crear-base-datos.sh`: sigue habiendo un respaldo diario (RNF-20). |
+| `FreeTierRestrictionError` por la retención de respaldos | El plan gratuito permite máximo 1 día, que es el valor por defecto del script. Si alguien lo cambió, ejecuta `RETENCION=1 bash infra/aws/crear-base-datos.sh`. |
 | Error porque la clase `db.t4g.micro` no está disponible | Ejecuta `CLASE=db.t3.micro bash infra/aws/crear-base-datos.sh`. |
 | `Access denied for user 'cocinaadmin'` | Contraseña del administrador equivocada. Si la olvidaste: **RDS → Modificar → Configuración de credenciales**. |
 | La conexión desde tu computador se queda esperando | El puerto no está abierto para tu IP, o tu IP cambió: repite el paso 1 de *Conectarte desde tu computador*. |
