@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -64,6 +65,18 @@ public class CatalogoProductosJdbc implements CatalogoProductos {
             .forEach(producto -> resultado.put(producto.id(), producto));
 
         return resultado;
+    }
+
+    @Override
+    public List<ProductoCatalogo> listarDisponibles(Long hogarId) {
+        return jdbc.sql("SELECT " + COLUMNAS + """
+                FROM producto
+                WHERE activo = TRUE
+                  AND (hogar_id IS NULL OR hogar_id = :hogarId)
+                """)
+            .param("hogarId", hogarId)
+            .query(CatalogoProductosJdbc::aProducto)
+            .list();
     }
 
     private static ProductoCatalogo aProducto(ResultSet rs, int fila) throws SQLException {

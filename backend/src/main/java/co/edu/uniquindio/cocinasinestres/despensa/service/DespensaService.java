@@ -15,6 +15,7 @@ import co.edu.uniquindio.cocinasinestres.despensa.domain.ValidadorItemDespensa;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.EdicionItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaResponse;
+import co.edu.uniquindio.cocinasinestres.despensa.dto.ProductoDisponibleResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ResumenDespensaResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.model.ItemDespensa;
 import co.edu.uniquindio.cocinasinestres.despensa.repository.ItemDespensaRepository;
@@ -30,6 +31,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Casos de uso de la despensa virtual: agregar, consultar, editar y quitar productos del
@@ -100,6 +102,37 @@ public class DespensaService {
             .count();
 
         return new ResumenDespensaResponse(items.size(), porVencer, bajoMinimo);
+    }
+
+    /**
+     * Productos del catálogo que la usuaria puede agregar (pantalla 16), ordenados por
+     * nombre. Cada uno dice si ya está en la despensa, para editarlo en vez de repetirlo.
+     *
+     * @param buscar texto que debe contener el nombre; sin distinguir mayúsculas ni tildes.
+     *               Vacío o ausente devuelve todo el catálogo disponible
+     */
+    @Transactional(readOnly = true)
+    public List<ProductoDisponibleResponse> catalogo(String buscar) {
+
+        Long hogarId = hogarIdActual();
+
+        Map<Long, Long> itemPorProducto = itemRepository.findByHogarId(hogarId).stream()
+            .collect(Collectors.toMap(ItemDespensa::getProductoId, ItemDespensa::getId, (a, b) -> a));
+
+        return catalogo.listarDisponibles(hogarId).stream()
+            .filter(producto -> BusquedaTexto.coincide(producto.nombre(), buscar))
+            .sorted(Comparator.comparing(ProductoCatalogo::nombre, COLATOR_ES))
+            .map(producto -> new ProductoDisponibleResponse(
+                producto.id(),
+                producto.nombre(),
+                producto.categoria(),
+                producto.tipoCantidad(),
+                producto.unidadBase(),
+                producto.unidadCompra(),
+                producto.cantidadUnidadCompra(),
+                producto.precioUnidadCompra(),
+                itemPorProducto.get(producto.id())))
+            .toList();
     }
 
     /**

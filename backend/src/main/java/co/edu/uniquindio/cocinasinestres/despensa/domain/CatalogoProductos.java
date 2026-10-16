@@ -1,6 +1,7 @@
 package co.edu.uniquindio.cocinasinestres.despensa.domain;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -28,4 +29,10 @@ public interface CatalogoProductos {
      * @return los productos encontrados, indexados por su identificador
      */
     Map<Long, ProductoCatalogo> buscarPorIds(Collection<Long> productoIds);
+
+    /**
+     * Lista los productos que el hogar puede agregar: activos y del catálogo global o
+     * registrados por ese mismo hogar.
+     */
+    List<ProductoCatalogo> listarDisponibles(Long hogarId);
 }
