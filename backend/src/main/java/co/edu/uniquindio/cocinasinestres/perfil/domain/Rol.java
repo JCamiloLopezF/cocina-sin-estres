@@ -31,9 +31,12 @@ public enum Rol {
         return PREFIJO_AUTORIDAD + name();
     }
 
-    /** Indica si el rol puede editar el catálogo y ver la auditoría. */
+    /**
+     * Indica si el rol puede editar el catálogo y ver la auditoría. Solo el curador:
+     * así cada cambio queda asociado a un curador identificable (ADR-16, RNF-24).
+     */
     public boolean puedeCurar() {
-        return this == CURADOR || this == ADMIN;
+        return this == CURADOR;
     }
 
     /** Indica si el rol puede gestionar cuentas y asignar roles. */
