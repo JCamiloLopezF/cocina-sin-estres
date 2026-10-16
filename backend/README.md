@@ -227,3 +227,22 @@ Flyway las aplica al arrancar, en orden y una sola vez, y Hibernate corre con `d
 - **Dominio** (`perfil/domain/RolTest`): JUnit puro, sin contexto de Spring.
 - **Servicios** (`perfil/service/UsuarioActualServiceTest`): dobles de Mockito para los repositorios, sin Spring ni base de datos. Cubre el alta perezosa, el ADMIN inicial, la cuenta desactivada y dos peticiones simultáneas del mismo `firebase_uid`.
 - **Integración** (`comun/seguridad/SeguridadIntegracionTest`): levanta la aplicación con el perfil `dev` contra un MySQL 8.4 en Docker (Testcontainers). Verifica 401 sin credenciales, 200 con `X-Dev-User`, 403 en `/api/admin` y `/api/curaduria` con rol `USUARIA`, y que la ruta de salud sea pública. **Necesita Docker en ejecución**; el solo arranque del contexto comprueba además que Flyway aplica `V1` y que `validate` no encuentra diferencias.
+
+
+## Recetario: estructura de una receta (KAN-13)
+
+Una receta es una fila de `receta` más sus filas de `ingrediente_receta` (tablas de `V1`). Las 8 primeras las carga `V3`; después las edita la curaduría.
+
+| Campo | Qué es | Regla |
+| --- | --- | --- |
+| `nombre` | Nombre de la receta | Obligatorio, hasta 120 caracteres |
+| `descripcion` | Texto corto | Opcional |
+| `tiempoMinutos` | Tiempo total | Mayor que cero |
+| `porciones` | Porciones para las que están calculadas las cantidades | Mayor que cero |
+| `pasos` | Un paso por línea, **sin numerar** | Obligatorio. `PasosReceta` lo convierte a lista |
+| `preparacionPrevia` | Texto del aviso `PREPARACION_PREVIA` | Opcional |
+| `activa` | Si aparece en el catálogo | Las recetas no se borran: se desactivan |
+
+Cada ingrediente es un producto del catálogo global (`productoId`), una `cantidad` en la unidad base del producto y la marca `opcional`. Un producto aparece una sola vez por receta.
+
+**Recetas iniciales (`V3`).** Arroz con pollo y verduras, Lentejas guisadas con papa, Frijoles con arroz, Huevos pericos, Pasta con atún y tomate, Crema de papa con queso, Carne guisada con papa y Batido de banano y leche. Solo usan productos de `V2` (los busca por nombre) y quedan registradas por `sistema-carga-inicial`, con un registro `CREAR` por receta en la auditoría.
