@@ -11,6 +11,8 @@
 set -euo pipefail
 
 export AWS_DEFAULT_REGION="${REGION:-us-east-1}"
+# Sin paginador: si no, la salida larga se abre en less y el script se detiene.
+export AWS_PAGER=""
 INSTANCIA="${INSTANCIA:-cocina-sin-estres-mysql}"
 GRUPO_PARAMETROS="${INSTANCIA}-tls"
 ADMIN_USUARIO="${ADMIN_USUARIO:-cocinaadmin}"
