@@ -1,4 +1,3 @@
-
 package co.edu.uniquindio.cocinasinestres.perfil.repository;
 
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;

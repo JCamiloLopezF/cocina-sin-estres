@@ -1,9 +1,9 @@
-
 package co.edu.uniquindio.cocinasinestres.perfil.controller;
 
 import co.edu.uniquindio.cocinasinestres.perfil.dto.PerfilHogarRequest;
 import co.edu.uniquindio.cocinasinestres.perfil.dto.PerfilHogarResponse;
 import co.edu.uniquindio.cocinasinestres.perfil.service.HogarService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/perfil/hogar")
+// CURADOR y ADMIN no tienen hogar (ADR-16).
+@PreAuthorize("hasRole('USUARIA')")
 public class PerfilHogarController {
 
     private final HogarService hogarService;

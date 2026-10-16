@@ -1,4 +1,3 @@
-
 package co.edu.uniquindio.cocinasinestres.perfil.model;
 
 import jakarta.persistence.Column;
@@ -11,6 +10,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.util.Objects;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Representa a una persona integrante de un hogar.
@@ -31,6 +32,8 @@ public class Persona {
     @Column(name = "nombre", length = 60)
     private String nombre;
 
+    // Columna TINYINT UNSIGNED: sin esto, la validación de Hibernate espera INTEGER.
+    @JdbcTypeCode(SqlTypes.TINYINT)
     @Column(name = "edad", nullable = false)
     private Integer edad;
 

@@ -1,9 +1,9 @@
-
 package co.edu.uniquindio.cocinasinestres.comun.seguridad;
 
 import co.edu.uniquindio.cocinasinestres.comun.config.PropiedadesCocina;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
 import javax.crypto.Cipher;
@@ -21,6 +21,7 @@ public class CifradorDatosSensibles {
     private static final String PREFIJO = "v1:";
     private static final int TAMANO_NONCE = 12;
     private static final int TAMANO_TAG_BITS = 128;
+    private static final SecureRandom ALEATORIO = new SecureRandom();
 
     private final byte[] clave;
 
@@ -59,7 +60,7 @@ public class CifradorDatosSensibles {
         }
 
         byte[] nonce = new byte[TAMANO_NONCE];
-        new java.security.SecureRandom().nextBytes(nonce);
+        ALEATORIO.nextBytes(nonce);
 
         try {
             Cipher cipher = Cipher.getInstance(ALGORITMO);
