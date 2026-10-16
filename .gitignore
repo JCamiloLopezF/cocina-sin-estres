@@ -53,3 +53,6 @@ desktop.ini
 logs/
 *.log
 tmp/
+
+# Caché local de Firebase CLI (KAN-11)
+.firebase/
