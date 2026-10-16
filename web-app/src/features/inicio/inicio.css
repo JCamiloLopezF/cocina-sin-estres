@@ -1,0 +1,35 @@
+.accesos {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: var(--espacio-5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acceso-rapido {
+  display: grid;
+  gap: var(--espacio-1);
+  padding: var(--espacio-4) var(--espacio-5);
+  border: 1px solid var(--color-linea);
+  border-left: 6px solid var(--color-primario);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.acceso-rapido:hover {
+  border-color: var(--color-primario);
+  color: var(--color-tinta);
+}
+
+.acceso-rapido__titulo {
+  font-size: var(--texto-l);
+  font-weight: 700;
+}
+
+.acceso-rapido__texto {
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
