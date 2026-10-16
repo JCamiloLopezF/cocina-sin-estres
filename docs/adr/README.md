@@ -27,7 +27,7 @@ Cada decisión de arquitectura queda registrada con su contexto, alternativas, j
 | [ADR-19](ADR-19-alta-perezosa-usuario.md) | Alta perezosa del usuario local | Abierta |
 | [ADR-20](ADR-20-cifrado-datos-salud.md) | Cifrado de los datos de salud | Aprobada |
 | [ADR-21](ADR-21-planificador-sin-conexion.md) | Planificador tolerante a cortes de conexión | Aprobada |
-| [ADR-22](ADR-22-proveedor-nube.md) | Proveedor de nube: Google Cloud, en el proyecto de Firebase | Aprobada |
+| [ADR-22](ADR-22-proveedor-nube.md) | Proveedor de nube: AWS para backend y base de datos; Firebase para identidad y frontend | Aprobada |
 | [ADR-23](ADR-23-trazabilidad-catalogo.md) | Trazabilidad del catálogo | Abierta |
 
 ADR-01 a ADR-12 están en el documento de Arquitectura C4 (`docs/curso/`). ADR-13 a ADR-23 están aquí, un archivo por decisión. Una ADR *Abierta* sigue en discusión: antes de construir sobre ella, confírmala con el equipo.
