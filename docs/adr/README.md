@@ -18,19 +18,19 @@ Cada decisión de arquitectura queda registrada con su contexto, alternativas, j
 | ADR-10 | Avisos internos por motor de reglas | Precisada por ADR-17 |
 | ADR-11 | Cantidad mixta en la despensa | Precisada por ADR-15 |
 | ADR-12 | Despliegue en la nube desde el primer sprint | Aprobada |
-| ADR-13 | Campos del perfil del hogar | Propuesta |
-| ADR-14 | Presupuesto por ciclo de ingreso | Propuesta |
-| ADR-15 | Niveles de granel sobre una cantidad estimada | Propuesta |
-| ADR-16 | Tres roles con mínimo privilegio | Propuesta |
-| ADR-17 | Motor de avisos en el backend | Propuesta |
-| ADR-18 | Las recetas referencian productos del catálogo | Propuesta |
-| ADR-19 | Alta perezosa del usuario local | Propuesta |
-| ADR-20 | Cifrado de los datos de salud | Propuesta |
-| ADR-21 | Planificador tolerante a cortes de conexión | Propuesta |
-| ADR-22 | Proveedor de nube | Abierta |
-| ADR-23 | Trazabilidad del catálogo | Propuesta |
+| [ADR-13](ADR-13-campos-perfil-hogar.md) | Campos del perfil del hogar | Aprobada |
+| [ADR-14](ADR-14-presupuesto-ciclo-ingreso.md) | Presupuesto por ciclo de ingreso | Aprobada |
+| [ADR-15](ADR-15-niveles-granel.md) | Niveles de granel sobre una cantidad estimada | Aprobada |
+| [ADR-16](ADR-16-tres-roles.md) | Tres roles con mínimo privilegio | Aprobada |
+| [ADR-17](ADR-17-motor-avisos-backend.md) | Motor de avisos en el backend | Aprobada |
+| [ADR-18](ADR-18-recetas-producto-catalogo.md) | Las recetas referencian productos del catálogo | Aprobada |
+| [ADR-19](ADR-19-alta-perezosa-usuario.md) | Alta perezosa del usuario local | Abierta |
+| [ADR-20](ADR-20-cifrado-datos-salud.md) | Cifrado de los datos de salud | Aprobada |
+| [ADR-21](ADR-21-planificador-sin-conexion.md) | Planificador tolerante a cortes de conexión | Aprobada |
+| [ADR-22](ADR-22-proveedor-nube.md) | Proveedor de nube: AWS para backend y base de datos; Firebase para identidad y frontend | Aprobada |
+| [ADR-23](ADR-23-trazabilidad-catalogo.md) | Trazabilidad del catálogo | Abierta |
 
-ADR-01 a ADR-12 están en el documento de Arquitectura C4 (`docs/curso/`). ADR-13 a ADR-23 se agregan aquí, un archivo por decisión, cuando el equipo los apruebe.
+ADR-01 a ADR-12 están en el documento de Arquitectura C4 (`docs/curso/`). ADR-13 a ADR-23 están aquí, un archivo por decisión. Una ADR *Abierta* sigue en discusión: antes de construir sobre ella, confírmala con el equipo.
 
 ## Plantilla
 
