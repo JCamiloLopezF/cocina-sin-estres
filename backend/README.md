@@ -21,11 +21,13 @@ Versiones: Spring Boot 4.1.1 (Spring Framework 7, Spring Security 7, Hibernate 7
 | `PUERTO` | Puerto de la API | Opcional (8080) | Opcional (8080) |
 | `LOG_NIVEL` | Nivel de log de la aplicación | Opcional (DEBUG) | Opcional (INFO) |
 | `FIREBASE_CREDENCIALES_RUTA` | JSON de la cuenta de servicio, **fuera del repositorio** | Se ignora | **Obligatoria**: sin ella la aplicación no arranca |
-| `CIFRADO_CLAVE_V1` | Clave AES-256 en Base64 para datos de salud (ADR-20) | Opcional mientras no haya datos cifrados | Obligatoria |
+| `CIFRADO_CLAVE_V1` | Clave AES-256 en Base64 para datos de salud (ADR-20) | Opcional (usa una clave de desarrollo pública) | **Obligatoria**: sin ella la aplicación no arranca. Se genera con `openssl rand -base64 32` |
 | `ADMIN_INICIAL_CORREO` | Correo que entra como ADMIN la primera vez (ADR-16) | Opcional | Recomendada |
 | `CORS_ORIGENES` | Orígenes del navegador permitidos | Opcional (`http://localhost:5173`) | Obligatoria |
 
 El repositorio es público: ningún valor real se escribe en el código ni en los `application*.yml` (CONTRIBUTING.md §8).
+
+Los ambientes de la nube (desarrollo y producción) corren con el perfil `prod` y cada uno tiene su propia base en Amazon RDS (AWS); la conexión y los respaldos están en [`docs/despliegue/base-de-datos.md`](../docs/despliegue/base-de-datos.md). El perfil `dev` es solo para tu computador.
 
 ## Ejecución
 

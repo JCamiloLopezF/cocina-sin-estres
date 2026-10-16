@@ -1,4 +1,3 @@
-
 package co.edu.uniquindio.cocinasinestres.perfil.domain;
 
 public enum PeriodicidadIngreso {

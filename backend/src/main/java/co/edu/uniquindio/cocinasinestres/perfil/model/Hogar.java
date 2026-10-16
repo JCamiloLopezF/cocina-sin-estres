@@ -38,9 +38,12 @@ public class Hogar {
     @Column(name = "periodicidad_ingreso", nullable = false, length = 10)
     private String periodicidadIngreso;
 
+    // Columnas TINYINT: sin esto, la validación de Hibernate espera INTEGER.
+    @JdbcTypeCode(SqlTypes.TINYINT)
     @Column(name = "dia_pago_1", nullable = false)
     private Integer diaPago1;
 
+    @JdbcTypeCode(SqlTypes.TINYINT)
     @Column(name = "dia_pago_2")
     private Integer diaPago2;
 

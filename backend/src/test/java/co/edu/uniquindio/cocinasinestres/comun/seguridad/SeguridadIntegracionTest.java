@@ -45,6 +45,12 @@ class SeguridadIntegracionTest {
 
     private static final String UID = "uid-de-prueba";
 
+    /**
+     * Cuenta que crea la migración V2 para atribuir la carga inicial del catálogo
+     * (ADR-23). Productos, recetas y auditoría la referencian, así que no se borra.
+     */
+    private static final String USUARIO_DE_SISTEMA = "sistema-carga-inicial";
+
     @Container
     @ServiceConnection
     static final MySQLContainer MYSQL =
@@ -57,8 +63,10 @@ class SeguridadIntegracionTest {
     private UsuarioRepository usuarioRepository;
 
     @BeforeEach
-    void dejarLaTablaDeCuentasVacia() {
-        usuarioRepository.deleteAll();
+    void dejarSoloLaCuentaDeSistema() {
+        usuarioRepository.deleteAll(usuarioRepository.findAll().stream()
+                .filter(usuario -> !USUARIO_DE_SISTEMA.equals(usuario.getFirebaseUid()))
+                .toList());
     }
 
     @Test
@@ -142,7 +150,9 @@ class SeguridadIntegracionTest {
         mockMvc.perform(get("/api/yo").header(FiltroUsuarioDev.ENCABEZADO, UID))
                 .andExpect(status().isOk());
 
-        assertThat(usuarioRepository.count()).isEqualTo(1);
+        assertThat(usuarioRepository.findAll())
+                .filteredOn(usuario -> UID.equals(usuario.getFirebaseUid()))
+                .hasSize(1);
     }
 
     @Test
