@@ -13,6 +13,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Resuelve quién es la usuaria de la petición.
@@ -39,6 +40,29 @@ public class UsuarioActualService {
         this.usuarioRepository = usuarioRepository;
         this.correoAdminInicial = propiedades.adminInicial().correo();
     }
+
+    /**
+     * Actualiza el estado de completitud del perfil de una cuenta.
+     *
+     * El repositorio de usuarios sigue siendo responsabilidad
+     * exclusiva de este servicio.
+     */
+    @Transactional
+    public UsuarioAutenticado actualizarPerfilCompleto(
+        Long usuarioId,
+        boolean perfilCompleto) {
+
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+            .orElseThrow(() -> new NoAutenticadoException(
+                "No pudimos identificar tu cuenta. Vuelve a iniciar sesión."));
+
+        usuario.setPerfilCompleto(perfilCompleto);
+
+        Usuario actualizado = usuarioRepository.save(usuario);
+
+        return aUsuarioAutenticado(actualizado);
+    }
+
 
     /**
      * Devuelve la cuenta de ese {@code firebase_uid} y la crea si es la primera vez
