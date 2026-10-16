@@ -181,10 +181,21 @@ aws elasticbeanstalk describe-applications --application-names "$APLICACION" \
        --description "Cocina sin estres: API REST" >/dev/null
 BUCKET="$(aws elasticbeanstalk create-storage-location --query S3Bucket --output text)"
 
+# "running Corretto 21" es la plataforma Java SE (el jar con su propio Tomcat). Las que
+# dicen "running Tomcat 11 Corretto 21" esperan un .war y no sirven aquí.
 PLATAFORMA="$(aws elasticbeanstalk list-available-solution-stacks \
-  --query "SolutionStacks[?contains(@, 'Amazon Linux 2023') && contains(@, 'Corretto 21')] | [0]" --output text)"
-[[ "$PLATAFORMA" != "None" && -n "$PLATAFORMA" ]] || falla "no encontré la plataforma Corretto 21 de Elastic Beanstalk."
+  --query "SolutionStacks[?contains(@, 'Amazon Linux 2023') && contains(@, 'running Corretto 21')] | [0]" --output text)"
+[[ "$PLATAFORMA" != "None" && -n "$PLATAFORMA" ]] || falla "no encontré la plataforma Java SE Corretto 21 de Elastic Beanstalk."
 echo "Plataforma: $PLATAFORMA"
+
+# Con el grupo de seguridad por ID, Elastic Beanstalk necesita saber la VPC y las subredes.
+# Solo las zonas donde existe $CLASE: us-east-1e, por ejemplo, no tiene instancias Graviton.
+ZONAS="$(aws ec2 describe-instance-type-offerings --location-type availability-zone \
+  --filters "Name=instance-type,Values=$CLASE" --query 'InstanceTypeOfferings[].Location' --output text)"
+SUBREDES="$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC" Name=default-for-az,Values=true \
+  "Name=availability-zone,Values=$(tr -s "\t " "," <<<"$ZONAS")" --query 'Subnets[].SubnetId' --output text | tr '\t' ',')"
+[[ -n "$SUBREDES" ]] || falla "no encontré subredes predeterminadas donde exista $CLASE."
+echo "Subredes: $SUBREDES"
 
 OPCIONES="$(mktemp)"
 trap 'rm -f "$OPCIONES"' EXIT
@@ -199,6 +210,9 @@ opciones = [
     ("aws:autoscaling:launchconfiguration", "DisableIMDSv1", "true"),
     ("aws:autoscaling:launchconfiguration", "RootVolumeType", "gp3"),
     ("aws:ec2:instances", "InstanceTypes", "$CLASE"),
+    ("aws:ec2:vpc", "VPCId", "$VPC"),
+    ("aws:ec2:vpc", "Subnets", "$SUBREDES"),
+    ("aws:ec2:vpc", "AssociatePublicIpAddress", "true"),
     ("aws:elasticbeanstalk:healthreporting:system", "SystemType", "enhanced"),
     ("aws:elasticbeanstalk:application", "Application Healthcheck URL", "/api/salud"),
     ("aws:elasticbeanstalk:cloudwatch:logs", "StreamLogs", "true"),
