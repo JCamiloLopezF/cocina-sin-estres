@@ -118,20 +118,25 @@ Hace falta para aplicar las migraciones antes de que exista el despliegue (KAN-1
      --query 'DBInstances[0].VpcSecurityGroups[0].VpcSecurityGroupId' --output text)
    aws ec2 authorize-security-group-ingress --group-id "$SG" --protocol tcp --port 3306 --cidr TU_IP/32
    ```
-2. Aplica las migraciones a `cocina_desarrollo` arrancando la API en tu computador contra esa base:
+2. Comprueba desde tu computador que el puerto ya responde (en macOS; en Linux quita `-G 5`):
+   ```bash
+   nc -vz -G 5 HOST_DE_LA_DB_URL 3306
+   ```
+   Debe decir `succeeded`. Si se queda esperando y sale `Operation timed out`, la regla no tiene tu IP actual o tu red bloquea el puerto 3306 (pasa en algunas redes públicas o de universidad); prueba con los datos del celular y abre esa IP.
+3. Aplica las migraciones a `cocina_desarrollo` arrancando la API en tu computador contra esa base. La terminal de macOS es zsh, que lee la contraseña con otra sintaxis:
    ```bash
    cd backend
    export DB_URL='LA_DB_URL_DE_DESARROLLO'
    export DB_USUARIO=app_desarrollo
-   read -r -s -p "Contraseña: " DB_CONTRASENA; export DB_CONTRASENA; echo
+   read -rs "DB_CONTRASENA?Contraseña: "; export DB_CONTRASENA; echo
    ./gradlew bootRun --args='--spring.profiles.active=dev'
    ```
-   En el log debe aparecer `Successfully applied N migrations to schema cocina_desarrollo`. Así la contraseña no queda en el historial de la terminal. Aquí sí se usa el perfil `dev`, porque la API corre solo en tu computador.
-3. Cuando termines, **cierra el puerto**:
+   En bash (Linux, Git Bash) la línea de la contraseña es `read -r -s -p "Contraseña: " DB_CONTRASENA; export DB_CONTRASENA; echo`. En el log debe aparecer `Successfully applied N migrations to schema cocina_desarrollo`. Así la contraseña no queda en el historial de la terminal. Aquí sí se usa el perfil `dev`, porque la API corre solo en tu computador.
+4. Cuando termines, **cierra el puerto**:
    ```bash
    aws ec2 revoke-security-group-ingress --group-id "$SG" --protocol tcp --port 3306 --cidr TU_IP/32
    ```
-4. **No hagas esto contra `cocina_produccion`.** Producción solo recibe migraciones desde el despliegue (KAN-11), cuando el código ya pasó por `main`.
+5. **No hagas esto contra `cocina_produccion`.** Producción solo recibe migraciones desde el despliegue (KAN-11), cuando el código ya pasó por `main`.
 
 Para MySQL Workbench o DBeaver: host = el de la `DB_URL`, puerto 3306, SSL en *Require*, usuario `app_desarrollo`. Nunca cambies el esquema a mano: los cambios van como migración nueva de Flyway (ADR-07).
 
@@ -139,13 +144,14 @@ Para MySQL Workbench o DBeaver: host = el de la `DB_URL`, puerto 3306, SSL en *R
 
 RDS hace los respaldos solo; no hay que programar nada:
 
-- **Un respaldo automático completo al día**, entre las 08:00 y las 08:30 UTC (3:00 a. m. en Colombia), y se conservan los de los **últimos 7 días**.
-- Además guarda el registro de transacciones: se puede **restaurar a cualquier minuto** de esos 7 días.
+- **Un respaldo automático completo al día**, entre las 08:00 y las 08:30 UTC (3:00 a. m. en Colombia).
+- **Retención de 1 día**: es el máximo que permite el plan gratuito de AWS. Se conserva el respaldo más reciente y el registro de transacciones, así que se puede **restaurar a cualquier minuto del último día**.
+- Para tener historial, Juan saca una **instantánea manual** cada semana (**RDS → Bases de datos → cocina-sin-estres-mysql → Acciones → Tomar instantánea**, nombre `semanal-AAAA-MM-DD`) y borra la de hace dos semanas. Ocupan poco y quedan como evidencia.
 - Los respaldos son de la instancia completa, así que cubren las dos bases.
 
 ### Evidencia para la sustentación
 
-1. `bash infra/aws/verificar-base-datos.sh` muestra la retención (`RetencionRespaldoDias: 7`), hasta qué minuto se puede restaurar y la lista de respaldos automáticos con su fecha, uno por día.
+1. `bash infra/aws/verificar-base-datos.sh` muestra la retención (`RetencionRespaldoDias: 1`), hasta qué minuto se puede restaurar y el respaldo automático más reciente con su fecha, que cambia cada día.
 2. En la consola, **RDS → Bases de datos → cocina-sin-estres-mysql → Mantenimiento y copias de seguridad** muestra lo mismo. Toma una captura cada semana y súbela a KAN-9 en Jira.
 
 ### Prueba de restauración (una vez, antes de la sustentación)
@@ -161,7 +167,7 @@ Comprobar que el respaldo sirve es mejor evidencia que mostrar que existe.
 | Síntoma | Causa y solución |
 | --- | --- |
 | El registro de la cuenta se queda esperando | La activación puede tardar horas. Espera el correo de AWS antes de crear recursos. |
-| Error al crear la instancia por la retención de respaldos | El plan gratuito puede limitarla. Ejecuta `RETENCION=1 bash infra/aws/crear-base-datos.sh`: sigue habiendo un respaldo diario (RNF-20). |
+| `FreeTierRestrictionError` por la retención de respaldos | El plan gratuito permite máximo 1 día, que es el valor por defecto del script. Si alguien lo cambió, ejecuta `RETENCION=1 bash infra/aws/crear-base-datos.sh`. |
 | Error porque la clase `db.t4g.micro` no está disponible | Ejecuta `CLASE=db.t3.micro bash infra/aws/crear-base-datos.sh`. |
 | `Access denied for user 'cocinaadmin'` | Contraseña del administrador equivocada. Si la olvidaste: **RDS → Modificar → Configuración de credenciales**. |
 | La conexión desde tu computador se queda esperando | El puerto no está abierto para tu IP, o tu IP cambió: repite el paso 1 de *Conectarte desde tu computador*. |

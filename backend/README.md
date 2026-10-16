@@ -285,8 +285,11 @@ Flyway las aplica al arrancar, en orden y una sola vez, y Hibernate corre con `d
 ## Pruebas
 
 ```bash
-./gradlew test
+./gradlew test     # pruebas + reporte de cobertura
+./gradlew build    # lo mismo que corre el CI en cada PR: compila, prueba y empaqueta
 ```
+
+Cada ejecución de `test` genera el reporte de cobertura de JaCoCo en `build/reports/jacoco/test/html/index.html`. En GitHub, el check `ci-backend` muestra el resumen de cobertura en la pestaña *Checks* del PR y guarda el reporte completo como artefacto `reportes-backend`.
 
 - **Dominio** (`perfil/domain/RolTest`): JUnit puro, sin contexto de Spring.
 - **Servicios** (`perfil/service/UsuarioActualServiceTest`): dobles de Mockito para los repositorios, sin Spring ni base de datos. Cubre el alta perezosa, el ADMIN inicial, la cuenta desactivada y dos peticiones simultáneas del mismo `firebase_uid`.

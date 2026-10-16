@@ -5,13 +5,20 @@
   "bypass_actors": [],
   "conditions": {
     "ref_name": {
-      "include": ["refs/heads/main", "refs/heads/develop"],
+      "include": [
+        "refs/heads/main",
+        "refs/heads/develop"
+      ],
       "exclude": []
     }
   },
   "rules": [
-    { "type": "deletion" },
-    { "type": "non_fast_forward" },
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
     {
       "type": "pull_request",
       "parameters": {
@@ -27,7 +34,15 @@
       "parameters": {
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
-          { "context": "convenciones-pr" }
+          {
+            "context": "convenciones-pr"
+          },
+          {
+            "context": "ci-backend"
+          },
+          {
+            "context": "ci-frontend"
+          }
         ]
       }
     }
