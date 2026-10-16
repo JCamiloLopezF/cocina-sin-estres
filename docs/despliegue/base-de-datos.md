@@ -118,20 +118,25 @@ Hace falta para aplicar las migraciones antes de que exista el despliegue (KAN-1
      --query 'DBInstances[0].VpcSecurityGroups[0].VpcSecurityGroupId' --output text)
    aws ec2 authorize-security-group-ingress --group-id "$SG" --protocol tcp --port 3306 --cidr TU_IP/32
    ```
-2. Aplica las migraciones a `cocina_desarrollo` arrancando la API en tu computador contra esa base:
+2. Comprueba desde tu computador que el puerto ya responde (en macOS; en Linux quita `-G 5`):
+   ```bash
+   nc -vz -G 5 HOST_DE_LA_DB_URL 3306
+   ```
+   Debe decir `succeeded`. Si se queda esperando y sale `Operation timed out`, la regla no tiene tu IP actual o tu red bloquea el puerto 3306 (pasa en algunas redes públicas o de universidad); prueba con los datos del celular y abre esa IP.
+3. Aplica las migraciones a `cocina_desarrollo` arrancando la API en tu computador contra esa base. La terminal de macOS es zsh, que lee la contraseña con otra sintaxis:
    ```bash
    cd backend
    export DB_URL='LA_DB_URL_DE_DESARROLLO'
    export DB_USUARIO=app_desarrollo
-   read -r -s -p "Contraseña: " DB_CONTRASENA; export DB_CONTRASENA; echo
+   read -rs "DB_CONTRASENA?Contraseña: "; export DB_CONTRASENA; echo
    ./gradlew bootRun --args='--spring.profiles.active=dev'
    ```
-   En el log debe aparecer `Successfully applied N migrations to schema cocina_desarrollo`. Así la contraseña no queda en el historial de la terminal. Aquí sí se usa el perfil `dev`, porque la API corre solo en tu computador.
-3. Cuando termines, **cierra el puerto**:
+   En bash (Linux, Git Bash) la línea de la contraseña es `read -r -s -p "Contraseña: " DB_CONTRASENA; export DB_CONTRASENA; echo`. En el log debe aparecer `Successfully applied N migrations to schema cocina_desarrollo`. Así la contraseña no queda en el historial de la terminal. Aquí sí se usa el perfil `dev`, porque la API corre solo en tu computador.
+4. Cuando termines, **cierra el puerto**:
    ```bash
    aws ec2 revoke-security-group-ingress --group-id "$SG" --protocol tcp --port 3306 --cidr TU_IP/32
    ```
-4. **No hagas esto contra `cocina_produccion`.** Producción solo recibe migraciones desde el despliegue (KAN-11), cuando el código ya pasó por `main`.
+5. **No hagas esto contra `cocina_produccion`.** Producción solo recibe migraciones desde el despliegue (KAN-11), cuando el código ya pasó por `main`.
 
 Para MySQL Workbench o DBeaver: host = el de la `DB_URL`, puerto 3306, SSL en *Require*, usuario `app_desarrollo`. Nunca cambies el esquema a mano: los cambios van como migración nueva de Flyway (ADR-07).
 
