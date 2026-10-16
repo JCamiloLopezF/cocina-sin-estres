@@ -1,6 +1,7 @@
 package co.edu.uniquindio.cocinasinestres.perfil.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
+import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
 import co.edu.uniquindio.cocinasinestres.comun.seguridad.CifradorDatosSensibles;
 import co.edu.uniquindio.cocinasinestres.perfil.domain.PeriodicidadIngreso;
 import co.edu.uniquindio.cocinasinestres.perfil.domain.UsuarioAutenticado;
@@ -13,8 +14,6 @@ import co.edu.uniquindio.cocinasinestres.perfil.model.Persona;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Usuario;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.PersonaRepository;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,6 +23,8 @@ import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class HogarService {
@@ -123,8 +124,8 @@ public class HogarService {
 
         Hogar hogar = hogarRepository
             .findByUsuario_Id(usuarioActual.id())
-            .orElseThrow(() -> new DatosInvalidosException(
-                ERROR_DATOS_INVALIDOS,
+            // 404: el frontend lo usa para llevar a la usuaria al onboarding.
+            .orElseThrow(() -> new RecursoNoEncontradoException(
                 "Todavía no existe un perfil del hogar."));
 
         List<Persona> personas =

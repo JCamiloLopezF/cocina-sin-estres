@@ -21,6 +21,12 @@ spring:
         # Las consultas se ven en la consola, con formato y con los parámetros.
         format_sql: true
 
+cocina:
+  cifrado:
+    # Clave SOLO para desarrollo y pruebas, con datos inventados. Es pública a propósito:
+    # producción usa su propia CIFRADO_CLAVE_V1, guardada como secreto (ADR-20).
+    clave-v1: ${CIFRADO_CLAVE_V1:GTjox554s0ORjbm7LDGNJLe9hcD0iHyD8dYI5OjqTss=}
+
 logging:
   level:
     co.edu.uniquindio.cocinasinestres: ${LOG_NIVEL:DEBUG}
