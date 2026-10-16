@@ -11,6 +11,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Entidad JPA que mapea la tabla comida_plan (V1).
@@ -18,7 +20,6 @@ import java.util.Objects;
 @Entity
 @Table(name = "comida_plan")
 public class ComidaPlan {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -29,6 +30,8 @@ public class ComidaPlan {
     private PlanSemanal planSemanal;
 
     // 1 = lunes … 7 = domingo
+    // Columna TINYINT: sin esto, la validación de Hibernate espera INTEGER.
+    @JdbcTypeCode(SqlTypes.TINYINT)
     @Column(name = "dia", nullable = false)
     private Integer dia;
 

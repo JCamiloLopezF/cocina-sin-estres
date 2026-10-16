@@ -1,4 +1,4 @@
-package co.edu.uniquindio.cocinasinestres.planificador.controller;
+package co.edu.uniquindio.cocinasinestres.planificador;
 
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
@@ -8,13 +8,15 @@ import co.edu.uniquindio.cocinasinestres.planificador.service.PlanificadorServic
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * Controlador para manejar planes semanales y asignación de recetas a día/comida.
  */
 @RestController
-@RequestMapping("/api/plan-semanal")
+@RequestMapping("/api/planes-semanales")
+@PreAuthorize("hasRole('USUARIA')")
 public class PlanificadorController {
 
     private final PlanificadorService planificadorService;
@@ -36,7 +38,7 @@ public class PlanificadorController {
         return ResponseEntity.ok(resp);
     }
 
-    @PutMapping("/{planId}/comida")
+    @PutMapping("/{planId}/comidas")
     public ResponseEntity<ComidaPlanResponse> asignarComida(
         @PathVariable("planId") Long planId,
         @RequestBody ComidaPlanAssignRequest request) {
@@ -44,7 +46,7 @@ public class PlanificadorController {
         return ResponseEntity.ok(resp);
     }
 
-    @DeleteMapping("/{planId}/comida/{comidaId}")
+    @DeleteMapping("/{planId}/comidas/{comidaId}")
     public ResponseEntity<Void> eliminarComida(
         @PathVariable("planId") Long planId,
         @PathVariable("comidaId") Long comidaId) {
@@ -52,7 +54,7 @@ public class PlanificadorController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/{planId}/comida/{comidaId}/marcar-preparada")
+    @PutMapping("/{planId}/comidas/{comidaId}/marcar-preparada")
     public ResponseEntity<ComidaPlanResponse> marcarPreparada(
         @PathVariable("planId") Long planId,
         @PathVariable("comidaId") Long comidaId) {

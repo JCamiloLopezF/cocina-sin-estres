@@ -21,15 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Genera la lista de compras agregando las cantidades de ingredientes por producto.
- *
- * Algoritmo:
- *  - Agrega por receta las cantidades de ingrediente (según ingrediente_receta.cantidad)
- *    multiplicadas por la cantidad de veces que aparece la receta en el plan.
- *  - Agrupa por producto_id y calcula costo estimado si hay cantidad_unidad_compra y precio_unidad_compra.
  */
 @Service
 public class ListaComprasServiceImpl implements ListaComprasService {
-
     private static final String ERROR_RECURSO_NO_ENCONTRADO = "RECURSO_NO_ENCONTRADO";
 
     private final PlanSemanalRepository planSemanalRepository;
@@ -67,6 +61,8 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             // Si no hay recetas, borramos lista existente si la hubiera
             listaComprasRepository.findByPlanSemanal_Id(planSemanalId).ifPresent(lista -> {
                 itemListaComprasRepository.deleteByListaCompras_Id(lista.getId());
+                // forzar ejecución del delete antes de borrar la lista
+                itemListaComprasRepository.flush();
                 listaComprasRepository.delete(lista);
             });
             return;
@@ -104,6 +100,7 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             // Sin ingredientes relevantes: eliminar lista existente y salir.
             listaComprasRepository.findByPlanSemanal_Id(planSemanalId).ifPresent(lista -> {
                 itemListaComprasRepository.deleteByListaCompras_Id(lista.getId());
+                itemListaComprasRepository.flush();
                 listaComprasRepository.delete(lista);
             });
             return;
@@ -113,8 +110,9 @@ public class ListaComprasServiceImpl implements ListaComprasService {
         ListaCompras lista = listaComprasRepository.findByPlanSemanal_Id(planSemanalId)
             .orElseGet(() -> listaComprasRepository.save(new ListaCompras(plan)));
 
-        // Borrar items previos
+        // Borrar items previos (forzar flush para evitar violaciones de unique key)
         itemListaComprasRepository.deleteByListaCompras_Id(lista.getId());
+        itemListaComprasRepository.flush();
 
         // Para calcular costo estimado consultamos producto por producto
         String sqlProducto = "SELECT cantidad_unidad_compra, precio_unidad_compra FROM producto WHERE id = ?";
@@ -126,7 +124,14 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             // Default costo = 0
             BigDecimal costoEstimado = BigDecimal.ZERO;
 
-            Map<String, Object> prod = jdbcTemplate.queryForMap(sqlProducto, productoId);
+            Map<String, Object> prod = null;
+            try {
+                prod = jdbcTemplate.queryForMap(sqlProducto, productoId);
+            } catch (Exception e) {
+                // si no existe el producto o hay error, dejamos costo en 0
+                prod = null;
+            }
+
             if (prod != null) {
                 Number cantidadUnidadNum = (Number) prod.get("cantidad_unidad_compra");
                 Number precioNum = (Number) prod.get("precio_unidad_compra");

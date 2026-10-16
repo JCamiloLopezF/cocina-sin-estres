@@ -1,7 +1,8 @@
 package co.edu.uniquindio.cocinasinestres.planificador.service;
 
+import co.edu.uniquindio.cocinasinestres.comun.error.ConflictoException;
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
-import co.edu.uniquindio.cocinasinestres.comun.error.NoAutenticadoException;
+import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
 import co.edu.uniquindio.cocinasinestres.perfil.domain.UsuarioAutenticado;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
@@ -13,6 +14,7 @@ import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.model.PlanSemanal;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.ComidaPlanRepository;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.PlanSemanalRepository;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -31,9 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestres.planificador.service.PlanificadorService {
-
     private static final Logger log = LoggerFactory.getLogger(PlanificadorServiceImpl.class);
-
     private static final String ERROR_PLAN_DATOS_INVALIDOS = "PLAN_DATOS_INVALIDOS";
     private static final String ERROR_RECURSO_NO_ENCONTRADO = "RECURSO_NO_ENCONTRADO";
 
@@ -62,9 +62,15 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
     @Override
     @Transactional
     public PlanSemanalResponse crearPlanSiNoExiste(LocalDate semanaInicio) {
+        // validar semanaInicio obligatorio y que sea lunes
+        if (semanaInicio == null || semanaInicio.getDayOfWeek() != DayOfWeek.MONDAY) {
+            throw new DatosInvalidosException("PLAN_SEMANA_INVALIDA", "La semana debe empezar en lunes.");
+        }
+
         UsuarioAutenticado usuario = usuarioActualService.obtener();
+        // Si la usuaria no tiene hogar, devolver conflicto específico (no 401)
         Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
-            .orElseThrow(() -> new NoAutenticadoException("No existe hogar para la usuaria."));
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
 
         PlanSemanal plan = planSemanalRepository.findByHogar_IdAndSemanaInicio(hogar.getId(), semanaInicio)
             .orElseGet(() -> planSemanalRepository.save(new PlanSemanal(hogar, semanaInicio)));
@@ -75,12 +81,17 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
     @Override
     @Transactional(readOnly = true)
     public PlanSemanalResponse obtenerPorSemana(LocalDate semanaInicio) {
+        // validar semanaInicio obligatorio y que sea lunes
+        if (semanaInicio == null || semanaInicio.getDayOfWeek() != DayOfWeek.MONDAY) {
+            throw new DatosInvalidosException("PLAN_SEMANA_INVALIDA", "La semana debe empezar en lunes.");
+        }
+
         UsuarioAutenticado usuario = usuarioActualService.obtener();
         Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
-            .orElseThrow(() -> new NoAutenticadoException("No existe hogar para la usuaria."));
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
 
         PlanSemanal plan = planSemanalRepository.findByHogar_IdAndSemanaInicio(hogar.getId(), semanaInicio)
-            .orElseThrow(() -> new DatosInvalidosException(ERROR_RECURSO_NO_ENCONTRADO, "No existe un plan para esa semana."));
+            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "No existe un plan para esa semana."));
 
         return construirRespuesta(plan);
     }
@@ -91,15 +102,16 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
         validarRequestAsignacion(request);
 
         UsuarioAutenticado usuario = usuarioActualService.obtener();
-        // verificar que el plan pertenece al hogar de la usuaria
+
         PlanSemanal plan = planSemanalRepository.findById(planId)
-            .orElseThrow(() -> new DatosInvalidosException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado."));
+            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado."));
 
         Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
-            .orElseThrow(() -> new NoAutenticadoException("No existe hogar para la usuaria."));
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
 
         if (!plan.getHogar().getId().equals(hogar.getId())) {
-            throw new DatosInvalidosException("PLAN_NO_PERMITIDO", "No puedes operar sobre el plan de otro hogar.");
+            // no confirmar la existencia del plan de otro hogar: 404
+            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "No puedes operar sobre el plan de otro hogar.");
         }
 
         // validar receta existe y está activa (consulta directa a la tabla receta)
@@ -113,9 +125,9 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             Optional<ComidaPlan> porCambio = comidaPlanRepository.findByIdCambioCliente(idCambio);
             if (porCambio.isPresent()) {
                 ComidaPlan existente = porCambio.get();
-                // si pertenece a otro plan: devolver error
+                // si pertenece a otro plan: devolver 404 (no confirmar existencia en plan actual)
                 if (!existente.getPlanSemanal().getId().equals(planId)) {
-                    throw new DatosInvalidosException("CONFLICTO_ASIGNACION", "El idCambioCliente ya existe en otro plan.");
+                    throw new RecursoNoEncontradoException("CONFLICTO_ASIGNACION", "El idCambioCliente ya existe en otro plan.");
                 }
                 // actualizar si cambió algo
                 existente.setRecetaId(request.recetaId());
@@ -150,19 +162,16 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
 
             // Generación síncrona de lista de compras (se ejecuta antes de responder)
             listaComprasService.generarListaCompras(plan.getId());
-
             log.info("Comida asignada: planId={} dia={} tipo={} receta={}", planId, request.dia(), request.tipoComida(), request.recetaId());
-
             return aComidaPlanResponse(comida);
         } catch (DataIntegrityViolationException dive) {
-            // Posible choque por id_cambio_cliente u otra constraint: intentar recuperar por idCambioCliente si fue el caso.
+            // Conflicto: devolver 409 con ConflictoException
             if (idCambio != null && !idCambio.isBlank()) {
                 return comidaPlanRepository.findByIdCambioCliente(idCambio)
                     .map(this::aComidaPlanResponse)
-                    .orElseThrow(() -> new DatosInvalidosException("CONFLICTO_ASIGNACION",
-                        "No fue posible completar la asignación por conflicto."));
+                    .orElseThrow(() -> new ConflictoException("CONFLICTO_ASIGNACION", "No fue posible completar la asignación por conflicto."));
             }
-            throw new DatosInvalidosException("CONFLICTO_ASIGNACION", "No fue posible completar la asignación por conflicto.");
+            throw new ConflictoException("CONFLICTO_ASIGNACION", "No fue posible completar la asignación por conflicto.");
         }
     }
 
@@ -171,21 +180,19 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
     public void eliminarComida(Long planId, Long comidaId) {
         UsuarioAutenticado usuario = usuarioActualService.obtener();
         Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
-            .orElseThrow(() -> new NoAutenticadoException("No existe hogar para la usuaria."));
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
 
         ComidaPlan comida = comidaPlanRepository.findById(comidaId)
-            .orElseThrow(() -> new DatosInvalidosException(ERROR_RECURSO_NO_ENCONTRADO, "Comida no encontrada."));
+            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Comida no encontrada."));
 
         if (!comida.getPlanSemanal().getId().equals(planId)) {
-            throw new DatosInvalidosException("PLAN_NO_PERMITIDO", "La comida no pertenece al plan indicado.");
+            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "La comida no pertenece al plan indicado.");
         }
-
         if (!comida.getPlanSemanal().getHogar().getId().equals(hogar.getId())) {
-            throw new DatosInvalidosException("PLAN_NO_PERMITIDO", "No puedes operar sobre el plan de otro hogar.");
+            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "No puedes operar sobre el plan de otro hogar.");
         }
 
         comidaPlanRepository.delete(comida);
-
         // regenerar lista de compras al eliminar
         listaComprasService.generarListaCompras(planId);
     }
@@ -195,26 +202,23 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
     public ComidaPlanResponse marcarPreparada(Long planId, Long comidaId) {
         UsuarioAutenticado usuario = usuarioActualService.obtener();
         Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
-            .orElseThrow(() -> new NoAutenticadoException("No existe hogar para la usuaria."));
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
 
         ComidaPlan comida = comidaPlanRepository.findById(comidaId)
-            .orElseThrow(() -> new DatosInvalidosException(ERROR_RECURSO_NO_ENCONTRADO, "Comida no encontrada."));
+            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Comida no encontrada."));
 
         if (!comida.getPlanSemanal().getId().equals(planId)) {
-            throw new DatosInvalidosException("PLAN_NO_PERMITIDO", "La comida no pertenece al plan indicado.");
+            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "La comida no pertenece al plan indicado.");
         }
-
         if (!comida.getPlanSemanal().getHogar().getId().equals(hogar.getId())) {
-            throw new DatosInvalidosException("PLAN_NO_PERMITIDO", "No puedes operar sobre el plan de otro hogar.");
+            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "No puedes operar sobre el plan de otro hogar.");
         }
 
         comida.setPreparada(true);
         comida.setPreparadaEn(LocalDateTime.now(ZoneOffset.UTC));
         ComidaPlan guardada = comidaPlanRepository.save(comida);
-
         // generar lista si es necesario (por ejemplo si marcar preparada afecta lista)
         listaComprasService.generarListaCompras(planId);
-
         return aComidaPlanResponse(guardada);
     }
 
@@ -251,7 +255,6 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             .stream()
             .map(this::aComidaPlanResponse)
             .collect(Collectors.toList());
-
         return new PlanSemanalResponse(
             plan.getId(),
             plan.getSemanaInicio(),

@@ -11,6 +11,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.Objects;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Mapea la tabla item_lista_compras (V1).
@@ -18,7 +20,6 @@ import java.util.Objects;
 @Entity
 @Table(name = "item_lista_compras")
 public class ItemListaCompras {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,6 +37,8 @@ public class ItemListaCompras {
     @Column(name = "costo_estimado", nullable = false, precision = 12, scale = 2)
     private BigDecimal costoEstimado;
 
+    // Columna SMALLINT UNSIGNED: sin esto, la validación de Hibernate espera INTEGER.
+    @JdbcTypeCode(SqlTypes.SMALLINT)
     @Column(name = "prioridad", nullable = false)
     private Integer prioridad;
 

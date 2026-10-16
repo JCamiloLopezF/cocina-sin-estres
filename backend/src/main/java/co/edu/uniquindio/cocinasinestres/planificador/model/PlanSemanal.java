@@ -20,7 +20,6 @@ import java.util.Objects;
 @Entity
 @Table(name = "plan_semanal")
 public class PlanSemanal {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -33,6 +32,7 @@ public class PlanSemanal {
     @Column(name = "semana_inicio", nullable = false)
     private LocalDate semanaInicio;
 
+    // Dejar que la BD establezca creado_en (INSERT DEFAULT); no forzamos anotaciones Hibernate aquí.
     @Column(name = "creado_en", nullable = false, insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
