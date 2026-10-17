@@ -1,0 +1,233 @@
+/* Componentes compartidos (RNF-30). Un bloque por componente, en el orden de los archivos. */
+
+/* Boton */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-height: 3rem;
+  padding: var(--espacio-3) var(--espacio-5);
+  border: 2px solid transparent;
+  border-radius: var(--radio-control);
+  font-weight: 700;
+  font-size: var(--texto-m);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 120ms ease, transform 120ms ease;
+}
+
+.boton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.boton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.boton--ancho {
+  width: 100%;
+}
+
+.boton--primario {
+  background: var(--color-primario);
+  color: #fff;
+}
+
+.boton--primario:hover:not(:disabled) {
+  background: var(--color-primario-hondo);
+  color: #fff;
+}
+
+.boton--secundario {
+  background: var(--color-superficie);
+  border-color: var(--color-primario);
+  color: var(--color-primario);
+}
+
+.boton--secundario:hover:not(:disabled) {
+  background: var(--color-primario-suave);
+}
+
+.boton--texto {
+  min-height: 2.75rem;
+  padding-inline: var(--espacio-2);
+  background: none;
+  color: var(--color-primario);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.boton__giro {
+  width: 1.1em;
+  height: 1.1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: girar 700ms linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* CampoTexto */
+.campo {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+.campo__etiqueta {
+  font-weight: 700;
+}
+
+.campo__ayuda {
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.campo__control {
+  width: 100%;
+  min-height: 3rem;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 2px solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  font-size: var(--texto-m);
+}
+
+.campo__control:hover {
+  border-color: var(--color-tenue);
+}
+
+.campo__control:focus-visible {
+  border-color: var(--color-foco);
+  outline-offset: 0;
+}
+
+.campo__control[aria-invalid='true'] {
+  border-color: var(--color-tomate);
+}
+
+.campo__error {
+  color: var(--color-tomate);
+  font-size: var(--texto-s);
+  font-weight: 700;
+}
+
+/* Alerta */
+.alerta {
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-control);
+  border-left: 6px solid;
+  font-size: var(--texto-s);
+}
+
+.alerta--error {
+  background: var(--color-tomate-suave);
+  border-color: var(--color-tomate);
+}
+
+.alerta--exito {
+  background: var(--color-primario-suave);
+  border-color: var(--color-primario);
+}
+
+.alerta--info {
+  background: var(--color-mazorca-suave);
+  border-color: var(--color-mazorca);
+}
+
+.alerta__titulo {
+  display: block;
+  margin-bottom: var(--espacio-1);
+  font-size: var(--texto-m);
+}
+
+/* EstadoVacio */
+.vacio {
+  display: grid;
+  justify-items: start;
+  gap: var(--espacio-3);
+  padding: var(--espacio-6) var(--espacio-5);
+  border: 2px dashed var(--color-linea);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-superficie);
+}
+
+.vacio__titulo {
+  font-size: var(--texto-l);
+}
+
+.vacio__texto {
+  color: var(--color-tenue);
+  max-width: 34ch;
+}
+
+.vacio__acciones {
+  display: grid;
+  gap: var(--espacio-2);
+  width: 100%;
+  margin-top: var(--espacio-2);
+}
+
+/* Cargando */
+.cargando {
+  display: grid;
+  place-items: center;
+  gap: var(--espacio-3);
+  min-height: 60dvh;
+  color: var(--color-tenue);
+}
+
+.cargando__olla {
+  width: 3.5rem;
+  height: 3.5rem;
+  animation: hervir 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes hervir {
+  to {
+    transform: translateY(-4px);
+  }
+}
+
+/* MarcaCocina */
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.marca__olla {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.marca__nombre {
+  font-weight: 700;
+  font-size: var(--texto-l);
+  letter-spacing: -0.01em;
+}
+
+/* EncabezadoPagina */
+.encabezado {
+  display: grid;
+  gap: var(--espacio-1);
+  margin-bottom: var(--espacio-5);
+}
+
+.encabezado__titulo {
+  font-size: var(--texto-xl);
+  letter-spacing: -0.015em;
+}
+
+.encabezado__detalle {
+  color: var(--color-tenue);
+}

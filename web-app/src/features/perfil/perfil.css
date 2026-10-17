@@ -1,0 +1,30 @@
+.perfil__bloque {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-6);
+}
+
+.perfil__subtitulo {
+  font-size: var(--texto-l);
+}
+
+.perfil__datos {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--espacio-2) var(--espacio-4);
+  margin: 0;
+  padding: var(--espacio-4) var(--espacio-5);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-linea);
+}
+
+.perfil__datos dt {
+  color: var(--color-tenue);
+}
+
+.perfil__datos dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
