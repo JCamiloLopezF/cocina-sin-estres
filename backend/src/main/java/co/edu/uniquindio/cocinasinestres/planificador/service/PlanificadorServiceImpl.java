@@ -104,14 +104,14 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
         UsuarioAutenticado usuario = usuarioActualService.obtener();
 
         PlanSemanal plan = planSemanalRepository.findById(planId)
-            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado."));
+            .orElseThrow(() -> new RecursoNoEncontradoException("Plan semanal no encontrado."));
 
         Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
             .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
 
         if (!plan.getHogar().getId().equals(hogar.getId())) {
-            // no confirmar la existencia del plan de otro hogar: 404
-            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "No puedes operar sobre el plan de otro hogar.");
+            // No confirmar la existencia del plan de otro hogar: devolver 404 igual que "no existe"
+            throw new RecursoNoEncontradoException("Plan semanal no encontrado.");
         }
 
         // validar receta existe y está activa (consulta directa a la tabla receta)
@@ -125,9 +125,9 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             Optional<ComidaPlan> porCambio = comidaPlanRepository.findByIdCambioCliente(idCambio);
             if (porCambio.isPresent()) {
                 ComidaPlan existente = porCambio.get();
-                // si pertenece a otro plan: devolver 404 (no confirmar existencia en plan actual)
+                // si pertenece a otro plan: devolver conflicto (409)
                 if (!existente.getPlanSemanal().getId().equals(planId)) {
-                    throw new RecursoNoEncontradoException("CONFLICTO_ASIGNACION", "El idCambioCliente ya existe en otro plan.");
+                    throw new ConflictoException("CONFLICTO_ASIGNACION", "El idCambioCliente ya existe en otro plan.");
                 }
                 // actualizar si cambió algo
                 existente.setRecetaId(request.recetaId());
@@ -183,13 +183,15 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
 
         ComidaPlan comida = comidaPlanRepository.findById(comidaId)
-            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Comida no encontrada."));
+            .orElseThrow(() -> new RecursoNoEncontradoException("Comida no encontrada."));
 
         if (!comida.getPlanSemanal().getId().equals(planId)) {
-            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "La comida no pertenece al plan indicado.");
+            // No revelar existencia del recurso en otro plan: 404 como "no encontrada"
+            throw new RecursoNoEncontradoException("Comida no encontrada.");
         }
         if (!comida.getPlanSemanal().getHogar().getId().equals(hogar.getId())) {
-            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "No puedes operar sobre el plan de otro hogar.");
+            // Igual: 404
+            throw new RecursoNoEncontradoException("Comida no encontrada.");
         }
 
         comidaPlanRepository.delete(comida);
@@ -205,13 +207,13 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
 
         ComidaPlan comida = comidaPlanRepository.findById(comidaId)
-            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Comida no encontrada."));
+            .orElseThrow(() -> new RecursoNoEncontradoException("Comida no encontrada."));
 
         if (!comida.getPlanSemanal().getId().equals(planId)) {
-            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "La comida no pertenece al plan indicado.");
+            throw new RecursoNoEncontradoException("Comida no encontrada.");
         }
         if (!comida.getPlanSemanal().getHogar().getId().equals(hogar.getId())) {
-            throw new RecursoNoEncontradoException("PLAN_NO_PERMITIDO", "No puedes operar sobre el plan de otro hogar.");
+            throw new RecursoNoEncontradoException("Comida no encontrada.");
         }
 
         comida.setPreparada(true);

@@ -1,4 +1,4 @@
-package co.edu.uniquindio.cocinasinestres.planificador;
+package co.edu.uniquindio.cocinasinestres.planificador.controller;
 
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
