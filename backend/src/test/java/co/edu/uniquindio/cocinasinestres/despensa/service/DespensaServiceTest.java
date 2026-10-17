@@ -21,6 +21,7 @@ import co.edu.uniquindio.cocinasinestres.despensa.domain.ProductoCatalogo;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.EdicionItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaResponse;
+import co.edu.uniquindio.cocinasinestres.despensa.dto.ProductoDisponibleResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ResumenDespensaResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.model.ItemDespensa;
 import co.edu.uniquindio.cocinasinestres.despensa.repository.ItemDespensaRepository;
@@ -43,6 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * Prueba de los casos de uso de la despensa con dobles: no levanta Spring ni toca MySQL.
@@ -94,6 +96,42 @@ class DespensaServiceTest {
 
         when(usuarioActualService.obtener()).thenReturn(
             new UsuarioAutenticado(USUARIA_ID, "uid-mariana", "mariana@ejemplo.com", Rol.USUARIA, true));
+    }
+
+    // ---------- Catálogo para agregar (pantalla 16) ----------
+
+    @Test
+    void elCatalogoSaleOrdenadoPorNombreYMarcaLoQueYaEstaEnLaDespensa() {
+        ItemDespensa huevosEnCasa = item(1L, "6", null, null);
+        conId(huevosEnCasa, 77L);
+        when(itemRepository.findByHogarId(HOGAR_ID)).thenReturn(List.of(huevosEnCasa));
+
+        List<ProductoDisponibleResponse> catalogoDisponible = servicio().catalogo(null);
+
+        assertThat(catalogoDisponible).extracting(ProductoDisponibleResponse::nombre)
+            .containsExactly("Aceite vegetal", "Arroz", "Fríjol", "Huevos", "Pollo");
+        assertThat(catalogoDisponible).filteredOn(p -> p.id().equals(1L))
+            .singleElement().extracting(ProductoDisponibleResponse::itemDespensaId).isEqualTo(77L);
+        assertThat(catalogoDisponible).filteredOn(p -> p.id().equals(2L))
+            .singleElement().extracting(ProductoDisponibleResponse::itemDespensaId).isNull();
+    }
+
+    @Test
+    void elCatalogoBuscaSinDistinguirTildesNiMayusculas() {
+        when(itemRepository.findByHogarId(HOGAR_ID)).thenReturn(List.of());
+
+        assertThat(servicio().catalogo("FRIJOL")).extracting(ProductoDisponibleResponse::nombre)
+            .containsExactly("Fríjol");
+        assertThat(servicio().catalogo("ar")).extracting(ProductoDisponibleResponse::nombre)
+            .containsExactly("Arroz");
+    }
+
+    @Test
+    void sinHogarElCatalogoTambienPideCompletarElPerfil() {
+        hogares.quitar(USUARIA_ID);
+
+        assertThat(codigoDelError(() -> servicio().catalogo(null)))
+            .isEqualTo(CodigoDespensa.HOGAR_REQUERIDO);
     }
 
     // ---------- Agregar ----------
@@ -415,6 +453,11 @@ class DespensaServiceTest {
             null));
     }
 
+    /** Simula el id que pone MySQL al guardar. */
+    private static void conId(ItemDespensa item, Long id) {
+        ReflectionTestUtils.setField(item, "id", id);
+    }
+
     private static List<String> nombres(List<ItemDespensaResponse> respuestas) {
         return respuestas.stream().map(ItemDespensaResponse::nombre).toList();
     }
@@ -434,6 +477,11 @@ class DespensaServiceTest {
         @Override
         public Optional<ProductoCatalogo> buscarDisponible(Long productoId, Long hogarId) {
             return Optional.ofNullable(productos.get(productoId));
+        }
+
+        @Override
+        public List<ProductoCatalogo> listarDisponibles(Long hogarId) {
+            return List.copyOf(productos.values());
         }
 
         @Override

@@ -5,7 +5,7 @@
 }
 
 .perfil__subtitulo {
-  font-size: var(--texto-l);
+  font-size: var(--texto-m);
 }
 
 .perfil__datos {
@@ -27,4 +27,160 @@
   margin: 0;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+/* Asistente del perfil del hogar (wireframes 07 a 10). */
+.asistente {
+  display: grid;
+  gap: var(--espacio-5);
+}
+
+.asistente__encabezado {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.asistente__encabezado h1:focus {
+  outline: none;
+}
+
+/* Barra de progreso en cuatro tramos: amarillo lo hecho, beige lo que falta. */
+.asistente__progreso {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.asistente__marca {
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--color-beige);
+}
+
+.asistente__marca--hecha {
+  background: var(--color-primario);
+}
+
+.asistente__marca[aria-current='step'] {
+  box-shadow: 0 0 0 1px var(--color-tinta);
+}
+
+.asistente__paso {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.asistente__acciones {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-3);
+}
+
+.tarjeta-persona {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 7.5rem;
+  gap: var(--espacio-3);
+  align-items: start;
+  margin: 0;
+  padding: var(--espacio-3) var(--espacio-4) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  min-width: 0;
+}
+
+/* La leyenda va dentro de la tarjeta, como título, y no sobre el borde. */
+.tarjeta-persona__titulo {
+  float: left;
+  grid-column: 1 / -1;
+  padding: 0;
+  font-weight: 700;
+}
+
+.tarjeta-persona__quitar {
+  position: absolute;
+  top: var(--espacio-1);
+  right: var(--espacio-2);
+}
+
+.tarjeta-persona .campo__caja--sufijo .campo__control {
+  padding-right: 3.5rem;
+}
+
+
+/* "+ Agregar persona" (wireframe 07): tarjeta punteada. */
+.agregar-punteado {
+  min-height: 3rem;
+  border: var(--borde) dashed var(--color-punteado);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.agregar-punteado:hover {
+  border-color: var(--color-tinta);
+  background: var(--color-crema);
+}
+
+.asistente__total,
+.asistente__nota {
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-beige);
+}
+
+.asistente__total {
+  display: flex;
+  justify-content: space-between;
+}
+
+.asistente__nota {
+  display: grid;
+  gap: var(--espacio-1);
+  font-size: var(--texto-s);
+}
+
+.asistente__nota p {
+  color: var(--color-tenue);
+}
+
+.asistente__dias {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.asistente__dias legend {
+  margin-bottom: var(--espacio-3);
+}
+
+.chip-extra {
+  min-height: 2.75rem;
+  padding: var(--espacio-2) var(--espacio-4);
+  border: var(--borde) dashed var(--color-punteado);
+  border-radius: 999px;
+  background: var(--color-superficie);
+  cursor: pointer;
+}
+
+.casilla--aviso {
+  align-items: flex-start;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-crema);
+  font-size: var(--texto-s);
+}
+
+.casilla--aviso input {
+  margin-top: 0.15rem;
 }

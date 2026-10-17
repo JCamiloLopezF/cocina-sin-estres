@@ -69,13 +69,24 @@ src/
 
 Si alguien abre una pantalla que no es de su rol, la aplicación lo lleva a su propio inicio. Esto ordena la navegación, pero **no es la barrera de seguridad**: el backend revisa el rol en cada petición (RNF-23).
 
+### Pantallas del prototipo 1
+
+| Ruta | Pantalla | API |
+| --- | --- | --- |
+| `/perfil/hogar` | Perfil del hogar: personas, presupuesto, ingreso, días sin tiempo y restricciones (pantallas 4 y 5) | `GET` y `PUT /api/perfil/hogar` |
+| `/despensa` | Listado con búsqueda y filtros Todo, Por vencer y Bajo mínimo (14, 15 y 20) | `GET /api/items-despensa` |
+| `/despensa/agregar` | Buscar en el catálogo y registrar cantidad o nivel (16, 17 y 18) | `GET /api/items-despensa/catalogo`, `POST /api/items-despensa` |
+| `/despensa/:id` | Detalle, editar y quitar con confirmación y deshacer (19, RNF-13) | `GET`, `PUT` y `DELETE /api/items-despensa/{id}` |
+
+Las restricciones de salud solo se envían con el consentimiento marcado (Ley 1581, RNF-22). La lista de restricciones del formulario es provisional hasta que exista el catálogo de restricciones (RNF-03).
+
 ### Errores
 
 `api/cliente.ts` convierte cualquier error en `ErrorApi` con el `codigo` estable del backend (CONTRIBUTING.md §7). El texto que ve la usuaria sale de `api/mensajesError.ts` según ese código, nunca del `detail` del servidor. Los errores de Firebase se traducen en `features/auth/mensajesAuth.ts`. Correo inexistente y contraseña equivocada dan el mismo mensaje, para no revelar qué correos tienen cuenta.
 
 ## Componentes compartidos
 
-Antes de crear un componente en un módulo, revisa `shared/componentes/index.ts`: `Boton`, `CampoTexto`, `Alerta`, `EstadoVacio`, `EncabezadoPagina`, `Cargando`, `EnConstruccion`, `MarcaCocina` y `Olla`.
+Antes de crear un componente en un módulo, revisa `shared/componentes/index.ts`: `Boton`, `CampoTexto`, `GrupoOpciones`, `Alerta`, `EstadoVacio`, `EncabezadoPagina`, `Cargando`, `EnConstruccion`, `MarcaCocina` y `Olla`. Para casillas de verificación usa la clase `casilla`.
 
 ## Accesibilidad (RNF-12, WCAG 2.1 AA)
 
@@ -83,6 +94,8 @@ Antes de crear un componente en un módulo, revisa `shared/componentes/index.ts`
 - Al enviar con errores, el foco va al primer campo con error.
 - Los errores se anuncian con `role="alert"` y las confirmaciones con `role="status"`.
 - Contraste AA en todos los textos, foco visible en todo lo que se puede tocar, objetivos táctiles de al menos 44 px y enlace "Saltar al contenido".
+- Los colores siguen los wireframes del documento de UI ("0.2 UI"): amarillo `--color-primario` con borde y texto en tinta para la acción principal y lo seleccionado, blanco con borde de tinta para la acción alterna, crema `--color-crema` con borde de tinta para lo urgente (por vencer, bajo el mínimo) y grises cálidos para bordes y texto secundario. Los tokens están en `shared/estilos/base.css`; no escribas colores sueltos en los módulos.
+- Los errores no dependen del color: llevan un signo "!" y el texto en negrilla, y el campo queda con borde de tinta y fondo crema.
 - La tipografía es Atkinson Hyperlegible Next, diseñada para lectura con baja visión, servida desde el propio sitio.
 
 Las pantallas de referencia están en `docs/curso/` (Interfaces de Usuario, pantallas 13 a 26).

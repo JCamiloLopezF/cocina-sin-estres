@@ -1,9 +1,11 @@
 /*
  * Tokens y estilos base de Cocina sin estrés.
  *
- * Paleta de cocina de plaza: verde cilantro para lo que se puede tocar, amarillo
- * mazorca para destacar, tomate solo para errores. Todo el texto cumple contraste
- * WCAG 2.1 AA sobre su fondo (RNF-12).
+ * Paleta tomada de los wireframes (docs de UI, "0.2 UI"): amarillo para la acción
+ * principal y lo que está seleccionado, tinta casi negra para texto y bordes de lo que
+ * se puede tocar, crema para resaltar lo urgente y grises cálidos para el resto. Todo
+ * el texto cumple contraste WCAG 2.1 AA sobre su fondo (RNF-12): tinta sobre amarillo
+ * 13:1, tenue sobre blanco 5,9:1.
  *
  * Tipografía: Atkinson Hyperlegible Next, diseñada para lectura con baja visión.
  * Se sirve desde el propio sitio (sin pedir nada a Google) y solo en latín, 400 y 700.
@@ -12,18 +14,26 @@
 @import '@fontsource/atkinson-hyperlegible-next/latin-700.css';
 
 :root {
-  --color-fondo: #f6f8f3;
+  --color-fondo: #ffffff;
   --color-superficie: #ffffff;
-  --color-tinta: #17261d;
-  --color-tenue: #4f5f55;
-  --color-linea: #d3ddd5;
-  --color-primario: #1f6b43;
-  --color-primario-hondo: #154d30;
-  --color-primario-suave: #e3efe7;
-  --color-mazorca: #f4b731;
-  --color-mazorca-suave: #fdf1d2;
-  --color-tomate: #b3261e;
-  --color-tomate-suave: #fbe7e5;
+  --color-tinta: #140f1f;
+  --color-tenue: #66626d;
+  --color-linea: #e3dcd1;
+  /*
+   * Borde de los campos de texto y listas. Es un poco más oscuro que el del wireframe
+   * (#cfc8bd) porque el borde es lo que deja ver dónde escribir: 3,3:1 sobre blanco,
+   * como pide WCAG 1.4.11 (RNF-12).
+   */
+  --color-linea-fuerte: #948c80;
+  --color-punteado: #b9b0a3;
+  /* Acción principal y selección: siempre con texto y borde en tinta. */
+  --color-primario: #fedb71;
+  --color-primario-hondo: #f7cb45;
+  --color-sobre-primario: var(--color-tinta);
+  /* Resaltado de lo urgente (por vencer, bajo el mínimo) y avisos suaves. */
+  --color-crema: #fff8e4;
+  /* Fondos de apoyo: imágenes, ayudas, zonas vacías. */
+  --color-beige: #f4efe7;
   --color-foco: #1a4fd6;
 
   --fuente: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -43,7 +53,8 @@
   --espacio-7: 3rem;
 
   --radio-control: 12px;
-  --radio-tarjeta: 18px;
+  --radio-tarjeta: 16px;
+  --borde: 2px;
   --ancho-app: 30rem;
   --alto-barra: 4.25rem;
 
@@ -84,13 +95,14 @@ h3 {
 }
 
 a {
-  color: var(--color-primario);
+  color: var(--color-tinta);
   font-weight: 700;
+  text-decoration-thickness: 2px;
   text-underline-offset: 0.2em;
 }
 
 a:hover {
-  color: var(--color-primario-hondo);
+  text-decoration-color: var(--color-primario-hondo);
 }
 
 button,
@@ -104,6 +116,15 @@ textarea {
 :focus-visible {
   outline: 3px solid var(--color-foco);
   outline-offset: 2px;
+}
+
+/* Rótulo de sección en mayúsculas pequeñas: "GRANOS Y BÁSICOS", "PRODUCTO A GRANEL". */
+.rotulo {
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .solo-lectores {

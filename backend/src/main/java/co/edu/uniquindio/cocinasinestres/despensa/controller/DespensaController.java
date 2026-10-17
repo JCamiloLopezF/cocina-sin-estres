@@ -3,9 +3,11 @@ package co.edu.uniquindio.cocinasinestres.despensa.controller;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.EdicionItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaResponse;
+import co.edu.uniquindio.cocinasinestres.despensa.dto.ProductoDisponibleResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ResumenDespensaResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.service.DespensaService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,12 +25,12 @@ import java.util.List;
 /**
  * Despensa virtual del hogar de la usuaria autenticada.
  *
- * <p>No necesita {@code @PreAuthorize}: la cadena de seguridad ya exige una cuenta
- * autenticada en {@code /api/**} y la despensa se resuelve siempre desde el hogar de esa
- * cuenta, nunca desde un identificador que mande el cliente.</p>
+ * <p>La despensa se resuelve siempre desde el hogar de la cuenta autenticada, nunca desde
+ * un identificador que mande el cliente. Solo el rol USUARIA tiene hogar (ADR-16).</p>
  */
 @RestController
 @RequestMapping("/api/items-despensa")
+@PreAuthorize("hasRole('USUARIA')")
 public class DespensaController {
 
     private final DespensaService despensaService;
@@ -53,6 +55,16 @@ public class DespensaController {
     @GetMapping("/resumen")
     public ResumenDespensaResponse resumen() {
         return despensaService.resumen();
+    }
+
+    /**
+     * Productos que se pueden agregar a la despensa (pantalla 16).
+     *
+     * @param buscar texto a buscar en el nombre del producto
+     */
+    @GetMapping("/catalogo")
+    public List<ProductoDisponibleResponse> catalogo(@RequestParam(required = false) String buscar) {
+        return despensaService.catalogo(buscar);
     }
 
     @GetMapping("/{id}")

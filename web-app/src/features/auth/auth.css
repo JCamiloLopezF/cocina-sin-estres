@@ -10,7 +10,7 @@
   position: relative;
   overflow: hidden;
   padding: var(--espacio-6) var(--espacio-5) var(--espacio-7);
-  background: var(--color-mazorca);
+  background: var(--color-beige);
   color: var(--color-tinta);
 }
 
@@ -30,10 +30,12 @@
   letter-spacing: -0.035em;
 }
 
-/* "sin estrés" se cocina a fuego lento: la segunda línea queda desplazada. */
+/* "sin estrés" se cocina a fuego lento: la segunda línea queda desplazada y subrayada en amarillo. */
 .acceso__nombre span:last-child {
-  padding-left: 1.1em;
-  color: var(--color-primario-hondo);
+  justify-self: start;
+  margin-left: 1.1em;
+  padding-inline: 0.08em;
+  background: linear-gradient(transparent 62%, var(--color-primario) 62%, var(--color-primario) 92%, transparent 92%);
 }
 
 .acceso__lema {
@@ -63,7 +65,7 @@
 }
 
 .acceso__titulo {
-  font-size: var(--texto-xl);
+  font-size: var(--texto-l);
   letter-spacing: -0.015em;
 }
 
@@ -90,7 +92,7 @@
 .formulario__mostrar input {
   width: 1.25rem;
   height: 1.25rem;
-  accent-color: var(--color-primario);
+  accent-color: var(--color-tinta);
 }
 
 .acceso__enlaces {

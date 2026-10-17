@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { ErrorApi } from '../../api/cliente'
 import { mensajeDeError } from '../../api/mensajesError'
 import { useConsulta } from '../../api/useConsulta'
@@ -9,7 +10,7 @@ import './perfil.css'
 interface PerfilHogar {
   presupuestoMonto: number | null
   periodicidadIngreso: 'SEMANAL' | 'QUINCENAL' | 'MENSUAL' | null
-  personas: { id: number; nombre: string; edad: number | null }[]
+  personas: { id: number; nombre: string | null; edad: number | null }[]
 }
 
 const PERIODICIDAD: Record<string, string> = {
@@ -51,6 +52,11 @@ export function PantallaPerfil() {
             <EstadoVacio
               titulo="Todavía no has llenado el perfil del hogar"
               texto="Con las personas que comen en casa, sus restricciones y tu presupuesto podremos sugerirte recetas que te sirvan."
+              acciones={
+                <Link className="boton boton--primario boton--ancho" to="/perfil/hogar">
+                  Completar perfil del hogar
+                </Link>
+              }
             />
           ) : (
             <Alerta tono="error">
@@ -64,9 +70,7 @@ export function PantallaPerfil() {
           <dl className="perfil__datos">
             <dt>Personas</dt>
             <dd>
-              {hogar.estado.datos.personas.length === 0
-                ? 'Sin registrar'
-                : hogar.estado.datos.personas.map((p) => p.nombre).join(', ')}
+              {describirPersonas(hogar.estado.datos.personas)}
             </dd>
             <dt>Presupuesto</dt>
             <dd>
@@ -78,6 +82,11 @@ export function PantallaPerfil() {
             </dd>
           </dl>
         )}
+        {hogar.estado.tipo === 'listo' && (
+          <Link className="boton boton--secundario boton--ancho" to="/perfil/hogar">
+            Editar perfil del hogar
+          </Link>
+        )}
       </section>
 
       <Boton variante="secundario" ancho onClick={() => void salir()}>
@@ -85,4 +94,13 @@ export function PantallaPerfil() {
       </Boton>
     </>
   )
+}
+
+function describirPersonas(personas: PerfilHogar['personas']): string {
+  if (personas.length === 0) {
+    return 'Sin registrar'
+  }
+  const nombres = personas.map((p) => p.nombre).filter(Boolean)
+  const cuantas = `${personas.length} ${personas.length === 1 ? 'persona' : 'personas'}`
+  return nombres.length ? `${cuantas}: ${nombres.join(', ')}` : cuantas
 }
