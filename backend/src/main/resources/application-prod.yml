@@ -1,0 +1,40 @@
+# Perfil prod: el ambiente desplegado.
+#
+# Todas las variables son obligatorias y sin valor por defecto: si falta una, la
+# aplicación no arranca. Es mejor que quede abajo a que quede arriba mal
+# configurada (por ejemplo, sin poder verificar tokens).
+#
+# En este perfil el encabezado X-Dev-User no existe: FiltroUsuarioDev está marcado
+# con @Profile("dev") y su bean no se crea.
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USUARIO}
+    password: ${DB_CONTRASENA}
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    # Las migraciones se aplican al desplegar; nadie toca el esquema a mano (ADR-07).
+    validate-on-migrate: true
+
+server:
+  # Detrás de un proxy o balanceador: respeta los encabezados X-Forwarded-*
+  # para que las URL generadas y la IP del cliente sean las reales.
+  forward-headers-strategy: framework
+  tomcat:
+    # Sin el detalle de la versión en las respuestas de error.
+    remoteip:
+      remote-ip-header: X-Forwarded-For
+
+logging:
+  level:
+    root: INFO
+    co.edu.uniquindio.cocinasinestres: ${LOG_NIVEL:INFO}
+    # Nunca en producción: las consultas pueden llevar datos personales (RNF-21).
+    org.hibernate.SQL: WARN

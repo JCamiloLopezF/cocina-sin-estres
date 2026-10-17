@@ -104,6 +104,16 @@ El PR de `develop` hacia `main` usa el tipo `release`:
 release: prototipo 1
 ```
 
+**Checks automáticos.** Cada PR hacia `develop` o `main` ejecuta tres checks obligatorios. Si alguno falla, GitHub bloquea el merge:
+
+| Check | Qué revisa | Dónde ver el detalle |
+| --- | --- | --- |
+| `convenciones-pr` | Título del PR, nombre de la rama y rama destino | Pestaña *Checks* del PR |
+| `ci-backend` | Compila el backend y corre sus pruebas (JUnit, Testcontainers) con cobertura JaCoCo | *Checks* → resumen del job; reporte HTML en el artefacto `reportes-backend` |
+| `ci-frontend` | Instala dependencias, corre las pruebas (Vitest) y compila el frontend | *Checks* → registro del job |
+
+`ci-backend` y `ci-frontend` solo compilan cuando el PR toca su carpeta. Si no la toca, terminan en verde de inmediato. Antes de abrir el PR, corre las mismas pruebas en tu computador (`./gradlew build` en `backend/`, `npm test` en `web-app/`).
+
 **Reglas del PR:**
 
 - Necesita **una aprobación de otro integrante**. La aprobación del autor no cuenta.
@@ -199,6 +209,26 @@ web-app/src/
 | Pruebas | junto al archivo, `.test.tsx` | `TarjetaReceta.test.tsx` |
 
 Antes de crear un componente, revisa `shared/`. Si un componente se repite en dos módulos, se mueve a `shared/`.
+
+Módulos permitidos (el check `convenciones-pr` rechaza cualquier otro). Se escriben en minúsculas y sin tildes:
+
+| Módulo | Cuándo usarlo |
+| --- | --- |
+| `auth` | Registro, inicio de sesión, recuperación de contraseña, tokens de Firebase y roles |
+| `perfil` | Perfil del hogar: personas, presupuesto, restricciones y onboarding |
+| `despensa` | Despensa virtual: productos del hogar, cantidades, vencimientos y mínimos |
+| `planificador` | Plan semanal, cruce con la despensa, costo, modo rescate y lista de compras |
+| `recetario` | Catálogo de recetas: listar, buscar, filtrar y ver el detalle |
+| `avisos` | Motor de reglas y centro de avisos |
+| `admin` | Gestión de cuentas y roles (rol ADMIN) |
+| `curaduria` | Edición del catálogo de productos y recetas (rol CURADOR) |
+| `web` | Frontend en general: estructura, navegación y componentes compartidos |
+| `api` | Backend en general: configuración, seguridad común y manejo de errores |
+| `db` | Base de datos: migraciones Flyway y carga de datos |
+| `ci` | GitHub Actions, el pipeline y la configuración del repositorio |
+| `docs` | Solo documentación |
+
+Si un cambio toca varios módulos, usa el principal: el esqueleto del backend va con `api` y el del frontend con `web`.
 
 ## 6. Migraciones de base de datos (Flyway)
 

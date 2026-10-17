@@ -2,35 +2,260 @@
 
 API de **Cocina sin estrés** en Java con Spring Boot. Concentra la lógica de negocio, verifica el token de Firebase en cada petición y aplica la autorización por rol.
 
-> **Estado:** el esqueleto del proyecto llega con KAN-8. Este README se completa en ese PR.
-
 ## Requisitos
 
 - Java 21 (LTS)
 - Docker (para MySQL local con Docker Compose)
 - No hace falta instalar Gradle: el proyecto usa el wrapper (`./gradlew`).
 
+Versiones: Spring Boot 4.1.1 (Spring Framework 7, Spring Security 7, Hibernate 7.4), Flyway 12, MySQL 8.4, Firebase Admin SDK 9.9.
+
 ## Configuración
 
 1. Copia `.env.example` a `.env` y completa los valores. El archivo `.env` nunca se sube.
-2. Para trabajar sin Firebase, usa el perfil `dev`: acepta el encabezado `X-Dev-User` para simular un usuario (ADR-19). Ese modo no existe en producción.
+2. Siempre hay que activar un perfil: `dev` o `prod`.
+
+| Variable | Para qué | dev | prod |
+| --- | --- | --- | --- |
+| `DB_URL`, `DB_USUARIO`, `DB_CONTRASENA` | Conexión a MySQL | Opcional (toma los valores del `docker-compose.yml`) | Obligatoria |
+| `PUERTO` | Puerto de la API | Opcional (8080) | Opcional (8080) |
+| `LOG_NIVEL` | Nivel de log de la aplicación | Opcional (DEBUG) | Opcional (INFO) |
+| `FIREBASE_CREDENCIALES_RUTA` | JSON de la cuenta de servicio, **fuera del repositorio** | Se ignora | **Obligatoria**: sin ella la aplicación no arranca |
+| `CIFRADO_CLAVE_V1` | Clave AES-256 en Base64 para datos de salud (ADR-20) | Opcional mientras no haya datos cifrados | Obligatoria |
+| `ADMIN_INICIAL_CORREO` | Correo que entra como ADMIN la primera vez (ADR-16) | Opcional | Recomendada |
+| `CORS_ORIGENES` | Orígenes del navegador permitidos | Opcional (`http://localhost:5173`) | Obligatoria |
+
+El repositorio es público: ningún valor real se escribe en el código ni en los `application*.yml` (CONTRIBUTING.md §8).
 
 ## Ejecución
 
 ```bash
-# Base de datos local
+# Base de datos local (desde la raíz del repositorio)
 docker compose up -d mysql
 
-# API en el perfil dev
+# API en el perfil dev. Flyway aplica las migraciones al arrancar.
 ./gradlew bootRun --args='--spring.profiles.active=dev'
 
-# Pruebas
+# Pruebas (la de integración necesita Docker en ejecución)
 ./gradlew test
 ```
 
-## Módulos
+**Qué hace cada pieza.** Docker solo sirve para tener un MySQL en tu computador (`docker compose up -d mysql`); no ejecuta nuestro código ni las migraciones. Las migraciones las aplica **Flyway cuando arranca la API** (`bootRun`) o cuando corre la prueba de integración. Hacer `commit` y `push` solo sube los archivos: no toca ninguna base de datos. Para comprobar `V1` y `V2` en tu equipo basta con levantar MySQL y arrancar la API en `dev`; en el log aparece `Successfully applied 2 migrations`.
 
-Organizado por módulo de negocio (RNF-26). Cada módulo tiene las capas `controller`, `dto`, `service`, `domain`, `model` y `repository`.
+Si ya habías arrancado la API con una versión anterior de una migración y luego la cambias, Flyway falla por *checksum*. En tu base local se resuelve con `docker compose down -v` (borra los datos locales) y volviendo a arrancar.
+
+## Autenticación
+
+No hay endpoint de registro ni de inicio de sesión. El frontend entra con Firebase y manda el token en cada petición; el backend lo verifica en un filtro y busca o crea el `usuario` por `firebase_uid` (**alta perezosa**, ADR-05). La primera cuenta cuyo correo coincida con `ADMIN_INICIAL_CORREO` entra con rol `ADMIN`.
+
+```bash
+# prod: token de Firebase
+curl -H 'Authorization: Bearer <idToken>' http://localhost:8080/api/yo
+```
+
+En el perfil `dev` no hace falta Firebase: un filtro alternativo acepta el encabezado `X-Dev-User` con el `firebase_uid` que quieras simular (ADR-19). El correo se inventa como `<uid>@dev.local`.
+
+```bash
+# dev: usuaria simulada
+curl -H 'X-Dev-User: uid-mariana' http://localhost:8080/api/yo
+```
+
+> `FiltroUsuarioDev` es la única clase que lee ese encabezado y está marcada con `@Profile("dev")`: en `prod` el bean no se crea y el encabezado no significa nada.
+
+## Autorización
+
+Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que decide es la cadena de seguridad.
+
+| Ruta | Quién entra |
+| --- | --- |
+| `GET /api/salud` | Cualquiera, sin token |
+| `/api/**` | Cuenta autenticada y activa |
+| `/api/curaduria/**` | `CURADOR` o `ADMIN` |
+| `/api/admin/**` | `ADMIN` |
+| Todo lo demás | Nadie |
+
+## Endpoints
+
+| Método y ruta | Qué hace |
+| --- | --- |
+| `GET /api/salud` | Comprobación de salud. Público. Devuelve estado, versión y hora UTC. |
+| `GET /api/yo` | Devuelve la cuenta autenticada: `id`, `correo`, `rol` y `perfilCompleto`. |
+| `GET /api/curaduria/productos` | Lista los productos activos del catálogo, ordenados por categoría y nombre. `CURADOR` o `ADMIN`. |
+| `GET /api/curaduria/productos/{id}` | Devuelve un producto. 404 si no existe. |
+| `POST /api/curaduria/productos` | Crea un producto del catálogo global. Responde 201 con `Location`. |
+| `PUT /api/curaduria/productos/{id}` | Actualiza un producto. Si no cambia ningún campo, no se modifica el responsable ni se audita. |
+| `DELETE /api/curaduria/productos/{id}` | Desactiva el producto (no lo borra). Responde 204; repetirlo no tiene efecto. |
+| `GET /api/items-despensa` | Lista la despensa del hogar de la usuaria. Parámetros opcionales: `filtro` (`TODO`, `POR_VENCER`, `BAJO_MINIMO`) y `buscar`. |
+| `GET /api/items-despensa/resumen` | Totales para la pantalla de inicio: `total`, `porVencer` y `bajoMinimo`. |
+| `GET /api/items-despensa/catalogo` | Productos del catálogo que la usuaria puede agregar (pantalla 16), por nombre. Parámetro opcional `buscar`. Cada uno trae `itemDespensaId` si ya está en la despensa. |
+| `GET /api/items-despensa/{id}` | Devuelve un producto de la despensa. 404 si no existe o es de otro hogar. |
+| `POST /api/items-despensa` | Agrega un producto del catálogo a la despensa. Responde 201 con `Location`. |
+| `PUT /api/items-despensa/{id}` | Edita cantidad o nivel, mínimo, vencimiento y ubicación. |
+| `DELETE /api/items-despensa/{id}` | Quita el producto de la despensa. Responde 204. |
+
+Cada módulo agrega sus rutas; las convenciones están en [`CONTRIBUTING.md`](../CONTRIBUTING.md#api-rest).
+
+## Curaduría: catálogo de productos con precios de referencia (KAN-17)
+
+El catálogo es la lista de productos que usan la despensa, las recetas y el planificador para calcular costos. Cada producto del catálogo global (`producto.hogar_id` NULL) tiene un **precio de referencia completo**: una unidad de compra, cuánto trae esa unidad (en la unidad base del producto) y su precio en pesos (RNF-02).
+
+**Datos de un producto**
+
+| Campo | Qué es | Regla |
+| --- | --- | --- |
+| `nombre` | Nombre del producto | Obligatorio, hasta 120 caracteres |
+| `categoria` | Categoría | Obligatoria, hasta 60 caracteres |
+| `tipoCantidad` | `CONTABLE` o `GRANEL` | Obligatorio |
+| `unidadBase` | `g`, `ml` o `unidad` | Obligatoria |
+| `unidadCompra` | Presentación de compra, ej. `Bolsa` | Obligatoria, hasta 30 caracteres |
+| `cantidadUnidadCompra` | Cuánto trae la unidad de compra, en unidad base | Obligatoria, mayor que cero, hasta 3 decimales |
+| `precioUnidadCompra` | Precio de referencia de la unidad de compra, en pesos | Obligatorio, no negativo, hasta 2 decimales |
+| `capacidadReferencia` | Cantidad que equivale a "Lleno" | Obligatoria y mayor que cero en `GRANEL`; no se permite en `CONTABLE` |
+| `esBasico` | Si es un producto básico de la despensa | Opcional (por defecto `false`) |
+
+```bash
+# dev: crear un producto (la cuenta debe ser CURADOR o ADMIN)
+curl -X POST http://localhost:8080/api/curaduria/productos \
+  -H 'X-Dev-User: uid-curadora' -H 'Content-Type: application/json' \
+  -d '{
+    "nombre": "Harina de trigo",
+    "categoria": "GRANOS",
+    "tipoCantidad": "GRANEL",
+    "unidadBase": "g",
+    "unidadCompra": "Bolsa",
+    "cantidadUnidadCompra": 1000,
+    "precioUnidadCompra": 4200,
+    "capacidadReferencia": 1000,
+    "esBasico": false
+  }'
+```
+
+**Tener una cuenta con permiso en `dev`.** Toda cuenta nueva entra como `USUARIA`. Para probar la curaduría, arranca la API en `dev`, haz una primera petición con `X-Dev-User: uid-curadora` (por ejemplo `GET /api/yo`) para que se cree la cuenta, y súbela a curadora en tu base local:
+
+```sql
+UPDATE usuario SET rol = 'CURADOR' WHERE correo = 'uid-curadora@dev.local';
+```
+
+El cambio aplica desde la siguiente petición.
+
+```bash
+ADMIN_INICIAL_CORREO=uid-curadora@dev.local ./gradlew bootRun --args='--spring.profiles.active=dev'
+```
+
+Solo funciona si esa cuenta aún no existe: el rol se asigna al crearla.
+
+**Auditoría (RNF-24, ADR-23).** Crear, editar y desactivar escriben un registro en `auditoria_catalogo` dentro de la misma transacción: quién, cuándo, qué acción y los campos que cambiaron (`{"campo": {"antes": ..., "despues": ...}}`). Si falla la auditoría, tampoco se guarda el cambio. Por ahora la auditoría solo se escribe; no hay endpoint para consultarla.
+
+**Catálogo inicial (`V2`).** Carga 21 productos con su precio de referencia, básicos de la despensa colombiana (granos, aceites, lácteos, proteínas, verduras y frutas). Los registra un usuario de sistema (`sistema-carga-inicial`, rol `CURADOR`, desactivado, que no puede iniciar sesión) y deja un registro `CREAR` por producto en la auditoría. Los precios son una referencia aproximada que el curador ajusta con `PUT`.
+
+**Errores de validación.** Responden 400 con estos códigos en `codigo`:
+
+| Código | Cuándo |
+| --- | --- |
+| `PRODUCTO_NOMBRE_REQUERIDO`, `PRODUCTO_NOMBRE_LARGO` | Nombre vacío o de más de 120 caracteres |
+| `PRODUCTO_CATEGORIA_REQUERIDA`, `PRODUCTO_CATEGORIA_LARGA` | Categoría vacía o de más de 60 caracteres |
+| `PRODUCTO_TIPO_CANTIDAD_REQUERIDO`, `PRODUCTO_UNIDAD_BASE_REQUERIDA` | Falta el tipo de cantidad o la unidad base |
+| `PRODUCTO_UNIDAD_COMPRA_REQUERIDA`, `PRODUCTO_UNIDAD_COMPRA_LARGA` | Unidad de compra vacía o de más de 30 caracteres |
+| `PRODUCTO_CANTIDAD_COMPRA_REQUERIDA`, `PRODUCTO_CANTIDAD_COMPRA_INVALIDA` | Falta, es cero o negativa, o excede 3 decimales |
+| `PRODUCTO_PRECIO_REQUERIDO`, `PRODUCTO_PRECIO_INVALIDO` | Falta, es negativo o excede 2 decimales |
+| `PRODUCTO_CAPACIDAD_REQUERIDA` | Producto a granel sin capacidad de referencia válida |
+| `PRODUCTO_CAPACIDAD_NO_PERMITIDA` | Producto contable con capacidad de referencia |
+
+Un producto que no existe responde 404 con `RECURSO_NO_ENCONTRADO`.
+
+## Despensa virtual (KAN-xx)
+
+Productos que la usuaria tiene en casa, con su cantidad, vencimiento y nivel mínimo. Todo se resuelve desde el **hogar de la cuenta autenticada**: el cliente nunca manda un hogar, y un registro de otro hogar responde 404 (RNF-22). Una cuenta que aún no creó su hogar recibe 409 `DESPENSA_HOGAR_REQUERIDO`.
+
+**Cantidad mixta (ADR-11, ADR-15).** Cómo se registra la cantidad depende del `tipoCantidad` del producto. Mezclar los dos modos responde 400.
+
+| Producto | Cantidad | Mínimo (opcional) | Se guarda como |
+| --- | --- | --- | --- |
+| `CONTABLE` | `cantidad`: número en su unidad base, desde 0, hasta 3 decimales | `cantidadMinima`: número | La cantidad tal cual, `es_estimada = FALSE` |
+| `GRANEL` | `nivel`: `AGOTADO`, `POCO`, `MEDIO` o `LLENO` | `nivelMinimo`: `AGOTADO`, `POCO` o `MEDIO` | Proporción de la `capacidad_referencia`, `es_estimada = TRUE` |
+
+**Equivalencia de los niveles.** Cada nivel es una fracción de la capacidad de referencia del producto: `LLENO` = 100 %, `MEDIO` = 50 %, `POCO` = 25 %, `AGOTADO` = 0 %. El nivel que se muestra **no se guarda**: se calcula desde la cantidad y es el más cercano de los cuatro (hasta 37,5 % es `POCO`, hasta 75 % es `MEDIO`, más es `LLENO`; 0 es `AGOTADO`). Así sigue siendo correcto cuando otro proceso cambia la cantidad. Las reglas viven en `despensa/domain/NivelGranel`.
+
+**Vencimiento.** `fechaVencimiento` es opcional (formato `AAAA-MM-DD`). El estado se calcula con la fecha de hoy **en Colombia** (`America/Bogota`, ver `ConfiguracionReloj`):
+
+| `estadoVencimiento` | Cuándo |
+| --- | --- |
+| `SIN_FECHA` | No hay fecha |
+| `VIGENTE` | Vence en más de 7 días |
+| `POR_VENCER` | Vence hoy o dentro de los próximos 7 días |
+| `VENCIDO` | La fecha ya pasó |
+
+**Nivel mínimo.** Un producto está `bajoMinimo` cuando su cantidad **llega** al mínimo o queda por debajo (`cantidad <= cantidadMinima`); sin mínimo registrado nunca lo está. Las reglas de "por vencer" y "bajo mínimo" están en `despensa/domain/ReglasDespensa` para que el motor de avisos las reutilice y signifiquen lo mismo en toda la aplicación.
+
+**Pestañas del listado.** `POR_VENCER` incluye también los ya vencidos y los ordena del que vence antes al que vence después; `BAJO_MINIMO` y `TODO` se ordenan por nombre (y `TODO`, por categoría primero). El buscador no distingue mayúsculas ni tildes.
+
+```bash
+# dev: agregar huevos (contable) y arroz (a granel). Requiere que la cuenta tenga hogar.
+curl -X POST http://localhost:8080/api/items-despensa \
+  -H 'X-Dev-User: uid-mariana' -H 'Content-Type: application/json' \
+  -d '{ "productoId": 12, "cantidad": 12, "cantidadMinima": 4, "fechaVencimiento": "2026-10-20", "ubicacion": "Nevera" }'
+
+curl -X POST http://localhost:8080/api/items-despensa \
+  -H 'X-Dev-User: uid-mariana' -H 'Content-Type: application/json' \
+  -d '{ "productoId": 1, "nivel": "MEDIO", "nivelMinimo": "POCO" }'
+
+# Lo que vence pronto
+curl 'http://localhost:8080/api/items-despensa?filtro=POR_VENCER' -H 'X-Dev-User: uid-mariana'
+```
+
+**Errores de validación.** Responden 400 con estos códigos en `codigo`:
+
+| Código | Cuándo |
+| --- | --- |
+| `DESPENSA_PRODUCTO_REQUERIDO` | No llegó `productoId` |
+| `DESPENSA_CANTIDAD_REQUERIDA`, `DESPENSA_CANTIDAD_INVALIDA` | Producto contable sin cantidad, o negativa / con más de 3 decimales |
+| `DESPENSA_NIVEL_REQUERIDO` | Producto a granel sin nivel |
+| `DESPENSA_CANTIDAD_NO_PERMITIDA`, `DESPENSA_MINIMO_NO_PERMITIDO` | Producto a granel con cantidad o mínimo numérico |
+| `DESPENSA_NIVEL_NO_PERMITIDO`, `DESPENSA_NIVEL_MINIMO_NO_PERMITIDO` | Producto contable con nivel o nivel mínimo |
+| `DESPENSA_MINIMO_INVALIDO` | Mínimo numérico negativo o con más de 3 decimales |
+| `DESPENSA_NIVEL_MINIMO_INVALIDO` | Nivel mínimo `LLENO` (avisaría siempre) |
+| `DESPENSA_UBICACION_LARGA` | Ubicación de más de 40 caracteres |
+| `DESPENSA_FILTRO_INVALIDO` | `filtro` distinto de `TODO`, `POR_VENCER` o `BAJO_MINIMO` |
+
+Además: 404 `RECURSO_NO_ENCONTRADO` si el producto del catálogo no existe, está desactivado o es de otro hogar, o si el registro no es del hogar; 409 `DESPENSA_PRODUCTO_REPETIDO` si ese producto ya está en la despensa (también cuando dos peticiones simultáneas chocan contra `uk_item_despensa_hogar_id_producto_id`).
+
+**Dependencias provisionales.** Para no usar las entidades de otros módulos (RNF-26), despensa define dos puertos en `domain/`: `HogarDeUsuaria` (qué hogar tiene una cuenta) y `CatalogoProductos` (leer productos). Hoy los implementan `HogarDeUsuariaJdbc` y `CatalogoProductosJdbc`, que leen las tablas `hogar` y `producto` con `JdbcClient`. Cuando perfil y curaduría/recetario publiquen un servicio de consulta, solo se reemplazan esas dos clases.
+
+## Errores
+
+Todos salen en formato *Problem Details* (RFC 9457) desde un único `@RestControllerAdvice` en `comun/error`, con el campo `codigo` estable que el frontend usa para decidir el mensaje. Los controladores no arman respuestas de error: lanzan una `ExcepcionNegocio`.
+
+```json
+{
+  "status": 403,
+  "title": "Sin permiso",
+  "detail": "Tu cuenta no tiene permiso para esta sección.",
+  "instance": "/api/admin/cuentas",
+  "codigo": "AUTH_SIN_PERMISO"
+}
+```
+
+Los códigos transversales están en `comun/error/CodigoError`; cada módulo declara los suyos. La tabla de situación y estado HTTP está en [`CONTRIBUTING.md`](../CONTRIBUTING.md#7-manejo-de-errores-de-la-api).
+
+## Estructura
+
+Organizado por módulo de negocio (RNF-26), paquete raíz `co.edu.uniquindio.cocinasinestres`. Cada módulo tiene las capas `controller`, `dto`, `service`, `domain`, `model` y `repository`, y cada paquete un `package-info.java` que dice qué va ahí.
+
+```
+co.edu.uniquindio.cocinasinestres
+├── perfil         ← entidad JPA: Usuario
+├── despensa       ← entidad JPA: ItemDespensa
+├── recetario
+├── planificador
+├── avisos
+├── curaduria      ← entidades JPA: Producto, AuditoriaCatalogo
+├── admin
+└── comun
+    ├── config     Configuración tipada y Firebase Admin SDK
+    ├── seguridad  Filtros de autenticación, cadena de seguridad, roles
+    ├── error      Problem Details y excepciones del negocio
+    └── controller Endpoints transversales (salud)
+```
 
 | Módulo | Responsabilidad | Depende de |
 | --- | --- | --- |
@@ -39,10 +264,34 @@ Organizado por módulo de negocio (RNF-26). Cada módulo tiene las capas `contro
 | `recetario` | Catálogo de productos y recetas (lectura) | `comun` |
 | `planificador` | Plan semanal, cruce con la despensa, costo, modo rescate y lista de compras | `perfil`, `despensa`, `recetario` |
 | `avisos` | Motor de reglas y centro de avisos | `despensa`, `planificador` |
-| `curaduria` | Edición del catálogo y auditoría (rol CURADOR) | `recetario` |
+| `curaduria` | Catálogo de productos con precios de referencia, su edición y auditoría (rol CURADOR) | `perfil` (cuenta autenticada) |
 | `admin` | Gestión de cuentas y roles (rol ADMIN) | `perfil` |
-| `comun` | Seguridad, configuración, manejo de errores | — |
+| `comun` | Seguridad, configuración, manejo de errores | `perfil` (para resolver la usuaria autenticada) |
+
+Un módulo no usa las entidades ni los repositorios de otro: llama a su servicio. `domain/` va sin Spring y sin JPA (ADR-09).
+
+**Entidades JPA:** `perfil/model/Usuario`, `curaduria/model/Producto` y `curaduria/model/AuditoriaCatalogo`. Las otras 14 tablas de `V1` las mapea cada módulo cuando le toque. Hoy la entidad `Producto` vive en `curaduria`; los demás módulos no la usan directamente: cuando necesiten productos se los piden a un servicio.
 
 ## Migraciones
 
-En `src/main/resources/db/migration/`. Reglas en [`CONTRIBUTING.md`](../CONTRIBUTING.md#6-migraciones-de-base-de-datos-flyway).
+En `src/main/resources/db/migration/`:
+
+| Migración | Contenido |
+| --- | --- |
+| `V1__esquema_inicial.sql` | Las 17 tablas, con sus llaves y restricciones (KAN-12) |
+| `V2__catalogo_inicial.sql` | Usuario de sistema, 21 productos globales con precio de referencia y su auditoría (KAN-17) |
+
+Flyway las aplica al arrancar, en orden y una sola vez, y Hibernate corre con `ddl-auto=validate`: si una entidad no concuerda con su tabla, la aplicación no arranca. Reglas en [`CONTRIBUTING.md`](../CONTRIBUTING.md#6-migraciones-de-base-de-datos-flyway).
+
+## Pruebas
+
+```bash
+./gradlew test     # pruebas + reporte de cobertura
+./gradlew build    # lo mismo que corre el CI en cada PR: compila, prueba y empaqueta
+```
+
+Cada ejecución de `test` genera el reporte de cobertura de JaCoCo en `build/reports/jacoco/test/html/index.html`. En GitHub, el check `ci-backend` muestra el resumen de cobertura en la pestaña *Checks* del PR y guarda el reporte completo como artefacto `reportes-backend`.
+
+- **Dominio** (`perfil/domain/RolTest`): JUnit puro, sin contexto de Spring.
+- **Servicios** (`perfil/service/UsuarioActualServiceTest`): dobles de Mockito para los repositorios, sin Spring ni base de datos. Cubre el alta perezosa, el ADMIN inicial, la cuenta desactivada y dos peticiones simultáneas del mismo `firebase_uid`.
+- **Integración** (`comun/seguridad/SeguridadIntegracionTest`): levanta la aplicación con el perfil `dev` contra un MySQL 8.4 en Docker (Testcontainers). Verifica 401 sin credenciales, 200 con `X-Dev-User`, 403 en `/api/admin` y `/api/curaduria` con rol `USUARIA`, y que la ruta de salud sea pública. **Necesita Docker en ejecución**; el solo arranque del contexto comprueba además que Flyway aplica `V1` y que `validate` no encuentra diferencias.

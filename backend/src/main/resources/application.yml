@@ -1,0 +1,74 @@
+# Configuración común a todos los perfiles.
+#
+# Todo lo sensible llega por variable de entorno; los nombres están en
+# backend/.env.example. El repositorio es público: aquí no va ningún valor real
+# (CONTRIBUTING.md §8). Las variables sin valor por defecto hacen fallar el
+# arranque a propósito, en lugar de dejar la aplicación a medio configurar.
+#
+# Siempre hay que activar un perfil: dev o prod.
+
+spring:
+  application:
+    name: cocina-sin-estres
+    version: 0.1.0
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USUARIO}
+    password: ${DB_CONTRASENA}
+    hikari:
+      maximum-pool-size: 10
+      # Las fechas se guardan en UTC; ver spring.jpa.properties.hibernate.jdbc.time_zone
+      connection-init-sql: SET time_zone = '+00:00'
+
+  jpa:
+    # El esquema solo cambia con migraciones Flyway (ADR-07). "validate" revisa al
+    # arrancar que las entidades concuerden con las tablas y falla si no.
+    # Nunca create ni update.
+    hibernate:
+      ddl-auto: validate
+    # Sin sesión abierta durante la vista: cada consulta ocurre dentro de su servicio.
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          batch_size: 25
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # Borrar el esquema nunca es una operación de la aplicación.
+    clean-disabled: true
+
+  jackson:
+    default-property-inclusion: non_null
+    # Fechas en ISO 8601, no en milisegundos (CONTRIBUTING.md §5). En Jackson 3
+    # esta opción salió de "serialization" y vive en "datetime".
+    datetime:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${PUERTO:8080}
+  error:
+    # Los errores los arma ManejadorErrores en formato Problem Details (RFC 9457).
+    whitelabel:
+      enabled: false
+    include-stacktrace: never
+    include-message: never
+
+# Configuración propia, ver PropiedadesCocina.
+cocina:
+  firebase:
+    credenciales-ruta: ${FIREBASE_CREDENCIALES_RUTA:}
+  cifrado:
+    clave-v1: ${CIFRADO_CLAVE_V1:}
+  admin-inicial:
+    correo: ${ADMIN_INICIAL_CORREO:}
+  cors:
+    origenes: ${CORS_ORIGENES:http://localhost:5173}
+
+logging:
+  level:
+    root: INFO
+    co.edu.uniquindio.cocinasinestres: ${LOG_NIVEL:INFO}

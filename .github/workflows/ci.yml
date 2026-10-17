@@ -1,0 +1,114 @@
+# Integración continua (KAN-50): compila y prueba el backend y el frontend en cada PR.
+# Los jobs "ci-backend" y "ci-frontend" son checks obligatorios en main y develop:
+# si fallan, GitHub bloquea el merge.
+#
+# Cada job corre siempre y decide en su primer paso si aplica. Si el PR no toca su
+# módulo, termina en verde sin compilar. Así un check obligatorio nunca se queda
+# "esperando" en un PR que solo cambia documentación.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un push nuevo al mismo PR cancela la ejecución anterior, que ya no sirve
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: ci-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: ¿Cambió el backend?
+        id: cambios
+        shell: bash
+        env:
+          EVENTO: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash .github/scripts/detectar-cambios.sh '^(backend/|docker-compose\.yml$|\.github/workflows/ci\.yml$|\.github/scripts/(detectar-cambios\.sh|resumen-jacoco\.py)$)' backend/build.gradle
+
+      - name: Instalar Java 21
+        if: steps.cambios.outputs.aplica == 'true'
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Preparar Gradle (con caché)
+        if: steps.cambios.outputs.aplica == 'true'
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Compilar y ejecutar pruebas (JUnit + Testcontainers + JaCoCo)
+        if: steps.cambios.outputs.aplica == 'true'
+        working-directory: backend
+        run: ./gradlew build --no-daemon
+
+      - name: Resumen de cobertura
+        if: always() && steps.cambios.outputs.aplica == 'true'
+        run: python3 .github/scripts/resumen-jacoco.py backend/build/reports/jacoco/test/jacocoTestReport.xml >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar reportes de pruebas y cobertura
+        if: always() && steps.cambios.outputs.aplica == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: reportes-backend
+          path: |
+            backend/build/reports/tests/test/
+            backend/build/reports/jacoco/test/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  frontend:
+    name: ci-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: ¿Cambió el frontend?
+        id: cambios
+        shell: bash
+        env:
+          EVENTO: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash .github/scripts/detectar-cambios.sh '^(web-app/|\.github/workflows/ci\.yml$|\.github/scripts/detectar-cambios\.sh$)' web-app/package.json
+
+      - name: Instalar Node.js 22
+        if: steps.cambios.outputs.aplica == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web-app/package-lock.json
+
+      - name: Instalar dependencias
+        if: steps.cambios.outputs.aplica == 'true'
+        working-directory: web-app
+        run: npm ci
+
+      - name: Ejecutar pruebas (Vitest)
+        if: steps.cambios.outputs.aplica == 'true'
+        working-directory: web-app
+        run: npm test
+
+      - name: Compilar para producción
+        if: steps.cambios.outputs.aplica == 'true'
+        working-directory: web-app
+        run: npm run build
