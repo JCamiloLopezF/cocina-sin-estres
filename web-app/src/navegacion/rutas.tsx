@@ -4,9 +4,12 @@ import { PantallaEntrar } from '../features/auth/PantallaEntrar'
 import { PantallaRecuperar } from '../features/auth/PantallaRecuperar'
 import { PantallaRegistro } from '../features/auth/PantallaRegistro'
 import { PantallaCuraduria } from '../features/curaduria/PantallaCuraduria'
+import { PantallaAgregarProducto } from '../features/despensa/PantallaAgregarProducto'
 import { PantallaDespensa } from '../features/despensa/PantallaDespensa'
+import { PantallaItemDespensa } from '../features/despensa/PantallaItemDespensa'
 import { PantallaInicio } from '../features/inicio/PantallaInicio'
 import { PantallaPerfil } from '../features/perfil/PantallaPerfil'
+import { PantallaPerfilHogar } from '../features/perfil/PantallaPerfilHogar'
 import { PantallaPlan } from '../features/planificador/PantallaPlan'
 import { PantallaRecetario } from '../features/recetario/PantallaRecetario'
 import { DisenoOperativo } from './DisenoOperativo'
@@ -40,9 +43,12 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
               children: [
                 { index: true, element: <PantallaInicio /> },
                 { path: '/despensa', element: <PantallaDespensa /> },
+                { path: '/despensa/agregar', element: <PantallaAgregarProducto /> },
+                { path: '/despensa/:id', element: <PantallaItemDespensa /> },
                 { path: '/plan', element: <PantallaPlan /> },
                 { path: '/recetas', element: <PantallaRecetario /> },
                 { path: '/perfil', element: <PantallaPerfil /> },
+                { path: '/perfil/hogar', element: <PantallaPerfilHogar /> },
               ],
             },
           ],

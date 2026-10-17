@@ -69,13 +69,24 @@ src/
 
 Si alguien abre una pantalla que no es de su rol, la aplicación lo lleva a su propio inicio. Esto ordena la navegación, pero **no es la barrera de seguridad**: el backend revisa el rol en cada petición (RNF-23).
 
+### Pantallas del prototipo 1
+
+| Ruta | Pantalla | API |
+| --- | --- | --- |
+| `/perfil/hogar` | Perfil del hogar: personas, presupuesto, ingreso, días sin tiempo y restricciones (pantallas 4 y 5) | `GET` y `PUT /api/perfil/hogar` |
+| `/despensa` | Listado con búsqueda y filtros Todo, Por vencer y Bajo mínimo (14, 15 y 20) | `GET /api/items-despensa` |
+| `/despensa/agregar` | Buscar en el catálogo y registrar cantidad o nivel (16, 17 y 18) | `GET /api/items-despensa/catalogo`, `POST /api/items-despensa` |
+| `/despensa/:id` | Detalle, editar y quitar con confirmación y deshacer (19, RNF-13) | `GET`, `PUT` y `DELETE /api/items-despensa/{id}` |
+
+Las restricciones de salud solo se envían con el consentimiento marcado (Ley 1581, RNF-22). La lista de restricciones del formulario es provisional hasta que exista el catálogo de restricciones (RNF-03).
+
 ### Errores
 
 `api/cliente.ts` convierte cualquier error en `ErrorApi` con el `codigo` estable del backend (CONTRIBUTING.md §7). El texto que ve la usuaria sale de `api/mensajesError.ts` según ese código, nunca del `detail` del servidor. Los errores de Firebase se traducen en `features/auth/mensajesAuth.ts`. Correo inexistente y contraseña equivocada dan el mismo mensaje, para no revelar qué correos tienen cuenta.
 
 ## Componentes compartidos
 
-Antes de crear un componente en un módulo, revisa `shared/componentes/index.ts`: `Boton`, `CampoTexto`, `GrupoOpciones`, `Alerta`, `EstadoVacio`, `EncabezadoPagina`, `Cargando`, `EnConstruccion`, `MarcaCocina` y `Olla`.
+Antes de crear un componente en un módulo, revisa `shared/componentes/index.ts`: `Boton`, `CampoTexto`, `GrupoOpciones`, `Alerta`, `EstadoVacio`, `EncabezadoPagina`, `Cargando`, `EnConstruccion`, `MarcaCocina` y `Olla`. Para casillas de verificación usa la clase `casilla`.
 
 ## Accesibilidad (RNF-12, WCAG 2.1 AA)
 
