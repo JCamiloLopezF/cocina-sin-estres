@@ -58,8 +58,8 @@ public class ConfiguracionSeguridad {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/salud").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority(Rol.ADMIN.autoridad())
-                        .requestMatchers("/api/curaduria/**")
-                            .hasAnyAuthority(Rol.CURADOR.autoridad(), Rol.ADMIN.autoridad())
+                        // Solo el CURADOR edita el catálogo; el ADMIN gestiona cuentas (ADR-16).
+                        .requestMatchers("/api/curaduria/**").hasAuthority(Rol.CURADOR.autoridad())
                         .requestMatchers("/api/**").authenticated()
                         // Nada vive fuera de /api: lo que no esté arriba no existe.
                         .anyRequest().denyAll())

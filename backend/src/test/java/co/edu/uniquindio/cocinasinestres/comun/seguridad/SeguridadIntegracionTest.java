@@ -120,6 +120,35 @@ class SeguridadIntegracionTest {
     }
 
     @Test
+    @DisplayName("un ADMIN no entra a /api/curaduria: responde 403 (ADR-16)")
+    void unAdminNoEntraALasRutasDeCuraduria() throws Exception {
+        usuarioRepository.save(Usuario.nueva(UID, "admin@ejemplo.com", Rol.ADMIN));
+
+        mockMvc.perform(get("/api/curaduria/productos").header(FiltroUsuarioDev.ENCABEZADO, UID))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codigo").value(CodigoError.AUTH_SIN_PERMISO));
+    }
+
+    @Test
+    @DisplayName("un CURADOR no entra a /api/admin: responde 403")
+    void unCuradorNoEntraALasRutasDeAdministracion() throws Exception {
+        usuarioRepository.save(Usuario.nueva(UID, "curador@ejemplo.com", Rol.CURADOR));
+
+        mockMvc.perform(get("/api/admin/cuentas").header(FiltroUsuarioDev.ENCABEZADO, UID))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codigo").value(CodigoError.AUTH_SIN_PERMISO));
+    }
+
+    @Test
+    @DisplayName("un CURADOR sí entra a /api/curaduria")
+    void unCuradorEntraALasRutasDeCuraduria() throws Exception {
+        usuarioRepository.save(Usuario.nueva(UID, "curador@ejemplo.com", Rol.CURADOR));
+
+        mockMvc.perform(get("/api/curaduria/productos").header(FiltroUsuarioDev.ENCABEZADO, UID))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("un ADMIN sí pasa el control de rutas de /api/admin")
     void unAdminPasaElControlDeRutasDeAdministracion() throws Exception {
         usuarioRepository.save(Usuario.nueva(UID, "admin@ejemplo.com", Rol.ADMIN));
