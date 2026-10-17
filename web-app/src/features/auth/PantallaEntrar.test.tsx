@@ -49,7 +49,13 @@ describe('Entrar', () => {
     await usuario.type(screen.getByLabelText('Contraseña'), 'clave-segura')
     await usuario.click(screen.getByRole('button', { name: 'Entrar' }))
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Perfil' })).toBeInTheDocument()
+    // Al entrar, la sesión se vuelve a cargar y la pantalla puede montarse dos veces: con
+    // findBy el título encontrado a veces ya no está cuando se revisa. waitFor repite la
+    // revisión completa hasta que el estado final se mantiene.
+    await waitFor(
+      () => expect(screen.getByRole('heading', { level: 1, name: 'Perfil' })).toBeInTheDocument(),
+      { timeout: 4000 },
+    )
     expect(router.state.location.pathname).toBe('/perfil')
   })
 })

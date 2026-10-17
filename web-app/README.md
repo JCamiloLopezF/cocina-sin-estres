@@ -75,7 +75,7 @@ Si alguien abre una pantalla que no es de su rol, la aplicación lo lleva a su p
 
 ## Componentes compartidos
 
-Antes de crear un componente en un módulo, revisa `shared/componentes/index.ts`: `Boton`, `CampoTexto`, `Alerta`, `EstadoVacio`, `EncabezadoPagina`, `Cargando`, `EnConstruccion`, `MarcaCocina` y `Olla`.
+Antes de crear un componente en un módulo, revisa `shared/componentes/index.ts`: `Boton`, `CampoTexto`, `GrupoOpciones`, `Alerta`, `EstadoVacio`, `EncabezadoPagina`, `Cargando`, `EnConstruccion`, `MarcaCocina` y `Olla`.
 
 ## Accesibilidad (RNF-12, WCAG 2.1 AA)
 
@@ -83,6 +83,8 @@ Antes de crear un componente en un módulo, revisa `shared/componentes/index.ts`
 - Al enviar con errores, el foco va al primer campo con error.
 - Los errores se anuncian con `role="alert"` y las confirmaciones con `role="status"`.
 - Contraste AA en todos los textos, foco visible en todo lo que se puede tocar, objetivos táctiles de al menos 44 px y enlace "Saltar al contenido".
+- Los colores siguen los wireframes del documento de UI ("0.2 UI"): amarillo `--color-primario` con borde y texto en tinta para la acción principal y lo seleccionado, blanco con borde de tinta para la acción alterna, crema `--color-crema` con borde de tinta para lo urgente (por vencer, bajo el mínimo) y grises cálidos para bordes y texto secundario. Los tokens están en `shared/estilos/base.css`; no escribas colores sueltos en los módulos.
+- Los errores no dependen del color: llevan un signo "!" y el texto en negrilla, y el campo queda con borde de tinta y fondo crema.
 - La tipografía es Atkinson Hyperlegible Next, diseñada para lectura con baja visión, servida desde el propio sitio.
 
 Las pantallas de referencia están en `docs/curso/` (Interfaces de Usuario, pantallas 13 a 26).

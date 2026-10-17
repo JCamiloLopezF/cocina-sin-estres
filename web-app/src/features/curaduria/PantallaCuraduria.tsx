@@ -16,7 +16,7 @@ export function PantallaCuraduria() {
 
   return (
     <>
-      <EncabezadoPagina titulo="Catálogo" detalle="Productos y precios de referencia que ven todas las usuarias." />
+      <EncabezadoPagina titulo="Catálogo" detalle="Productos y precios de referencia que ven todas las usuarias." detalleAbajo />
       {estado.tipo === 'cargando' && <Cargando texto="Cargando el catálogo…" />}
       {estado.tipo === 'error' && (
         <Alerta tono="error">
