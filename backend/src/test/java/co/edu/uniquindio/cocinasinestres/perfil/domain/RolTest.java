@@ -19,9 +19,9 @@ class RolTest {
     }
 
     @Test
-    void soloElCuradorYElAdminPuedenEditarElCatalogo() {
+    void soloElCuradorPuedeEditarElCatalogo() {
         assertThat(Rol.CURADOR.puedeCurar()).isTrue();
-        assertThat(Rol.ADMIN.puedeCurar()).isTrue();
+        assertThat(Rol.ADMIN.puedeCurar()).isFalse();
         assertThat(Rol.USUARIA.puedeCurar()).isFalse();
     }
 

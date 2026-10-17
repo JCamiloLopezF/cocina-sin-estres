@@ -1,0 +1,447 @@
+/* Componentes compartidos (RNF-30). Un bloque por componente, en el orden de los archivos. */
+
+/* Boton */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-height: 3rem;
+  padding: var(--espacio-3) var(--espacio-5);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-control);
+  font-weight: 700;
+  font-size: var(--texto-m);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 120ms ease, transform 120ms ease;
+}
+
+.boton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.boton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.boton--ancho {
+  width: 100%;
+}
+
+/* Acción principal (wireframes): amarillo con borde y texto en tinta. */
+.boton--primario {
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+}
+
+.boton--primario:hover:not(:disabled) {
+  background: var(--color-primario-hondo);
+  color: var(--color-sobre-primario);
+}
+
+/* Acción alterna: blanco con borde en tinta. */
+.boton--secundario {
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+}
+
+.boton--secundario:hover:not(:disabled) {
+  background: var(--color-crema);
+  color: var(--color-tinta);
+}
+
+.boton--texto {
+  min-height: 2.75rem;
+  padding-inline: var(--espacio-2);
+  border-color: transparent;
+  background: none;
+  color: var(--color-tinta);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.boton__giro {
+  width: 1.1em;
+  height: 1.1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: girar 700ms linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* CampoTexto */
+.campo {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+.campo__etiqueta {
+  font-weight: 700;
+}
+
+.campo__ayuda {
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.campo__control {
+  width: 100%;
+  min-height: 3rem;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea-fuerte);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  font-size: var(--texto-m);
+}
+
+.campo__caja {
+  position: relative;
+}
+
+.campo__caja--sufijo .campo__control {
+  padding-right: 6.5rem;
+}
+
+.campo__sufijo {
+  position: absolute;
+  top: 50%;
+  right: var(--espacio-4);
+  color: var(--color-tenue);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.campo__control::placeholder {
+  color: var(--color-tenue);
+}
+
+.campo__control:hover {
+  border-color: var(--color-tenue);
+}
+
+.campo__control:focus-visible {
+  border-color: var(--color-tinta);
+  outline-offset: 2px;
+}
+
+/* Como en el wireframe 04: el campo con error queda con borde de tinta y fondo crema. */
+.campo__control[aria-invalid='true'] {
+  border-color: var(--color-tinta);
+  background: var(--color-crema);
+}
+
+/* El error no depende del color: lleva un signo y el texto en negrilla (WCAG 1.4.1). */
+.campo__error {
+  display: flex;
+  gap: var(--espacio-2);
+  align-items: baseline;
+  color: var(--color-tinta);
+  font-size: var(--texto-s);
+  font-weight: 700;
+}
+
+.campo__error::before {
+  content: '!';
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: 50%;
+  background: var(--color-primario);
+  font-size: var(--texto-xs);
+  line-height: 1;
+  transform: translateY(0.2em);
+}
+
+/* Alerta */
+.alerta {
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-control);
+  font-size: var(--texto-s);
+}
+
+/* Wireframe 04 (credenciales inválidas): recuadro amarillo con borde de tinta. */
+.alerta--error {
+  background: var(--color-primario);
+}
+
+.alerta--exito {
+  background: var(--color-crema);
+}
+
+.alerta--info {
+  background: var(--color-crema);
+  border-color: var(--color-linea);
+}
+
+.alerta__titulo {
+  display: block;
+  margin-bottom: var(--espacio-1);
+  font-size: var(--texto-m);
+}
+
+/* EstadoVacio */
+/* Wireframe 15: centrado, con una ilustración arriba y las acciones a todo el ancho. */
+.vacio {
+  display: grid;
+  justify-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-6) 0;
+  text-align: center;
+}
+
+.vacio::before {
+  content: '';
+  width: 7rem;
+  height: 7rem;
+  margin-bottom: var(--espacio-3);
+  border: var(--borde) dashed var(--color-punteado);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-beige) url('/olla.svg') center / 3.5rem no-repeat;
+}
+
+.vacio__titulo {
+  font-size: var(--texto-l);
+}
+
+.vacio__texto {
+  color: var(--color-tenue);
+  max-width: 34ch;
+}
+
+.vacio__acciones {
+  display: grid;
+  gap: var(--espacio-2);
+  width: 100%;
+  margin-top: var(--espacio-2);
+}
+
+/* Cargando */
+.cargando {
+  display: grid;
+  place-items: center;
+  gap: var(--espacio-3);
+  min-height: 60dvh;
+  color: var(--color-tenue);
+}
+
+.cargando__olla {
+  width: 3.5rem;
+  height: 3.5rem;
+  animation: hervir 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes hervir {
+  to {
+    transform: translateY(-4px);
+  }
+}
+
+/* MarcaCocina */
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.marca__olla {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.marca__nombre {
+  font-weight: 700;
+  font-size: var(--texto-l);
+  letter-spacing: -0.01em;
+}
+
+/* EncabezadoPagina */
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-1) var(--espacio-3);
+  margin-bottom: var(--espacio-5);
+}
+
+.encabezado__titulo {
+  font-size: var(--texto-l);
+  letter-spacing: -0.01em;
+}
+
+.encabezado__fila {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-width: 0;
+}
+
+.encabezado__volver {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-left: calc(-1 * var(--espacio-3));
+  font-size: var(--texto-xl);
+  line-height: 1;
+  text-decoration: none;
+}
+
+.encabezado__previo {
+  flex-basis: 100%;
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.encabezado__detalle {
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+/* Detalle largo (una frase): va en su propia línea debajo del título. */
+.encabezado--detalle-abajo .encabezado__detalle {
+  flex-basis: 100%;
+  font-size: var(--texto-m);
+}
+
+/* GrupoOpciones */
+.opciones {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.opciones__lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opciones__opcion {
+  position: relative;
+  display: inline-flex;
+}
+
+.opciones__opcion input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.opciones__opcion span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--espacio-2) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: 999px;
+  background: var(--color-superficie);
+}
+
+.opciones__opcion input:hover + span {
+  border-color: var(--color-linea-fuerte);
+}
+
+/* Seleccionado (wireframes 08, 09, 18): amarillo con borde de tinta y negrilla. */
+.opciones__opcion input:checked + span {
+  border-color: var(--color-tinta);
+  background: var(--color-primario);
+  font-weight: 700;
+}
+
+/* Variante en segmentos iguales y rectangulares (wireframes 09 y 18). */
+.opciones--segmentos .opciones__lista {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+}
+
+.opciones--segmentos .opciones__opcion span {
+  border-radius: var(--radio-control);
+  padding-inline: var(--espacio-2);
+}
+
+.opciones__opcion input:focus-visible + span {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.opciones[aria-invalid='true'] .opciones__opcion span {
+  border-color: var(--color-tinta);
+  background: var(--color-crema);
+}
+
+/* Casilla de verificación con su texto (input checkbox dentro de un label) */
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.casilla input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-tinta);
+}
+
+.casilla input[aria-invalid='true'] {
+  outline: var(--borde) solid var(--color-tinta);
+  outline-offset: 2px;
+}
+
+/* Casilla en tarjeta (wireframe 10): la fila entera se marca en amarillo. */
+.casilla--tarjeta {
+  justify-content: space-between;
+  padding: var(--espacio-2) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+}
+
+.casilla--tarjeta:has(input:checked) {
+  border-color: var(--color-tinta);
+  background: var(--color-primario);
+  font-weight: 700;
+}
+
+.casilla--tarjeta input {
+  order: 2;
+}
+
+/* Lista de selección (select nativo) con el mismo aspecto que los campos. */
+.campo__control--lista {
+  appearance: none;
+  padding-right: var(--espacio-6);
+  background: var(--color-superficie)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23140f1f' stroke-width='2'/%3E%3C/svg%3E")
+    right var(--espacio-4) center / 0.75rem no-repeat;
+  cursor: pointer;
+}

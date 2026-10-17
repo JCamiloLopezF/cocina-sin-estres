@@ -1,0 +1,85 @@
+/* Inicio (wireframe 13): avisos en amarillo y mosaicos con las cifras del hogar. */
+.inicio {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.aviso-inicio {
+  display: grid;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-control);
+  background: var(--color-primario);
+  color: var(--color-tinta);
+  font-size: var(--texto-s);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.aviso-inicio:hover {
+  background: var(--color-primario-hondo);
+  color: var(--color-tinta);
+}
+
+.aviso-inicio__titulo {
+  font-size: var(--texto-m);
+  font-weight: 700;
+}
+
+.mosaicos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-3);
+  margin: var(--espacio-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mosaicos__ancho {
+  grid-column: 1 / -1;
+}
+
+.mosaico {
+  display: grid;
+  gap: var(--espacio-1);
+  height: 100%;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.mosaico:hover {
+  border-color: var(--color-linea-fuerte);
+  color: var(--color-tinta);
+}
+
+.mosaico--fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mosaico--fila > span:first-child {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+.mosaico__cifra {
+  font-size: var(--texto-xl);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.mosaico__cifra--texto {
+  font-size: var(--texto-l);
+}
+
+.mosaico__detalle {
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
