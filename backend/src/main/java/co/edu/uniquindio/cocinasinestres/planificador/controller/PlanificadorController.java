@@ -2,8 +2,10 @@ package co.edu.uniquindio.cocinasinestres.planificador.controller;
 
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanCostoResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanSemanalRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanSemanalResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.service.PlanificadorCostoService;
 import co.edu.uniquindio.cocinasinestres.planificador.service.PlanificadorService;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,9 +22,13 @@ import org.springframework.web.bind.annotation.*;
 public class PlanificadorController {
 
     private final PlanificadorService planificadorService;
+    private final PlanificadorCostoService planificadorCostoService;
 
-    public PlanificadorController(PlanificadorService planificadorService) {
+    public PlanificadorController(
+        PlanificadorService planificadorService,
+        PlanificadorCostoService planificadorCostoService) {
         this.planificadorService = planificadorService;
+        this.planificadorCostoService = planificadorCostoService;
     }
 
     @PostMapping
@@ -59,6 +65,13 @@ public class PlanificadorController {
         @PathVariable("planId") Long planId,
         @PathVariable("comidaId") Long comidaId) {
         ComidaPlanResponse resp = planificadorService.marcarPreparada(planId, comidaId);
+        return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/{planId}/costo")
+    public ResponseEntity<PlanCostoResponse> consultarCosto(
+        @PathVariable("planId") Long planId) {
+        PlanCostoResponse resp = planificadorCostoService.calcularCosto(planId);
         return ResponseEntity.ok(resp);
     }
 }

@@ -92,6 +92,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `POST /api/items-despensa` | Agrega un producto del catálogo a la despensa. Responde 201 con `Location`. |
 | `PUT /api/items-despensa/{id}` | Edita cantidad o nivel, mínimo, vencimiento y ubicación. |
 | `DELETE /api/items-despensa/{id}` | Quita el producto de la despensa. Responde 204. |
+| `GET /api/planes-semanales/{planId}/costo` | Costo acumulado del plan por día (índice 0 = lunes), presupuesto semanal del hogar (ADR-14) y `excedePresupuesto`. El hogar sale de la usuaria autenticada. 404 si el plan no existe o es de otro hogar. |
 
 Cada módulo agrega sus rutas; las convenciones están en [`CONTRIBUTING.md`](../CONTRIBUTING.md#api-rest).
 
