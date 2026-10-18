@@ -97,7 +97,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `PUT /api/planes-semanales/{planId}/comidas` | Asigna una receta a un día y tipo de comida. Si el hueco ya está ocupado, reemplaza la receta. |
 | `DELETE /api/planes-semanales/{planId}/comidas/{comidaId}` | Quita la comida del plan. Responde 204. |
 | `PUT /api/planes-semanales/{planId}/comidas/{comidaId}/marcar-preparada` | Marca la comida como preparada. |
-| `GET /api/planes-semanales/{planId}/lista-compras` | Lista de compras generada del plan con su costo total. Si el plan no tiene comidas aún, responde lista vacía y costo cero. 404 si el plan no existe o es de otro hogar. |
+| `GET /api/planes-semanales/{planId}/lista-compras` | Lista de compras generada del plan con su costo total, ya descontando lo que el hogar tiene en su despensa (sin contar lo vencido). Si el plan no tiene comidas aún, responde lista vacía y costo cero. 404 si el plan no existe o es de otro hogar. |
 | `GET /api/planes-semanales/{planId}/costo` | Costo acumulado del plan por día (índice 0 = lunes), presupuesto semanal del hogar (ADR-14) y `excedePresupuesto`. El hogar sale de la usuaria autenticada. 404 si el plan no existe o es de otro hogar. |
 | `GET /api/recetas` | Lista las recetas activas ordenadas por nombre (resumen, sin pasos ni ingredientes). |
 | `GET /api/recetas/{id}` | Detalle de una receta: pasos separados e ingredientes con sus cantidades. 404 si no existe o está desactivada. |

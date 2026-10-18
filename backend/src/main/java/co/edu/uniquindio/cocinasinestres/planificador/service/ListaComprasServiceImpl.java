@@ -1,6 +1,7 @@
 package co.edu.uniquindio.cocinasinestres.planificador.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.StockEnDespensa;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ItemListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
@@ -13,6 +14,8 @@ import co.edu.uniquindio.cocinasinestres.planificador.repository.ListaComprasRep
 import co.edu.uniquindio.cocinasinestres.planificador.repository.PlanSemanalRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Genera la lista de compras agregando las cantidades de ingredientes por producto.
+ * Genera la lista de compras agregando las cantidades de ingredientes por producto
+ * y descontando lo que el hogar ya tiene en su despensa: solo se compra lo que falta.
  */
 @Service
 public class ListaComprasServiceImpl implements ListaComprasService {
@@ -34,18 +38,24 @@ public class ListaComprasServiceImpl implements ListaComprasService {
     private final ListaComprasRepository listaComprasRepository;
     private final ItemListaComprasRepository itemListaComprasRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final StockEnDespensa stockEnDespensa;
+    private final Clock reloj;
 
     public ListaComprasServiceImpl(
         PlanSemanalRepository planSemanalRepository,
         ComidaPlanRepository comidaPlanRepository,
         ListaComprasRepository listaComprasRepository,
         ItemListaComprasRepository itemListaComprasRepository,
-        JdbcTemplate jdbcTemplate) {
+        JdbcTemplate jdbcTemplate,
+        StockEnDespensa stockEnDespensa,
+        Clock reloj) {
         this.planSemanalRepository = planSemanalRepository;
         this.comidaPlanRepository = comidaPlanRepository;
         this.listaComprasRepository = listaComprasRepository;
         this.itemListaComprasRepository = itemListaComprasRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.stockEnDespensa = stockEnDespensa;
+        this.reloj = reloj;
     }
 
     @Override
@@ -62,12 +72,7 @@ public class ListaComprasServiceImpl implements ListaComprasService {
 
         if (recetaCounts.isEmpty()) {
             // Si no hay recetas, borramos lista existente si la hubiera
-            listaComprasRepository.findByPlanSemanal_Id(planSemanalId).ifPresent(lista -> {
-                itemListaComprasRepository.deleteByListaCompras_Id(lista.getId());
-                // forzar ejecución del delete antes de borrar la lista
-                itemListaComprasRepository.flush();
-                listaComprasRepository.delete(lista);
-            });
+            borrarListaSiExiste(planSemanalId);
             return;
         }
 
@@ -101,11 +106,27 @@ public class ListaComprasServiceImpl implements ListaComprasService {
 
         if (cantidades.isEmpty()) {
             // Sin ingredientes relevantes: eliminar lista existente y salir.
-            listaComprasRepository.findByPlanSemanal_Id(planSemanalId).ifPresent(lista -> {
-                itemListaComprasRepository.deleteByListaCompras_Id(lista.getId());
-                itemListaComprasRepository.flush();
-                listaComprasRepository.delete(lista);
-            });
+            borrarListaSiExiste(planSemanalId);
+            return;
+        }
+
+        // Cruce con la despensa: lo que el hogar ya tiene (y no está vencido) no se
+        // compra. La regla de vencimiento la aplica el puerto StockEnDespensa.
+        Map<Long, BigDecimal> stock =
+            stockEnDespensa.disponibles(plan.getHogar().getId(), LocalDate.now(reloj));
+
+        Map<Long, BigDecimal> faltantes = new HashMap<>();
+        cantidades.forEach((productoId, requerido) -> {
+            BigDecimal disponible = stock.getOrDefault(productoId, BigDecimal.ZERO);
+            BigDecimal faltante = requerido.subtract(disponible);
+            if (faltante.compareTo(BigDecimal.ZERO) > 0) {
+                faltantes.put(productoId, faltante);
+            }
+        });
+
+        if (faltantes.isEmpty()) {
+            // El hogar ya tiene todo: no hay nada que comprar.
+            borrarListaSiExiste(planSemanalId);
             return;
         }
 
@@ -120,7 +141,7 @@ public class ListaComprasServiceImpl implements ListaComprasService {
         // Para calcular costo estimado consultamos producto por producto
         String sqlProducto = "SELECT cantidad_unidad_compra, precio_unidad_compra FROM producto WHERE id = ?";
 
-        List<ItemListaCompras> items = cantidades.entrySet().stream().map(entry -> {
+        List<ItemListaCompras> items = faltantes.entrySet().stream().map(entry -> {
             Long productoId = entry.getKey();
             BigDecimal cantidadTotal = entry.getValue();
 
@@ -208,5 +229,15 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             item.getPrioridad(),
             item.isComprado()
         );
+    }
+
+    /** Borra la lista del plan si existe, con sus ítems. */
+    private void borrarListaSiExiste(Long planSemanalId) {
+        listaComprasRepository.findByPlanSemanal_Id(planSemanalId).ifPresent(lista -> {
+            itemListaComprasRepository.deleteByListaCompras_Id(lista.getId());
+            // forzar ejecución del delete antes de borrar la lista
+            itemListaComprasRepository.flush();
+            listaComprasRepository.delete(lista);
+        });
     }
 }
