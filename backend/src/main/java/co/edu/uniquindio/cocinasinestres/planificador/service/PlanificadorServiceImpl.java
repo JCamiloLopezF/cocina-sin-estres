@@ -9,6 +9,7 @@ import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanSemanalResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.model.PlanSemanal;
@@ -222,6 +223,24 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
         // generar lista si es necesario (por ejemplo si marcar preparada afecta lista)
         listaComprasService.generarListaCompras(planId);
         return aComidaPlanResponse(guardada);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ListaComprasResponse consultarListaCompras(Long planId) {
+        UsuarioAutenticado usuario = usuarioActualService.obtener();
+        Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
+
+        PlanSemanal plan = planSemanalRepository.findById(planId)
+            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado."));
+
+        if (!plan.getHogar().getId().equals(hogar.getId())) {
+            // Plan de otro hogar: mismo 404 que "no existe" (RNF-22)
+            throw new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado.");
+        }
+
+        return listaComprasService.consultar(planId);
     }
 
     private void validarRequestAsignacion(ComidaPlanAssignRequest r) {

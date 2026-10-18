@@ -9,11 +9,14 @@ import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.model.PlanSemanal;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.ComidaPlanRepository;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.PlanSemanalRepository;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -158,5 +161,52 @@ class PlanificadorServiceImplTest {
         assertEquals(77L, resp.recetaId());
         verify(comidaPlanRepository, times(1)).save(existing);
         verify(listaComprasService, times(1)).generarListaCompras(300L);
+    }
+
+    @Test
+    void consultarListaCompras_usuarioSinHogar_debeLanzarConflicto() {
+        when(hogarRepository.findByUsuario_Id(usuarioMock.id())).thenReturn(Optional.empty());
+
+        ConflictoException ex = assertThrows(ConflictoException.class,
+            () -> service.consultarListaCompras(200L));
+        assertNotNull(ex);
+    }
+
+    @Test
+    void consultarListaCompras_planInexistente_debeLanzarRecursoNoEncontrado() {
+        when(hogarRepository.findByUsuario_Id(usuarioMock.id())).thenReturn(Optional.of(hogarMock));
+        when(planSemanalRepository.findById(999L)).thenReturn(Optional.empty());
+
+        RecursoNoEncontradoException ex = assertThrows(RecursoNoEncontradoException.class,
+            () -> service.consultarListaCompras(999L));
+        assertNotNull(ex);
+    }
+
+    @Test
+    void consultarListaCompras_planDeOtroHogar_debeLanzarRecursoNoEncontrado() {
+        // Plan creado por un hogar distinto: mismo 404 que "no existe" (RNF-22)
+        PlanSemanal planOtro = new PlanSemanal(mock(Hogar.class), LocalDate.of(2026, 10, 12));
+        ReflectionTestUtils.setField(planOtro, "id", 400L);
+        when(hogarRepository.findByUsuario_Id(usuarioMock.id())).thenReturn(Optional.of(hogarMock));
+        when(planSemanalRepository.findById(400L)).thenReturn(Optional.of(planOtro));
+
+        RecursoNoEncontradoException ex = assertThrows(RecursoNoEncontradoException.class,
+            () -> service.consultarListaCompras(400L));
+        assertNotNull(ex);
+    }
+
+    @Test
+    void consultarListaCompras_planPropio_delegaEnElServicioDeListaCompras() {
+        PlanSemanal plan = planConId(200L);
+        ListaComprasResponse esperada = new ListaComprasResponse(
+            7L, 200L, null, List.of(), BigDecimal.ZERO);
+        when(hogarRepository.findByUsuario_Id(usuarioMock.id())).thenReturn(Optional.of(hogarMock));
+        when(planSemanalRepository.findById(200L)).thenReturn(Optional.of(plan));
+        when(listaComprasService.consultar(200L)).thenReturn(esperada);
+
+        ListaComprasResponse respuesta = service.consultarListaCompras(200L);
+
+        assertEquals(esperada, respuesta);
+        verify(listaComprasService, times(1)).consultar(200L);
     }
 }

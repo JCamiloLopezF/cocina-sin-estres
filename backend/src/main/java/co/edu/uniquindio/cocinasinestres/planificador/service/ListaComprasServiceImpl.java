@@ -1,6 +1,8 @@
 package co.edu.uniquindio.cocinasinestres.planificador.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.ItemListaComprasResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ItemListaCompras;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ListaCompras;
@@ -11,6 +13,7 @@ import co.edu.uniquindio.cocinasinestres.planificador.repository.ListaComprasRep
 import co.edu.uniquindio.cocinasinestres.planificador.repository.PlanSemanalRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -158,5 +161,52 @@ public class ListaComprasServiceImpl implements ListaComprasService {
 
         // Guardar items
         itemListaComprasRepository.saveAll(items);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ListaComprasResponse consultar(Long planSemanalId) {
+        return listaComprasRepository.findByPlanSemanal_Id(planSemanalId)
+            .map(lista -> {
+                List<ItemListaComprasResponse> items = itemListaComprasRepository
+                    .findByListaCompras_Id(lista.getId())
+                    .stream()
+                    .sorted(Comparator
+                        .comparing(ItemListaCompras::getPrioridad)
+                        .thenComparing(ItemListaCompras::getProductoId))
+                    .map(ListaComprasServiceImpl::aItem)
+                    .toList();
+
+                BigDecimal costoTotal = items.stream()
+                    .map(ItemListaComprasResponse::costoEstimado)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                return new ListaComprasResponse(
+                    lista.getId(),
+                    planSemanalId,
+                    lista.getGeneradaEn(),
+                    items,
+                    costoTotal
+                );
+            })
+            // Plan sin comidas: aún no hay nada que comprar, y eso no es un error.
+            .orElseGet(() -> new ListaComprasResponse(
+                null,
+                planSemanalId,
+                null,
+                List.of(),
+                BigDecimal.ZERO
+            ));
+    }
+
+    private static ItemListaComprasResponse aItem(ItemListaCompras item) {
+        return new ItemListaComprasResponse(
+            item.getId(),
+            item.getProductoId(),
+            item.getCantidad(),
+            item.getCostoEstimado(),
+            item.getPrioridad(),
+            item.isComprado()
+        );
     }
 }
