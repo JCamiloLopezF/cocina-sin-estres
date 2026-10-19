@@ -1,0 +1,57 @@
+/* Gestión de cuentas y roles (rol ADMIN). */
+.admin__busqueda {
+  margin: var(--espacio-4) 0;
+}
+
+.cuentas {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cuenta {
+  display: grid;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+}
+
+/* Desactivada: borde punteado y el estado dicho en texto, no solo con color. */
+.cuenta--inactiva {
+  border-style: dashed;
+  border-color: var(--color-punteado);
+  background: var(--color-beige);
+}
+
+.cuenta__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espacio-1) var(--espacio-3);
+}
+
+.cuenta__correo {
+  overflow-wrap: anywhere;
+}
+
+.cuenta__estado {
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+}
+
+.cuenta__acciones {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--espacio-2);
+}
+
+.admin__vacio,
+.admin__nota {
+  margin-top: var(--espacio-4);
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}

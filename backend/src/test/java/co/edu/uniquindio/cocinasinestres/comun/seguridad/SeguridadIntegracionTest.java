@@ -149,15 +149,14 @@ class SeguridadIntegracionTest {
     }
 
     @Test
-    @DisplayName("un ADMIN sí pasa el control de rutas de /api/admin")
+    @DisplayName("un ADMIN sí entra a /api/admin y ve las cuentas")
     void unAdminPasaElControlDeRutasDeAdministracion() throws Exception {
         usuarioRepository.save(Usuario.nueva(UID, "admin@ejemplo.com", Rol.ADMIN));
 
-        // 404 y no 403: la autorización lo deja pasar y no hay controlador todavía.
-        // Cada módulo agrega sus rutas bajo /api/admin.
         mockMvc.perform(get("/api/admin/cuentas").header(FiltroUsuarioDev.ENCABEZADO, UID))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.codigo").value(CodigoError.RECURSO_NO_ENCONTRADO));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].correo", org.hamcrest.Matchers.hasItem("admin@ejemplo.com")))
+                .andExpect(jsonPath("$[*].rol", org.hamcrest.Matchers.hasItem("ADMIN")));
     }
 
     @Test
