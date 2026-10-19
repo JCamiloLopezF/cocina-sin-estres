@@ -10,7 +10,11 @@ import { PantallaItemDespensa } from '../features/despensa/PantallaItemDespensa'
 import { PantallaInicio } from '../features/inicio/PantallaInicio'
 import { PantallaPerfil } from '../features/perfil/PantallaPerfil'
 import { PantallaPerfilHogar } from '../features/perfil/PantallaPerfilHogar'
+import { PantallaDia } from '../features/planificador/PantallaDia'
+import { PantallaListaCompras } from '../features/planificador/PantallaListaCompras'
 import { PantallaPlan } from '../features/planificador/PantallaPlan'
+import { PantallaAgregarAlPlan } from '../features/recetario/PantallaAgregarAlPlan'
+import { PantallaReceta } from '../features/recetario/PantallaReceta'
 import { PantallaRecetario } from '../features/recetario/PantallaRecetario'
 import { DisenoOperativo } from './DisenoOperativo'
 import { DisenoUsuaria } from './DisenoUsuaria'
@@ -46,7 +50,11 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
                 { path: '/despensa/agregar', element: <PantallaAgregarProducto /> },
                 { path: '/despensa/:id', element: <PantallaItemDespensa /> },
                 { path: '/plan', element: <PantallaPlan /> },
+                { path: '/plan/dia/:dia', element: <PantallaDia /> },
+                { path: '/plan/lista', element: <PantallaListaCompras /> },
                 { path: '/recetas', element: <PantallaRecetario /> },
+                { path: '/recetas/:id', element: <PantallaReceta /> },
+                { path: '/recetas/:id/agregar', element: <PantallaAgregarAlPlan /> },
                 { path: '/perfil', element: <PantallaPerfil /> },
                 { path: '/perfil/hogar', element: <PantallaPerfilHogar /> },
               ],

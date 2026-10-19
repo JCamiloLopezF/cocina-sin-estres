@@ -1,0 +1,277 @@
+/* Planificador semanal y lista de compras (wireframes 27 a 33). */
+@import '../despensa/despensa.css';
+
+.plan__lista {
+  margin-top: var(--espacio-5);
+}
+
+/* Wireframe 28: costo del plan con barra. */
+.costo-plan {
+  margin-bottom: var(--espacio-4);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+}
+
+.costo-plan__fila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  margin: 0 0 var(--espacio-2);
+}
+
+.costo-plan__barra {
+  height: 0.75rem;
+  overflow: hidden;
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: 999px;
+  background: var(--color-superficie);
+}
+
+.costo-plan__barra span {
+  display: block;
+  height: 100%;
+  background: var(--color-primario);
+}
+
+/* Si se pasa, la barra va llena y en tinta: el texto de la alerta dice cuánto. */
+.costo-plan__barra--excede span {
+  background: var(--color-tinta);
+}
+
+.costo-plan__nota {
+  margin: var(--espacio-2) 0 0;
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+}
+
+/* Wireframe 30: aviso de presupuesto excedido. */
+.aviso-presupuesto {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-4);
+  padding: var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-superficie);
+}
+
+.aviso-presupuesto h2,
+.aviso-presupuesto p {
+  margin: 0;
+}
+
+.aviso-presupuesto h2 {
+  font-size: var(--texto-l);
+}
+
+.aviso-presupuesto__icono {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: 10px;
+  background: var(--color-primario);
+  font-weight: 700;
+}
+
+.aviso-presupuesto__consejo {
+  padding: var(--espacio-3);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  font-size: var(--texto-s);
+}
+
+/* Wireframe 28: un día por tarjeta. */
+.semana {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dia {
+  display: grid;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  color: var(--color-tinta);
+  text-decoration: none;
+}
+
+.dia:hover {
+  border-color: var(--color-linea-fuerte);
+  color: var(--color-tinta);
+}
+
+.dia--hoy,
+.dia--hoy:hover {
+  border-color: var(--color-tinta);
+  background: var(--color-crema);
+}
+
+.dia--libre {
+  border-style: dashed;
+  border-color: var(--color-punteado);
+}
+
+.dia__titulo,
+.dia__comida {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.dia__comida {
+  font-size: var(--texto-s);
+}
+
+.dia__marcas,
+.dia__estado {
+  flex: none;
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+}
+
+.dia__estado--hecho {
+  color: var(--color-tinta);
+  font-weight: 700;
+}
+
+/* Wireframe 29: detalle del día. */
+.dia-detalle__aviso {
+  margin-bottom: var(--espacio-4);
+}
+
+.dia-detalle__aviso .boton--texto {
+  min-height: auto;
+  padding: 0;
+}
+
+.hueco + .hueco {
+  margin-top: var(--espacio-5);
+}
+
+.hueco__titulo {
+  margin-bottom: var(--espacio-2);
+}
+
+.hueco__agregar {
+  display: block;
+  padding: var(--espacio-3);
+  border: var(--borde) dashed var(--color-punteado);
+  border-radius: var(--radio-control);
+  color: var(--color-tinta);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.hueco__agregar:hover {
+  border-color: var(--color-tinta);
+  background: var(--color-crema);
+  color: var(--color-tinta);
+}
+
+.hueco__acciones {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--espacio-2);
+  margin-top: var(--espacio-2);
+}
+
+.hueco__acciones .boton {
+  padding-inline: var(--espacio-2);
+}
+
+.hueco__confirmar {
+  margin-top: var(--espacio-2);
+}
+
+.sugerencia {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-6);
+  padding: var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-crema);
+}
+
+.sugerencia h2,
+.sugerencia p {
+  margin: 0;
+}
+
+.sugerencia h2 {
+  font-size: var(--texto-m);
+}
+
+/* Wireframe 31: lista de compras. */
+.total-lista {
+  margin-bottom: var(--espacio-4);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-control);
+  background: var(--color-primario);
+}
+
+.total-lista__fila {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-size: var(--texto-m);
+}
+
+.total-lista__nota {
+  margin: var(--espacio-1) 0 0;
+  font-size: var(--texto-xs);
+}
+
+.lista__grupo + .lista__grupo {
+  margin-top: var(--espacio-5);
+}
+
+.lista__titulo {
+  margin-bottom: var(--espacio-2);
+}
+
+.compra {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: 4rem;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  cursor: pointer;
+}
+
+.compra input {
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  accent-color: var(--color-tinta);
+}
+
+.compra--hecha .compra__nombre {
+  text-decoration: line-through;
+}
+
+.compra__costo {
+  flex: none;
+  font-size: var(--texto-s);
+}
+
+.lista__acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-5);
+}

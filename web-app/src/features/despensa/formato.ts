@@ -27,6 +27,11 @@ export function nombreCategoria(codigo: string): string {
 const numero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 3 })
 const pesos = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 
+/** Pesos colombianos sin decimales: "$ 2.900". */
+export function enPesos(valor: number): string {
+  return pesos.format(valor)
+}
+
 /** "6 unidades", "1 unidad", "500 g", "1,5 l"… */
 export function cantidadConUnidad(cantidad: number, unidad: UnidadBase): string {
   if (unidad === 'unidad') {
