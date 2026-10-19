@@ -132,7 +132,7 @@ También se puede lanzar a mano con **Run workflow**, sobre `main`.
 | `Schema-validation` en los registros | Una entidad no coincide con las migraciones | Lo atrapa el CI del PR. Corrígelo con una migración nueva |
 | Error de CORS en el navegador | El origen no está en `CORS_ORIGENES` | Lo pone `crear-api.sh` con los dominios `web.app` y `firebaseapp.com` del proyecto. Si cambias de dominio, vuelve a ejecutarlo |
 | "Tu sesión expiró" al entrar | La API no pudo verificar el token | Revisa que la cuenta de servicio sea del mismo proyecto que `VITE_FIREBASE_PROJECT_ID` |
-| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | El job no corrió en el ambiente `produccion` o el repositorio cambió de nombre | Ejecuta `crear-api.sh` con `REPO_GITHUB=dueño/repo` |
+| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | El rol no reconoce el token de GitHub: el job no corrió en el ambiente `produccion`, el repositorio cambió de nombre, o el token usa el formato con identificadores fijos (`repo:dueño@ID/repo@ID:...`, repositorios creados desde el 15 de julio de 2026) y la política de confianza es anterior a ese cambio | Vuelve a ejecutar `crear-api.sh` (acepta los dos formatos). Si el repositorio cambió de nombre: `REPO_GITHUB=dueño/repo bash infra/aws/crear-api.sh` |
 | El paso de Firebase Hosting falla por permisos | Falta el secreto del paso 4 | Repite `init hosting:github` |
 
 ## Límites conocidos (prototipo)

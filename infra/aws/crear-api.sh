@@ -49,7 +49,7 @@ guardar_parametro() {  # nombre tipo valor
   aws ssm put-parameter --name "$RUTA_PARAMETROS/$1" --type "$2" --value "$3" --overwrite >/dev/null
 }
 
-for comando in aws python3 openssl; do
+for comando in aws python3 openssl curl; do
   command -v "$comando" >/dev/null 2>&1 || falla "falta '$comando'. Ejecuta este script en AWS CloudShell."
 done
 aws sts get-caller-identity >/dev/null 2>&1 || falla "no hay sesión de AWS. Abre CloudShell desde la consola."
@@ -307,8 +307,21 @@ if ! aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$PROVE
     --client-id-list sts.amazonaws.com --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 >/dev/null
 fi
 # Solo los jobs del ambiente "produccion" de este repositorio pueden asumir el rol.
-CONFIANZA_GITHUB="$(printf '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Federated":"%s"},"Action":"sts:AssumeRoleWithWebIdentity","Condition":{"StringEquals":{"token.actions.githubusercontent.com:aud":"sts.amazonaws.com","token.actions.githubusercontent.com:sub":"repo:%s:environment:%s"}}}]}' \
-  "$PROVEEDOR" "$REPO_GITHUB" "$AMBIENTE_GITHUB")"
+#
+# Los repositorios creados después del 15 de julio de 2026 firman el token con los
+# identificadores fijos del dueño y del repositorio ("repo:dueño@ID/repo@ID:..."), y los
+# anteriores con el formato clásico ("repo:dueño/repo:..."). Se aceptan los dos; los
+# identificadores evitan que alguien que registre después el mismo nombre pueda desplegar.
+read -r ID_DUENO ID_REPO < <(curl -fsS "https://api.github.com/repos/$REPO_GITHUB" \
+  | python3 -c 'import json, sys; d = json.load(sys.stdin); print(d["owner"]["id"], d["id"])') \
+  || falla "no pude leer los identificadores de $REPO_GITHUB en GitHub."
+DUENO="${REPO_GITHUB%%/*}"
+NOMBRE_REPO="${REPO_GITHUB#*/}"
+SUJETO_CLASICO="repo:$REPO_GITHUB:environment:$AMBIENTE_GITHUB"
+SUJETO_FIJO="repo:$DUENO@$ID_DUENO/$NOMBRE_REPO@$ID_REPO:environment:$AMBIENTE_GITHUB"
+CONFIANZA_GITHUB="$(printf '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Federated":"%s"},"Action":"sts:AssumeRoleWithWebIdentity","Condition":{"StringEquals":{"token.actions.githubusercontent.com:aud":"sts.amazonaws.com","token.actions.githubusercontent.com:sub":["%s","%s"]}}}]}' \
+  "$PROVEEDOR" "$SUJETO_FIJO" "$SUJETO_CLASICO")"
+echo "GitHub puede desplegar como: $SUJETO_FIJO"
 if aws iam get-role --role-name "$ROL_DESPLIEGUE" >/dev/null 2>&1; then
   aws iam update-assume-role-policy --role-name "$ROL_DESPLIEGUE" --policy-document "$CONFIANZA_GITHUB"
 else
