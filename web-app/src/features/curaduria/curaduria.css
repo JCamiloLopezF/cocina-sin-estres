@@ -1,0 +1,41 @@
+/* Catálogo del curador (wireframes 43 y 44). Reusa tarjetas y botones de la despensa. */
+@import '../despensa/despensa.css';
+
+.curaduria__barra {
+  display: flex;
+  justify-content: flex-end;
+  margin: var(--espacio-3) 0;
+}
+
+.curaduria__filtros {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: var(--espacio-2);
+  margin-bottom: var(--espacio-3);
+}
+
+.curaduria__conteo {
+  margin: 0 0 var(--espacio-2);
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.curaduria__precio {
+  flex: none;
+  font-weight: 700;
+  text-align: right;
+}
+
+.formulario-producto {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.formulario-producto__precio {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+}

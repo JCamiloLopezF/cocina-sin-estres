@@ -5,6 +5,7 @@ import { PantallaEntrar } from '../features/auth/PantallaEntrar'
 import { PantallaRecuperar } from '../features/auth/PantallaRecuperar'
 import { PantallaRegistro } from '../features/auth/PantallaRegistro'
 import { PantallaCuraduria } from '../features/curaduria/PantallaCuraduria'
+import { PantallaProductoCurado } from '../features/curaduria/PantallaProductoCurado'
 import { PantallaAgregarProducto } from '../features/despensa/PantallaAgregarProducto'
 import { PantallaCargaRapida } from '../features/despensa/PantallaCargaRapida'
 import { PantallaProductoAdicional } from '../features/despensa/PantallaProductoAdicional'
@@ -71,7 +72,16 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
         },
         {
           element: <RequiereRol roles={['CURADOR']} />,
-          children: [{ element: <DisenoOperativo />, children: [{ path: '/curaduria', element: <PantallaCuraduria /> }] }],
+          children: [
+            {
+              element: <DisenoOperativo />,
+              children: [
+                { path: '/curaduria', element: <PantallaCuraduria /> },
+                { path: '/curaduria/productos/nuevo', element: <PantallaProductoCurado /> },
+                { path: '/curaduria/productos/:id', element: <PantallaProductoCurado /> },
+              ],
+            },
+          ],
         },
         {
           element: <RequiereRol roles={['ADMIN']} />,
