@@ -76,7 +76,8 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             return;
         }
 
-        // SQL: agregamos ingredientes multiplicados por ocurrencias
+        // SQL: agregamos ingredientes multiplicados por ocurrencias. Los opcionales
+        // no se compran (igual que en el costo del plan, KAN-24).
         // Esta query retorna producto_id y cantidad_total (DECIMAL)
         String sql = """
             SELECT ir.producto_id AS producto_id,
@@ -88,6 +89,7 @@ public class ListaComprasServiceImpl implements ListaComprasService {
                 WHERE plan_semanal_id = ?
                 GROUP BY receta_id
             ) occ ON ir.receta_id = occ.receta_id
+            WHERE ir.opcional = FALSE
             GROUP BY ir.producto_id
             """;
 
