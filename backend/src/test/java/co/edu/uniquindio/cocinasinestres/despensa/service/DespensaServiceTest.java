@@ -21,6 +21,7 @@ import co.edu.uniquindio.cocinasinestres.despensa.domain.ProductoCatalogo;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.EdicionItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaResponse;
+import co.edu.uniquindio.cocinasinestres.despensa.dto.ProductoAdicionalRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ProductoDisponibleResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ResumenDespensaResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.model.ItemDespensa;
@@ -175,6 +176,70 @@ class DespensaServiceTest {
         assertThat(respuesta.nivelMinimo()).isEqualTo(NivelGranel.POCO);
         assertThat(respuesta.esEstimada()).isTrue();
         assertThat(respuesta.bajoMinimo()).isFalse();
+    }
+
+    // ---------- Producto adicional del hogar (ADR-18) ----------
+
+    @Test
+    void registraUnProductoAdicionalYLoAgregaALaDespensa() {
+        guardarDevolviendoLoRecibido();
+
+        ItemDespensaResponse respuesta = servicio().agregarAdicional(new ProductoAdicionalRequest(
+            "  Arepas   de maíz ", null, TipoCantidad.CONTABLE, null,
+            new BigDecimal("10"), null, null, null, null, "Nevera"));
+
+        ItemDespensa guardado = capturarGuardado();
+        assertThat(guardado.getHogarId()).isEqualTo(HOGAR_ID);
+        assertThat(guardado.getCantidad()).isEqualByComparingTo("10");
+        ProductoCatalogo registrado = catalogo.productos.get(guardado.getProductoId());
+        assertThat(registrado.nombre()).isEqualTo("Arepas de maíz");
+        assertThat(registrado.categoria()).isEqualTo(DespensaService.CATEGORIA_ADICIONAL);
+        assertThat(registrado.unidadBase()).isEqualTo(UnidadBase.unidad);
+        assertThat(registrado.capacidadReferencia()).isNull();
+        assertThat(respuesta.nombre()).isEqualTo("Arepas de maíz");
+    }
+
+    @Test
+    void unAdicionalAGranelSeRegistraPorNivelConCapacidadDeReferencia() {
+        guardarDevolviendoLoRecibido();
+
+        servicio().agregarAdicional(new ProductoAdicionalRequest(
+            "Quinua", "granos", TipoCantidad.GRANEL, UnidadBase.g,
+            null, NivelGranel.LLENO, null, null, null, null));
+
+        ItemDespensa guardado = capturarGuardado();
+        assertThat(guardado.getCantidad()).isEqualByComparingTo("1000");
+        assertThat(guardado.isEsEstimada()).isTrue();
+        assertThat(catalogo.productos.get(guardado.getProductoId()).categoria()).isEqualTo("GRANOS");
+    }
+
+    @Test
+    void noRegistraUnAdicionalConElNombreDeUnProductoQueYaExiste() {
+        assertThat(codigoDelError(() -> servicio().agregarAdicional(new ProductoAdicionalRequest(
+            "fríjol", null, TipoCantidad.GRANEL, null, null, NivelGranel.MEDIO, null, null, null, null))))
+            .isEqualTo(CodigoDespensa.PRODUCTO_EXISTE);
+
+        verify(itemRepository, never()).saveAndFlush(any(ItemDespensa.class));
+    }
+
+    @Test
+    void validaElAdicionalAntesDeRegistrarlo() {
+        assertThat(codigoDelError(() -> servicio().agregarAdicional(new ProductoAdicionalRequest(
+            " ", null, TipoCantidad.CONTABLE, null, BigDecimal.ONE, null, null, null, null, null))))
+            .isEqualTo(CodigoDespensa.NOMBRE_REQUERIDO);
+        assertThat(codigoDelError(() -> servicio().agregarAdicional(new ProductoAdicionalRequest(
+            "Tamal", null, null, null, BigDecimal.ONE, null, null, null, null, null))))
+            .isEqualTo(CodigoDespensa.TIPO_REQUERIDO);
+        assertThat(codigoDelError(() -> servicio().agregarAdicional(new ProductoAdicionalRequest(
+            "Tamal", null, TipoCantidad.CONTABLE, UnidadBase.g, BigDecimal.ONE, null, null, null, null, null))))
+            .isEqualTo(CodigoDespensa.UNIDAD_INVALIDA);
+        // Contable sin cantidad: la regla de cantidad mixta se aplica antes de guardar el producto.
+        assertThat(codigoDelError(() -> servicio().agregarAdicional(new ProductoAdicionalRequest(
+            "Tamal", null, TipoCantidad.CONTABLE, null, null, null, null, null, null, null))))
+            .isEqualTo(CodigoDespensa.CANTIDAD_REQUERIDA);
+
+        assertThat(catalogo.productos).hasSize(5);
+        verify(itemRepository, never()).saveAndFlush(any(ItemDespensa.class));
     }
 
     @Test
@@ -482,6 +547,17 @@ class DespensaServiceTest {
         @Override
         public List<ProductoCatalogo> listarDisponibles(Long hogarId) {
             return List.copyOf(productos.values());
+        }
+
+        private long siguienteId = 1000L;
+
+        @Override
+        public ProductoCatalogo registrarAdicional(Long hogarId, String nombre, String categoria,
+            TipoCantidad tipoCantidad, UnidadBase unidadBase, BigDecimal capacidadReferencia) {
+            ProductoCatalogo nuevo = new ProductoCatalogo(siguienteId++, nombre, categoria, tipoCantidad,
+                unidadBase, capacidadReferencia, null, null, null);
+            productos.put(nuevo.id(), nuevo);
+            return nuevo;
         }
 
         @Override

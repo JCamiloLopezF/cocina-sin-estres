@@ -7,6 +7,7 @@ import { PantallaRegistro } from '../features/auth/PantallaRegistro'
 import { PantallaCuraduria } from '../features/curaduria/PantallaCuraduria'
 import { PantallaAgregarProducto } from '../features/despensa/PantallaAgregarProducto'
 import { PantallaCargaRapida } from '../features/despensa/PantallaCargaRapida'
+import { PantallaProductoAdicional } from '../features/despensa/PantallaProductoAdicional'
 import { PantallaDespensa } from '../features/despensa/PantallaDespensa'
 import { PantallaItemDespensa } from '../features/despensa/PantallaItemDespensa'
 import { PantallaInicio } from '../features/inicio/PantallaInicio'
@@ -53,6 +54,7 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
                 { path: '/despensa', element: <PantallaDespensa /> },
                 { path: '/despensa/agregar', element: <PantallaAgregarProducto /> },
                 { path: '/despensa/carga-rapida', element: <PantallaCargaRapida /> },
+                { path: '/despensa/adicional', element: <PantallaProductoAdicional /> },
                 { path: '/despensa/:id', element: <PantallaItemDespensa /> },
                 { path: '/plan', element: <PantallaPlan /> },
                 { path: '/plan/dia/:dia', element: <PantallaDia /> },

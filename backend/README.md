@@ -90,6 +90,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `GET /api/items-despensa/catalogo` | Productos del catálogo que la usuaria puede agregar (pantalla 16), por nombre. Parámetro opcional `buscar`. Cada uno trae `itemDespensaId` si ya está en la despensa. |
 | `GET /api/items-despensa/{id}` | Devuelve un producto de la despensa. 404 si no existe o es de otro hogar. |
 | `POST /api/items-despensa` | Agrega un producto del catálogo a la despensa. Responde 201 con `Location`. |
+| `POST /api/items-despensa/adicional` | Registra un producto que no está en el catálogo (solo para ese hogar, sin precio, ADR-18) y lo agrega a la despensa. Lleva `nombre`, `tipoCantidad`, `unidadBase` opcional, `categoria` opcional y los datos del ítem. 409 `DESPENSA_PRODUCTO_EXISTE` si el nombre ya existe. |
 | `PUT /api/items-despensa/{id}` | Edita cantidad o nivel, mínimo, vencimiento y ubicación. |
 | `DELETE /api/items-despensa/{id}` | Quita el producto de la despensa. Responde 204. |
 | `POST /api/planes-semanales` | Crea (o devuelve si ya existe) el plan de la semana. El `semanaInicio` debe ser lunes. |

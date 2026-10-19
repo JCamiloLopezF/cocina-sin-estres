@@ -131,6 +131,13 @@ export function PantallaAgregarProducto() {
           </>
         ))}
 
+      <Link
+        className="despensa__propio"
+        to={buscar.trim() ? `/despensa/adicional?nombre=${encodeURIComponent(buscar.trim())}` : '/despensa/adicional'}
+      >
+        ¿No está en el catálogo? Registra un producto propio
+      </Link>
+
       {!buscar && (
         <>
           <h2 className="rotulo despensa__seccion" id="sugerencias-frecuentes">

@@ -322,3 +322,11 @@
   margin-bottom: 0;
   overflow-x: visible;
 }
+
+/* Enlace a registrar un producto que no está en el catálogo (ADR-18). */
+.despensa__propio {
+  display: block;
+  margin-top: var(--espacio-4);
+  color: var(--color-tinta);
+  font-weight: 700;
+}
