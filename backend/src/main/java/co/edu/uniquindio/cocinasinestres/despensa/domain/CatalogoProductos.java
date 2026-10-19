@@ -1,5 +1,8 @@
 package co.edu.uniquindio.cocinasinestres.despensa.domain;
 
+import co.edu.uniquindio.cocinasinestres.curaduria.domain.TipoCantidad;
+import co.edu.uniquindio.cocinasinestres.curaduria.domain.UnidadBase;
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -35,4 +38,15 @@ public interface CatalogoProductos {
      * registrados por ese mismo hogar.
      */
     List<ProductoCatalogo> listarDisponibles(Long hogarId);
+
+    /**
+     * Registra un producto adicional que solo ve este hogar (ADR-18): no está en el
+     * catálogo global, no tiene precio de referencia ni curador responsable.
+     *
+     * @param capacidadReferencia cantidad que equivale a "Lleno"; obligatoria a granel,
+     *                            {@code null} en productos contables
+     * @return el producto ya guardado, con su identificador
+     */
+    ProductoCatalogo registrarAdicional(Long hogarId, String nombre, String categoria,
+        TipoCantidad tipoCantidad, UnidadBase unidadBase, BigDecimal capacidadReferencia);
 }

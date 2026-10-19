@@ -3,6 +3,7 @@ package co.edu.uniquindio.cocinasinestres.despensa.controller;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.EdicionItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaResponse;
+import co.edu.uniquindio.cocinasinestres.despensa.dto.ProductoAdicionalRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ProductoDisponibleResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ResumenDespensaResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.service.DespensaService;
@@ -78,6 +79,19 @@ public class DespensaController {
 
         URI ubicacion = ServletUriComponentsBuilder.fromCurrentRequest()
             .path("/{id}")
+            .buildAndExpand(creado.id())
+            .toUri();
+
+        return ResponseEntity.created(ubicacion).body(creado);
+    }
+
+    /** Registra un producto que no está en el catálogo y lo agrega a la despensa (ADR-18). */
+    @PostMapping("/adicional")
+    public ResponseEntity<ItemDespensaResponse> agregarAdicional(@RequestBody ProductoAdicionalRequest request) {
+        ItemDespensaResponse creado = despensaService.agregarAdicional(request);
+
+        URI ubicacion = ServletUriComponentsBuilder.fromCurrentContextPath()
+            .path("/api/items-despensa/{id}")
             .buildAndExpand(creado.id())
             .toUri();
 

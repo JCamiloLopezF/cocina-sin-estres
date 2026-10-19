@@ -1,0 +1,9 @@
+-d
+../../../jc
+-proc:none
+main/java/co/edu/uniquindio/cocinasinestres/despensa/service/DespensaService.java
+main/java/co/edu/uniquindio/cocinasinestres/despensa/repository/CatalogoProductosJdbc.java
+main/java/co/edu/uniquindio/cocinasinestres/despensa/domain/CatalogoProductos.java
+main/java/co/edu/uniquindio/cocinasinestres/despensa/dto/ProductoAdicionalRequest.java
+main/java/co/edu/uniquindio/cocinasinestres/despensa/controller/DespensaController.java
+test/java/co/edu/uniquindio/cocinasinestres/despensa/service/DespensaServiceTest.java

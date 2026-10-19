@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, Navigate } from 'react-router'
 import { EncabezadoPagina } from '../../shared/componentes'
 import { useCuenta, useSesion } from '../auth/contextoSesion'
 import { resumenDespensa } from '../despensa/apiDespensa'
@@ -26,16 +26,15 @@ export function PantallaInicio() {
     new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()),
   )
 
+  // Primer ingreso: el perfil del hogar va antes que todo lo demás (RNF-01).
+  if (!cuenta.perfilCompleto) {
+    return <Navigate to="/perfil/hogar" replace />
+  }
+
   return (
     <>
       <EncabezadoPagina previo={hoy.charAt(0).toUpperCase() + hoy.slice(1)} titulo={nombre ? `Hola, ${nombre}` : 'Hola'} />
       <div className="inicio">
-        {!cuenta.perfilCompleto && (
-          <Link className="aviso-inicio" to="/perfil/hogar">
-            <span className="aviso-inicio__titulo">Falta el perfil de tu hogar</span>
-            <span>Cuéntanos quiénes comen en casa y tu presupuesto · Completar perfil</span>
-          </Link>
-        )}
         {resumen && resumen.porVencer > 0 && (
           <Link className="aviso-inicio" to="/despensa?filtro=POR_VENCER">
             <span className="aviso-inicio__titulo">

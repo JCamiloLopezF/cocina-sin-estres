@@ -12,6 +12,11 @@ const MENSAJES: Record<string, string> = {
   DESPENSA_MINIMO_INVALIDO: 'El mínimo no puede ser negativo y admite hasta 3 decimales.',
   DESPENSA_NIVEL_MINIMO_INVALIDO: 'El nivel mínimo no puede ser Lleno; elige Poco o Medio.',
   DESPENSA_UBICACION_LARGA: 'La ubicación no puede superar 40 caracteres.',
+  DESPENSA_NOMBRE_REQUERIDO: 'Escribe el nombre del producto.',
+  DESPENSA_NOMBRE_LARGO: 'El nombre puede tener hasta 120 caracteres.',
+  DESPENSA_TIPO_REQUERIDO: 'Elige si el producto se cuenta por unidades o va a granel.',
+  DESPENSA_UNIDAD_INVALIDA: 'Lo que se cuenta va en unidades; lo que va a granel, en gramos o mililitros.',
+  DESPENSA_PRODUCTO_EXISTE: 'Ya hay un producto llamado así. Búscalo en el catálogo y agrégalo desde ahí.',
   RECURSO_NO_ENCONTRADO: 'Ese producto ya no está en tu despensa.',
 }
 
