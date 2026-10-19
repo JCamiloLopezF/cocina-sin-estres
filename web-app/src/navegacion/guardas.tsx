@@ -32,6 +32,11 @@ export function RutaPrivada() {
     return <Cargando />
   }
   if (estado.tipo === 'sin-sesion') {
+    // Quien llega a la raíz sin sesión ve la bienvenida (wireframe 01); a cualquier otra
+    // ruta, se le pide entrar y se recuerda a dónde iba.
+    if (ubicacion.pathname === '/') {
+      return <Navigate to="/bienvenida" replace />
+    }
     return <Navigate to="/entrar" replace state={{ desde: ubicacion.pathname } satisfies EstadoNavegacion} />
   }
   if (estado.tipo === 'error') {

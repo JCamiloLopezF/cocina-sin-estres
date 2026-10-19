@@ -49,6 +49,21 @@ public final class CodigoDespensa {
     /** El filtro del listado no es TODO, POR_VENCER ni BAJO_MINIMO. */
     public static final String FILTRO_INVALIDO = "DESPENSA_FILTRO_INVALIDO";
 
+    /** Producto adicional sin nombre. */
+    public static final String NOMBRE_REQUERIDO = "DESPENSA_NOMBRE_REQUERIDO";
+
+    /** Nombre de producto adicional de más de 120 caracteres. */
+    public static final String NOMBRE_LARGO = "DESPENSA_NOMBRE_LARGO";
+
+    /** Producto adicional sin decir si se cuenta o va a granel. */
+    public static final String TIPO_REQUERIDO = "DESPENSA_TIPO_REQUERIDO";
+
+    /** Unidad que no corresponde al tipo: lo contable va en unidades; lo de granel, en g o ml. */
+    public static final String UNIDAD_INVALIDA = "DESPENSA_UNIDAD_INVALIDA";
+
+    /** Ya hay un producto con ese nombre en el catálogo o entre los del hogar. */
+    public static final String PRODUCTO_EXISTE = "DESPENSA_PRODUCTO_EXISTE";
+
     private CodigoDespensa() {
     }
 }

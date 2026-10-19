@@ -85,13 +85,25 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `POST /api/curaduria/productos` | Crea un producto del catálogo global. Responde 201 con `Location`. |
 | `PUT /api/curaduria/productos/{id}` | Actualiza un producto. Si no cambia ningún campo, no se modifica el responsable ni se audita. |
 | `DELETE /api/curaduria/productos/{id}` | Desactiva el producto (no lo borra). Responde 204; repetirlo no tiene efecto. |
+| `GET /api/admin/cuentas` | Lista las cuentas con su rol y si están activas. Solo `ADMIN`. |
+| `PUT /api/admin/cuentas/{id}` | Cambia el `rol` (`USUARIA`, `CURADOR`, `ADMIN`) o `activo` de otra cuenta. Un administrador no puede cambiarse a sí mismo (409 `ADMIN_CUENTA_PROPIA`). |
 | `GET /api/items-despensa` | Lista la despensa del hogar de la usuaria. Parámetros opcionales: `filtro` (`TODO`, `POR_VENCER`, `BAJO_MINIMO`) y `buscar`. |
 | `GET /api/items-despensa/resumen` | Totales para la pantalla de inicio: `total`, `porVencer` y `bajoMinimo`. |
 | `GET /api/items-despensa/catalogo` | Productos del catálogo que la usuaria puede agregar (pantalla 16), por nombre. Parámetro opcional `buscar`. Cada uno trae `itemDespensaId` si ya está en la despensa. |
 | `GET /api/items-despensa/{id}` | Devuelve un producto de la despensa. 404 si no existe o es de otro hogar. |
 | `POST /api/items-despensa` | Agrega un producto del catálogo a la despensa. Responde 201 con `Location`. |
+| `POST /api/items-despensa/adicional` | Registra un producto que no está en el catálogo (solo para ese hogar, sin precio, ADR-18) y lo agrega a la despensa. Lleva `nombre`, `tipoCantidad`, `unidadBase` opcional, `categoria` opcional y los datos del ítem. 409 `DESPENSA_PRODUCTO_EXISTE` si el nombre ya existe. |
 | `PUT /api/items-despensa/{id}` | Edita cantidad o nivel, mínimo, vencimiento y ubicación. |
 | `DELETE /api/items-despensa/{id}` | Quita el producto de la despensa. Responde 204. |
+| `POST /api/planes-semanales` | Crea (o devuelve si ya existe) el plan de la semana. El `semanaInicio` debe ser lunes. |
+| `GET /api/planes-semanales?semanaInicio=...` | Devuelve el plan de la semana con sus comidas. 404 si no hay plan para esa semana. |
+| `PUT /api/planes-semanales/{planId}/comidas` | Asigna una receta a un día y tipo de comida. Si el hueco ya está ocupado, reemplaza la receta. |
+| `DELETE /api/planes-semanales/{planId}/comidas/{comidaId}` | Quita la comida del plan. Responde 204. |
+| `PUT /api/planes-semanales/{planId}/comidas/{comidaId}/marcar-preparada` | Marca la comida como preparada. |
+| `GET /api/planes-semanales/{planId}/lista-compras` | Lista de compras generada del plan con su costo total, ya descontando lo que el hogar tiene en su despensa (sin contar lo vencido). Si el plan no tiene comidas aún, responde lista vacía y costo cero. 404 si el plan no existe o es de otro hogar. |
+| `GET /api/planes-semanales/{planId}/costo` | Costo acumulado del plan por día (índice 0 = lunes), presupuesto semanal del hogar (ADR-14) y `excedePresupuesto`. El hogar sale de la usuaria autenticada. 404 si el plan no existe o es de otro hogar. |
+| `GET /api/recetas` | Lista las recetas activas ordenadas por nombre (resumen, sin pasos ni ingredientes). |
+| `GET /api/recetas/{id}` | Detalle de una receta: pasos separados e ingredientes con sus cantidades. 404 si no existe o está desactivada. |
 
 Cada módulo agrega sus rutas; las convenciones están en [`CONTRIBUTING.md`](../CONTRIBUTING.md#api-rest).
 

@@ -5,8 +5,11 @@ import co.edu.uniquindio.cocinasinestres.curaduria.domain.UnidadBase;
 import co.edu.uniquindio.cocinasinestres.despensa.domain.CatalogoProductos;
 import co.edu.uniquindio.cocinasinestres.despensa.domain.ProductoCatalogo;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -77,6 +80,29 @@ public class CatalogoProductosJdbc implements CatalogoProductos {
             .param("hogarId", hogarId)
             .query(CatalogoProductosJdbc::aProducto)
             .list();
+    }
+
+    @Override
+    public ProductoCatalogo registrarAdicional(Long hogarId, String nombre, String categoria,
+        TipoCantidad tipoCantidad, UnidadBase unidadBase, BigDecimal capacidadReferencia) {
+
+        KeyHolder llave = new GeneratedKeyHolder();
+        jdbc.sql("""
+                INSERT INTO producto (hogar_id, nombre, categoria, tipo_cantidad, unidad_base, capacidad_referencia)
+                VALUES (:hogarId, :nombre, :categoria, :tipoCantidad, :unidadBase, :capacidadReferencia)
+                """)
+            .param("hogarId", hogarId)
+            .param("nombre", nombre)
+            .param("categoria", categoria)
+            .param("tipoCantidad", tipoCantidad.name())
+            .param("unidadBase", unidadBase.name())
+            .param("capacidadReferencia", capacidadReferencia)
+            .update(llave, "id");
+
+        // MySQL devuelve la llave como BigInteger: se convierte por Number.
+        Long id = llave.getKey().longValue();
+        return new ProductoCatalogo(id, nombre, categoria, tipoCantidad, unidadBase, capacidadReferencia,
+            null, null, null);
     }
 
     private static ProductoCatalogo aProducto(ResultSet rs, int fila) throws SQLException {

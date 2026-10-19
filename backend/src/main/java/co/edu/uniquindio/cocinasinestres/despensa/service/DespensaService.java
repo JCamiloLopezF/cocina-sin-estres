@@ -1,6 +1,8 @@
 package co.edu.uniquindio.cocinasinestres.despensa.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.ConflictoException;
+import co.edu.uniquindio.cocinasinestres.curaduria.domain.TipoCantidad;
+import co.edu.uniquindio.cocinasinestres.curaduria.domain.UnidadBase;
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
 import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
 import co.edu.uniquindio.cocinasinestres.despensa.domain.BusquedaTexto;
@@ -14,6 +16,7 @@ import co.edu.uniquindio.cocinasinestres.despensa.domain.ReglasDespensa;
 import co.edu.uniquindio.cocinasinestres.despensa.domain.ValidadorItemDespensa;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.EdicionItemDespensaRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaRequest;
+import co.edu.uniquindio.cocinasinestres.despensa.dto.ProductoAdicionalRequest;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ItemDespensaResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ProductoDisponibleResponse;
 import co.edu.uniquindio.cocinasinestres.despensa.dto.ResumenDespensaResponse;
@@ -24,7 +27,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.text.Collator;
+import java.text.Normalizer;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -44,6 +49,13 @@ import java.util.stream.Collectors;
 public class DespensaService {
 
     private static final Collator COLATOR_ES = Collator.getInstance(Locale.forLanguageTag("es-CO"));
+
+    /** Categoría de los productos adicionales cuando la usuaria no elige una. */
+    static final String CATEGORIA_ADICIONAL = "OTROS";
+
+    private static final int LARGO_MAXIMO_NOMBRE = 120;
+    private static final int LARGO_MAXIMO_CATEGORIA = 60;
+    private static final BigDecimal CAPACIDAD_ADICIONAL_GRANEL = new BigDecimal("1000");
 
     private final ItemDespensaRepository itemRepository;
     private final CatalogoProductos catalogo;
@@ -195,6 +207,84 @@ public class DespensaService {
         }
 
         return aResponse(guardado, producto);
+    }
+
+    /**
+     * Registra un producto que no está en el catálogo (solo para este hogar, ADR-18) y lo
+     * agrega a la despensa en la misma transacción: si los datos del ítem no sirven, no
+     * queda un producto suelto.
+     *
+     * @throws DatosInvalidosException si falta el nombre o el tipo, la unidad no cuadra con
+     *                                 el tipo o los datos del ítem incumplen la cantidad mixta
+     * @throws ConflictoException      si ya existe un producto con ese nombre para el hogar
+     *                                 o la usuaria aún no tiene hogar
+     */
+    @Transactional
+    public ItemDespensaResponse agregarAdicional(ProductoAdicionalRequest request) {
+
+        Long hogarId = hogarIdActual();
+
+        String nombre = request.nombre() == null ? "" : request.nombre().trim().replaceAll("\\s+", " ");
+        if (nombre.isEmpty()) {
+            throw new DatosInvalidosException(CodigoDespensa.NOMBRE_REQUERIDO, "Escribe el nombre del producto.");
+        }
+        if (nombre.length() > LARGO_MAXIMO_NOMBRE) {
+            throw new DatosInvalidosException(CodigoDespensa.NOMBRE_LARGO,
+                "El nombre puede tener hasta " + LARGO_MAXIMO_NOMBRE + " caracteres.");
+        }
+        if (request.tipoCantidad() == null) {
+            throw new DatosInvalidosException(CodigoDespensa.TIPO_REQUERIDO,
+                "Indica si el producto se cuenta por unidades o va a granel.");
+        }
+
+        boolean granel = request.tipoCantidad() == TipoCantidad.GRANEL;
+        UnidadBase unidad = request.unidadBase() != null ? request.unidadBase() : (granel ? UnidadBase.g : UnidadBase.unidad);
+        if (granel == (unidad == UnidadBase.unidad)) {
+            throw new DatosInvalidosException(CodigoDespensa.UNIDAD_INVALIDA,
+                "Lo que se cuenta va en unidades; lo que va a granel, en gramos o mililitros.");
+        }
+
+        String categoria = request.categoria() == null || request.categoria().isBlank()
+            ? CATEGORIA_ADICIONAL
+            : request.categoria().trim().toUpperCase(Locale.ROOT);
+        if (categoria.length() > LARGO_MAXIMO_CATEGORIA) {
+            categoria = CATEGORIA_ADICIONAL;
+        }
+
+        String clave = claveNombre(nombre);
+        boolean repetido = catalogo.listarDisponibles(hogarId).stream()
+            .anyMatch(producto -> claveNombre(producto.nombre()).equals(clave));
+        if (repetido) {
+            throw new ConflictoException(CodigoDespensa.PRODUCTO_EXISTE,
+                "Ya hay un producto llamado así. Búscalo en el catálogo y agrégalo desde ahí.");
+        }
+
+        // A granel, "Lleno" equivale a un kilo o un litro: es solo la referencia para estimar.
+        BigDecimal capacidad = granel ? CAPACIDAD_ADICIONAL_GRANEL : null;
+
+        // Se valida antes de guardar el producto, con los mismos datos que tendrá.
+        DatosItemDespensa datos = ValidadorItemDespensa.validar(
+            new ProductoCatalogo(0L, nombre, categoria, request.tipoCantidad(), unidad, capacidad, null, null, null),
+            request.cantidad(),
+            request.nivel(),
+            request.cantidadMinima(),
+            request.nivelMinimo(),
+            request.fechaVencimiento(),
+            request.ubicacion()
+        );
+
+        ProductoCatalogo producto = catalogo.registrarAdicional(
+            hogarId, nombre, categoria, request.tipoCantidad(), unidad, capacidad);
+        ItemDespensa guardado = itemRepository.saveAndFlush(new ItemDespensa(hogarId, producto.id(), datos));
+        return aResponse(guardado, producto);
+    }
+
+    /** Nombre comparable: sin tildes, sin mayúsculas y con espacios simples. */
+    private static String claveNombre(String nombre) {
+        return Normalizer.normalize(nombre.trim(), Normalizer.Form.NFD)
+            .replaceAll("\\p{M}", "")
+            .replaceAll("\\s+", " ")
+            .toLowerCase(Locale.ROOT);
     }
 
     /**

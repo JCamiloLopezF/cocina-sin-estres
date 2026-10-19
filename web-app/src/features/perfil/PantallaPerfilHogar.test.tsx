@@ -63,8 +63,9 @@ describe('Perfil del hogar (asistente de 4 pasos)', () => {
     expect(llamadas.some((l) => l.metodo === 'PUT')).toBe(false)
     await usuario.click(screen.getByRole('button', { name: 'Guardar perfil' }))
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Luisa' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/')
+    // Primera vez: sigue la carga rápida de la despensa (wireframe 11).
+    expect(await screen.findByRole('heading', { level: 1, name: 'Carga rápida' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/despensa/carga-rapida')
     expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toEqual({
       presupuestoMonto: 390000,
       periodicidadIngreso: 'QUINCENAL',

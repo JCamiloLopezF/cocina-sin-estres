@@ -1,0 +1,129 @@
+import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it } from 'vitest'
+import { backendFalso } from '../../prueba/backendFalso'
+import { montarApp } from '../../prueba/montar'
+import { crearServicioFalso, respuestaJson } from '../../prueba/servicioFalso'
+import type { ProductoCurado } from './apiCuraduria'
+
+const CURADORA = { uid: 'c', correo: 'curadora@correo.com', nombre: null }
+const LENTEJA: ProductoCurado = {
+  id: 3,
+  nombre: 'Lenteja',
+  categoria: 'GRANOS',
+  tipoCantidad: 'GRANEL',
+  unidadBase: 'g',
+  unidadCompra: 'Libra',
+  cantidadUnidadCompra: 500,
+  precioUnidadCompra: 4200,
+  capacidadReferencia: 1000,
+  esBasico: true,
+  activo: true,
+}
+const HUEVOS: ProductoCurado = {
+  ...LENTEJA,
+  id: 4,
+  nombre: 'Huevos',
+  categoria: 'LACTEOS',
+  tipoCantidad: 'CONTABLE',
+  unidadBase: 'unidad',
+  unidadCompra: 'Cubeta',
+  cantidadUnidadCompra: 30,
+  precioUnidadCompra: 18000,
+  capacidadReferencia: undefined,
+}
+
+function backend(extra = {}) {
+  return backendFalso({
+    'GET /yo': () => respuestaJson({ id: 2, correo: CURADORA.correo, rol: 'CURADOR', perfilCompleto: false }),
+    'GET /curaduria/productos': () => respuestaJson([LENTEJA, HUEVOS]),
+    'GET /curaduria/productos/3': () => respuestaJson(LENTEJA),
+    ...extra,
+  })
+}
+
+describe('Catálogo del curador (pantallas 43 y 44)', () => {
+  it('lista los productos con su precio y filtra por categoría', async () => {
+    backend()
+    const usuario = userEvent.setup()
+    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria')
+
+    expect(await screen.findByRole('link', { name: 'Editar Lenteja' })).toHaveTextContent(/4\.200.*libra/)
+    expect(screen.getByText('2 de 2 productos activos')).toBeInTheDocument()
+    await usuario.selectOptions(screen.getByLabelText('Categoría'), 'LACTEOS')
+    expect(screen.queryByRole('link', { name: 'Editar Lenteja' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Editar Huevos' })).toBeInTheDocument()
+  })
+
+  it('crea un producto con precio de referencia y valida los datos', async () => {
+    const { llamadas } = backend({
+      'POST /curaduria/productos': (cuerpo: unknown) => respuestaJson({ id: 9, activo: true, ...(cuerpo as object) }, 201),
+    })
+    const usuario = userEvent.setup()
+    const { router } = montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/productos/nuevo')
+
+    await usuario.click(await screen.findByRole('button', { name: 'Guardar producto' }))
+    expect(screen.getByText('Escribe el nombre.')).toBeInTheDocument()
+    expect(screen.getByText('Escribe la presentación de compra.')).toBeInTheDocument()
+
+    await usuario.type(screen.getByLabelText('Nombre'), 'Queso campesino')
+    await usuario.selectOptions(screen.getByLabelText('Categoría'), 'LACTEOS')
+    await usuario.click(screen.getByRole('radio', { name: 'Gramos' }))
+    await usuario.type(screen.getByLabelText('Presentación de compra'), 'Libra')
+    await usuario.type(screen.getByLabelText('Cuánto trae'), '500')
+    await usuario.type(screen.getByLabelText('Precio'), '6500')
+    await usuario.click(screen.getByRole('button', { name: 'Guardar producto' }))
+
+    expect(await screen.findByText('Queso campesino quedó guardado en el catálogo.')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/curaduria')
+    expect(llamadas.find((l) => l.metodo === 'POST')?.cuerpo).toEqual({
+      nombre: 'Queso campesino',
+      categoria: 'LACTEOS',
+      tipoCantidad: 'CONTABLE',
+      unidadBase: 'g',
+      unidadCompra: 'Libra',
+      cantidadUnidadCompra: 500,
+      precioUnidadCompra: 6500,
+      esBasico: false,
+    })
+  })
+
+  it('edita un producto a granel y lo puede quitar del catálogo', async () => {
+    const { llamadas } = backend({
+      'PUT /curaduria/productos/3': (cuerpo: unknown) => respuestaJson({ ...LENTEJA, ...(cuerpo as object) }),
+      'DELETE /curaduria/productos/3': () => new Response(null, { status: 204 }),
+    })
+    const usuario = userEvent.setup()
+    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/productos/3')
+
+    const precio = await screen.findByLabelText('Precio')
+    expect(screen.getByLabelText('Cantidad que equivale a «Lleno»')).toHaveValue('1000')
+    await usuario.clear(precio)
+    await usuario.type(precio, '4500')
+    await usuario.click(screen.getByRole('button', { name: 'Guardar producto' }))
+    expect(await screen.findByText('Lenteja quedó guardado en el catálogo.')).toBeInTheDocument()
+    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toMatchObject({ precioUnidadCompra: 4500, capacidadReferencia: 1000 })
+  })
+
+  it('quitar del catálogo pide confirmación', async () => {
+    const { llamadas } = backend({ 'DELETE /curaduria/productos/3': () => new Response(null, { status: 204 }) })
+    const usuario = userEvent.setup()
+    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/productos/3')
+
+    await usuario.click(await screen.findByRole('button', { name: 'Quitar del catálogo' }))
+    await usuario.click(screen.getByRole('button', { name: 'Sí, quitarlo' }))
+    expect(await screen.findByText('Lenteja ya no se ofrece en el catálogo.')).toBeInTheDocument()
+    expect(llamadas.some((l) => l.metodo === 'DELETE')).toBe(true)
+  })
+
+  it('muestra el detalle de validación del backend', async () => {
+    backend({
+      'PUT /curaduria/productos/3': () =>
+        respuestaJson({ status: 400, codigo: 'PRODUCTO_PRECIO_INVALIDO', detail: 'El precio de referencia no puede ser negativo.' }, 400),
+    })
+    const usuario = userEvent.setup()
+    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/productos/3')
+    await usuario.click(await screen.findByRole('button', { name: 'Guardar producto' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('El precio de referencia no puede ser negativo.')
+  })
+})

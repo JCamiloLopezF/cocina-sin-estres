@@ -28,3 +28,10 @@ export function validarContrasenaNueva(contrasena: string): string | undefined {
 export function validarNombre(nombre: string): string | undefined {
   return nombre.trim() ? undefined : 'Escribe cómo te llamas.'
 }
+
+export function validarConfirmacion(contrasena: string, confirmacion: string): string | undefined {
+  if (!confirmacion) {
+    return 'Escribe de nuevo la contraseña.'
+  }
+  return confirmacion === contrasena ? undefined : 'Las contraseñas no coinciden.'
+}
