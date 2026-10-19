@@ -85,6 +85,8 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `POST /api/curaduria/productos` | Crea un producto del catálogo global. Responde 201 con `Location`. |
 | `PUT /api/curaduria/productos/{id}` | Actualiza un producto. Si no cambia ningún campo, no se modifica el responsable ni se audita. |
 | `DELETE /api/curaduria/productos/{id}` | Desactiva el producto (no lo borra). Responde 204; repetirlo no tiene efecto. |
+| `GET /api/admin/cuentas` | Lista las cuentas con su rol y si están activas. Solo `ADMIN`. |
+| `PUT /api/admin/cuentas/{id}` | Cambia el `rol` (`USUARIA`, `CURADOR`, `ADMIN`) o `activo` de otra cuenta. Un administrador no puede cambiarse a sí mismo (409 `ADMIN_CUENTA_PROPIA`). |
 | `GET /api/items-despensa` | Lista la despensa del hogar de la usuaria. Parámetros opcionales: `filtro` (`TODO`, `POR_VENCER`, `BAJO_MINIMO`) y `buscar`. |
 | `GET /api/items-despensa/resumen` | Totales para la pantalla de inicio: `total`, `porVencer` y `bajoMinimo`. |
 | `GET /api/items-despensa/catalogo` | Productos del catálogo que la usuaria puede agregar (pantalla 16), por nombre. Parámetro opcional `buscar`. Cada uno trae `itemDespensaId` si ya está en la despensa. |
