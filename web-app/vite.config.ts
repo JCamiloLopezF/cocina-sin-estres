@@ -15,5 +15,8 @@ export default defineConfig({
     setupFiles: ['./src/prueba/configuracion.ts'],
     css: false,
     restoreMocks: true,
+    // Los recorridos completos (perfil en 4 pasos, plan) hacen muchos clics: en el CI
+    // pueden pasar de los 5 s por defecto sin que nada esté mal.
+    testTimeout: 20000,
   },
 })
