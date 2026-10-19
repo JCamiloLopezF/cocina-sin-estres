@@ -184,3 +184,49 @@
 .casilla--aviso input {
   margin-top: 0.15rem;
 }
+
+/* Todo listo (wireframe 12). */
+.listo {
+  display: grid;
+  gap: var(--espacio-4);
+  padding-top: var(--espacio-5);
+}
+
+.listo__ilustracion {
+  display: grid;
+  place-items: center;
+  height: 9rem;
+  border: var(--borde) dashed var(--color-punteado);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-beige);
+}
+
+.listo__ilustracion svg {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+.listo__titulo {
+  margin: 0;
+  font-size: var(--texto-xl);
+  line-height: 1.15;
+}
+
+.listo__datos {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listo__datos li {
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+}
+
+.listo__inicio {
+  justify-self: center;
+  color: var(--color-tinta);
+}

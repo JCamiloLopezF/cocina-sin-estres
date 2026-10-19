@@ -301,3 +301,24 @@
 .confirmar .formulario-item__acciones {
   grid-template-columns: 1fr 1fr;
 }
+
+/* Acción corta a la derecha del título, como "Omitir" (wireframe 11). */
+.encabezado__accion {
+  color: var(--color-tinta);
+  font-weight: 700;
+}
+
+/* Carga rápida (wireframe 11): las píldoras se acomodan en varias filas. */
+.carga__intro {
+  margin: 0 0 var(--espacio-4);
+}
+
+.carga__grupo {
+  margin-bottom: var(--espacio-4);
+}
+
+.filtros--envolver {
+  flex-wrap: wrap;
+  margin-bottom: 0;
+  overflow-x: visible;
+}

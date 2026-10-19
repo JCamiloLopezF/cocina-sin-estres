@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { ErrorApi, pedir } from '../../api/cliente'
 import { mensajeDeError } from '../../api/mensajesError'
 import { Alerta, Boton, Cargando, CampoTexto, GrupoOpciones } from '../../shared/componentes'
-import { useSesion } from '../auth/contextoSesion'
+import { useSesion, useCuenta } from '../auth/contextoSesion'
 import { enfocarPrimerError } from '../auth/enfocarPrimerError'
 import './perfil.css'
 
@@ -73,6 +73,9 @@ interface Errores {
 export function PantallaPerfilHogar() {
   const navegar = useNavigate()
   const { recargarCuenta } = useSesion()
+  // La primera vez que se guarda, el recorrido sigue con la carga rápida de la despensa (wireframe 11).
+  const cuenta = useCuenta()
+  const [primeraVez] = useState(() => !cuenta.perfilCompleto)
   const formulario = useRef<HTMLFormElement>(null)
   const titulo = useRef<HTMLHeadingElement>(null)
   const [paso, setPaso] = useState(0)
@@ -226,7 +229,7 @@ export function PantallaPerfilHogar() {
     try {
       await pedir('/perfil/hogar', { metodo: 'PUT', cuerpo })
       await recargarCuenta()
-      navegar('/', { replace: true })
+      navegar(primeraVez ? '/despensa/carga-rapida' : '/', { replace: true })
     } catch (error) {
       // Este código trae en el detalle qué dato falló, ya redactado para la usuaria (RNF-01).
       setErrorGeneral(

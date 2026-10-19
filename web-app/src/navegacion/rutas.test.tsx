@@ -25,8 +25,8 @@ describe('Navegación por sesión y rol', () => {
     expect(router.state.location.pathname).toBe('/entrar')
   })
 
-  it('la usuaria ve el menú de cinco pestañas y el aviso de perfil incompleto', async () => {
-    const fetchFalso = backendResponde({ id: 1, correo: LUISA.correo, rol: 'USUARIA', perfilCompleto: false })
+  it('la usuaria ve el menú de cinco pestañas', async () => {
+    const fetchFalso = backendResponde({ id: 1, correo: LUISA.correo, rol: 'USUARIA', perfilCompleto: true })
     const { servicio } = crearServicioFalso(LUISA)
     montarApp(servicio, '/')
 
@@ -40,9 +40,26 @@ describe('Navegación por sesión y rol', () => {
       'Perfil',
     ])
     expect(within(menu).getByRole('link', { name: 'Inicio' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByText('Falta el perfil de tu hogar')).toBeInTheDocument()
     // La identidad viaja al backend en cada petición.
     expect(fetchFalso.mock.calls[0][1]?.headers).toMatchObject({ Authorization: 'Bearer prueba' })
+  })
+
+  it('en el primer ingreso la usuaria va directo al perfil del hogar (RNF-01)', async () => {
+    backendResponde({ id: 1, correo: LUISA.correo, rol: 'USUARIA', perfilCompleto: false })
+    const { router } = montarApp(crearServicioFalso(LUISA).servicio, '/')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Tu hogar · paso 1 de 4' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/perfil/hogar')
+  })
+
+  it('sin sesión, la raíz muestra la bienvenida', async () => {
+    backendResponde({})
+    const { router } = montarApp(crearServicioFalso(null).servicio, '/')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Te damos la bienvenida' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Crear mi cuenta' })).toHaveAttribute('href', '/registro')
+    expect(screen.getByRole('link', { name: 'Ya tengo cuenta' })).toHaveAttribute('href', '/entrar')
+    expect(router.state.location.pathname).toBe('/bienvenida')
   })
 
   it('un curador que abre una pantalla de usuaria termina en su catálogo (RNF-23)', async () => {
@@ -74,7 +91,7 @@ describe('Navegación por sesión y rol', () => {
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
 
     await usuario.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Entrar' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Te damos la bienvenida' })).toBeInTheDocument()
   })
 
   it('desde Perfil se cierra la sesión', async () => {

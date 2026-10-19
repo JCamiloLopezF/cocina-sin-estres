@@ -1,15 +1,18 @@
 import type { RouteObject } from 'react-router'
 import { PantallaAdmin } from '../features/admin/PantallaAdmin'
+import { PantallaBienvenida } from '../features/auth/PantallaBienvenida'
 import { PantallaEntrar } from '../features/auth/PantallaEntrar'
 import { PantallaRecuperar } from '../features/auth/PantallaRecuperar'
 import { PantallaRegistro } from '../features/auth/PantallaRegistro'
 import { PantallaCuraduria } from '../features/curaduria/PantallaCuraduria'
 import { PantallaAgregarProducto } from '../features/despensa/PantallaAgregarProducto'
+import { PantallaCargaRapida } from '../features/despensa/PantallaCargaRapida'
 import { PantallaDespensa } from '../features/despensa/PantallaDespensa'
 import { PantallaItemDespensa } from '../features/despensa/PantallaItemDespensa'
 import { PantallaInicio } from '../features/inicio/PantallaInicio'
 import { PantallaPerfil } from '../features/perfil/PantallaPerfil'
 import { PantallaPerfilHogar } from '../features/perfil/PantallaPerfilHogar'
+import { PantallaTodoListo } from '../features/perfil/PantallaTodoListo'
 import { PantallaDia } from '../features/planificador/PantallaDia'
 import { PantallaListaCompras } from '../features/planificador/PantallaListaCompras'
 import { PantallaPlan } from '../features/planificador/PantallaPlan'
@@ -31,6 +34,7 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
     {
       element: <RutaPublica />,
       children: [
+        { path: '/bienvenida', element: <PantallaBienvenida /> },
         { path: '/entrar', element: <PantallaEntrar modoDev={modoDev} /> },
         { path: '/registro', element: modoDev ? <PantallaEntrar modoDev /> : <PantallaRegistro /> },
         { path: '/recuperar', element: modoDev ? <PantallaEntrar modoDev /> : <PantallaRecuperar /> },
@@ -48,6 +52,7 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
                 { index: true, element: <PantallaInicio /> },
                 { path: '/despensa', element: <PantallaDespensa /> },
                 { path: '/despensa/agregar', element: <PantallaAgregarProducto /> },
+                { path: '/despensa/carga-rapida', element: <PantallaCargaRapida /> },
                 { path: '/despensa/:id', element: <PantallaItemDespensa /> },
                 { path: '/plan', element: <PantallaPlan /> },
                 { path: '/plan/dia/:dia', element: <PantallaDia /> },
@@ -57,6 +62,7 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
                 { path: '/recetas/:id/agregar', element: <PantallaAgregarAlPlan /> },
                 { path: '/perfil', element: <PantallaPerfil /> },
                 { path: '/perfil/hogar', element: <PantallaPerfilHogar /> },
+                { path: '/listo', element: <PantallaTodoListo /> },
               ],
             },
           ],

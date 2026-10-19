@@ -101,3 +101,17 @@
   margin-top: var(--espacio-5);
   font-size: var(--texto-s);
 }
+
+/* Bienvenida (wireframe 01). */
+.bienvenida__acciones {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-5);
+}
+
+.bienvenida__nota {
+  margin: 0;
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+  text-align: center;
+}

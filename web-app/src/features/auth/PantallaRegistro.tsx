@@ -5,12 +5,20 @@ import { DisenoAcceso } from './DisenoAcceso'
 import { enfocarPrimerError } from './enfocarPrimerError'
 import { mensajeDeErrorAuth } from './mensajesAuth'
 import { useSesion } from './contextoSesion'
-import { LARGO_MINIMO_CONTRASENA, validarContrasenaNueva, validarCorreo, validarNombre } from './validaciones'
+import {
+  LARGO_MINIMO_CONTRASENA,
+  validarConfirmacion,
+  validarContrasenaNueva,
+  validarCorreo,
+  validarNombre,
+} from './validaciones'
 
 interface Errores {
   nombre?: string
   correo?: string
   contrasena?: string
+  confirmacion?: string
+  autorizacion?: string
 }
 
 /** Crear cuenta con nombre, correo y contraseña. Firebase manda el correo de verificación. */
@@ -20,6 +28,8 @@ export function PantallaRegistro() {
   const [nombre, setNombre] = useState('')
   const [correo, setCorreo] = useState('')
   const [contrasena, setContrasena] = useState('')
+  const [confirmacion, setConfirmacion] = useState('')
+  const [autoriza, setAutoriza] = useState(false)
   const [mostrar, setMostrar] = useState(false)
   const [errores, setErrores] = useState<Errores>({})
   const [errorGeneral, setErrorGeneral] = useState<string>()
@@ -32,9 +42,11 @@ export function PantallaRegistro() {
       nombre: validarNombre(nombre),
       correo: validarCorreo(correo),
       contrasena: validarContrasenaNueva(contrasena),
+      confirmacion: validarConfirmacion(contrasena, confirmacion),
+      autorizacion: autoriza ? undefined : 'Para crear la cuenta necesitamos tu autorización.',
     }
     setErrores(nuevos)
-    if (nuevos.nombre || nuevos.correo || nuevos.contrasena) {
+    if (Object.values(nuevos).some(Boolean)) {
       enfocarPrimerError(formulario.current)
       return
     }
@@ -80,10 +92,37 @@ export function PantallaRegistro() {
           onChange={(e) => setContrasena(e.target.value)}
           error={errores.contrasena}
         />
+        <CampoTexto
+          etiqueta="Confirmar contraseña"
+          type={mostrar ? 'text' : 'password'}
+          name="confirmacion"
+          autoComplete="new-password"
+          value={confirmacion}
+          onChange={(e) => setConfirmacion(e.target.value)}
+          error={errores.confirmacion}
+        />
         <label className="formulario__mostrar">
           <input type="checkbox" checked={mostrar} onChange={(e) => setMostrar(e.target.checked)} />
           Mostrar contraseña
         </label>
+        <div className="campo">
+          <label className="casilla">
+            <input
+              type="checkbox"
+              name="autorizacion"
+              checked={autoriza}
+              aria-invalid={errores.autorizacion ? true : undefined}
+              aria-describedby={errores.autorizacion ? 'error-autorizacion' : undefined}
+              onChange={(e) => setAutoriza(e.target.checked)}
+            />
+            Autorizo el tratamiento de mis datos personales y los de salud de mi hogar (Ley 1581 de 2012).
+          </label>
+          {errores.autorizacion && (
+            <span className="campo__error" id="error-autorizacion">
+              {errores.autorizacion}
+            </span>
+          )}
+        </div>
         <Boton type="submit" ancho cargando={enviando}>
           Crear cuenta
         </Boton>
