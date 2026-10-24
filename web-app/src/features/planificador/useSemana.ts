@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { pedir } from '../../api/cliente'
+import { obtenerAdaptaciones, type Adaptacion } from '../recetario/adaptaciones'
 import { listarRecetas, obtenerReceta } from '../recetario/apiRecetario'
 import { analizarReceta, cargarCocina, type Cocina, type RecetaVista } from '../recetario/cocina'
 import { costoPlan, obtenerPlan } from './apiPlanificador'
@@ -20,6 +21,8 @@ export interface Semana {
   /** Las recetas que están en el plan, con costo y faltantes. */
   recetas: Map<number, RecetaVista>
   cocina: Cocina
+  /** Cómo adaptar cada receta del plan a las alergias de cada persona (ADR-24). */
+  adaptaciones: Map<number, Adaptacion>
   /** Días sin tiempo para cocinar del perfil (1 = lunes). */
   diasSinTiempo: number[]
   periodicidad?: Periodicidad
@@ -30,12 +33,13 @@ export type EstadoSemana = { tipo: 'cargando' } | { tipo: 'listo'; semana: Seman
 export async function cargarSemana(lunes: string, senal?: AbortSignal): Promise<Semana> {
   const plan = await obtenerPlan(lunes, senal)
   const idsEnPlan = [...new Set((plan?.comidas ?? []).map((c) => c.recetaId))]
-  const [resumen, cocina, perfil, costo, detalles] = await Promise.all([
+  const [resumen, cocina, perfil, costo, detalles, adaptaciones] = await Promise.all([
     listarRecetas(senal),
     cargarCocina(senal),
     pedir<{ diasSinTiempo?: number[]; periodicidadIngreso?: Periodicidad }>('/perfil/hogar', { senal }).catch(() => undefined),
     plan ? costoPlan(plan.id, senal) : Promise.resolve(undefined),
     Promise.all(idsEnPlan.map((id) => obtenerReceta(id, senal))),
+    obtenerAdaptaciones(idsEnPlan, senal),
   ])
   return {
     lunes,
@@ -44,6 +48,7 @@ export async function cargarSemana(lunes: string, senal?: AbortSignal): Promise<
     nombres: new Map(resumen.map((r) => [r.id, r.nombre])),
     recetas: new Map(detalles.map((d) => [d.id, analizarReceta(d, cocina)])),
     cocina,
+    adaptaciones,
     diasSinTiempo: perfil?.diasSinTiempo ?? [],
     periodicidad: perfil?.periodicidadIngreso,
   }

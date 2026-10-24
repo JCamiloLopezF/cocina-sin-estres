@@ -299,3 +299,15 @@
 .completar-plan h2 {
   font-size: var(--texto-m);
 }
+
+/* ADR-24: lo que hay que cambiar para quien tiene alergias. */
+.hueco__ajustes {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: var(--espacio-2) 0 0;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-left: 4px solid var(--color-primario-hondo);
+  background: var(--color-crema);
+  font-size: var(--texto-s);
+  list-style: none;
+}

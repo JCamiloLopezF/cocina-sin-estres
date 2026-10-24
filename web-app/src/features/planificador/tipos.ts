@@ -68,4 +68,6 @@ export interface PlanGenerado {
   aprovecha: string[]
   /** Comidas del plan que suelen gustarles a los niños; 0 si en el hogar no hay niños. */
   paraNinos?: number
+  /** Comidas que llevan un cambio o un plato aparte para alguien con alergia (ADR-24). */
+  conAdaptaciones?: number
 }

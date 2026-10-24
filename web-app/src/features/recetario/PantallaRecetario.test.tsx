@@ -2,7 +2,15 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { backendFalso } from '../../prueba/backendFalso'
-import { ARROZ_CON_LECHE, ARROZ_CON_POLLO, PERFIL_CON_ALERGIAS, resumenReceta, rutasCocina, SOPA } from '../../prueba/cocinaFalsa'
+import {
+  ARROZ_CON_LECHE,
+  ARROZ_CON_POLLO,
+  PERFIL_CON_ALERGIA_GRAVE,
+  PERFIL_CON_ALERGIAS,
+  resumenReceta,
+  rutasCocina,
+  SOPA,
+} from '../../prueba/cocinaFalsa'
 import { montarApp } from '../../prueba/montar'
 import { crearServicioFalso, LUISA, respuestaJson } from '../../prueba/servicioFalso'
 
@@ -123,36 +131,75 @@ describe('Recetario (pantallas 21 a 24)', () => {
   })
 
   describe('alergias por persona', () => {
-    function backendConAlergias() {
+    function backendConAlergias(perfil: object = PERFIL_CON_ALERGIAS, extra: Record<string, () => Response> = {}) {
       return backendFalso({
         ...rutasCocina(),
         'GET /recetas': () => respuestaJson([ARROZ_CON_POLLO, SOPA, ARROZ_CON_LECHE].map(resumenReceta)),
         'GET /recetas/12': () => respuestaJson(ARROZ_CON_LECHE),
-        'GET /perfil/hogar': () => respuestaJson(PERFIL_CON_ALERGIAS),
+        'GET /perfil/hogar': () => respuestaJson(perfil),
+        ...extra,
       })
     }
 
-    it('oculta por defecto las recetas no aptas y deja verlas marcadas', async () => {
+    it('una alergia que no es grave no oculta la receta: la marca "con ajuste"', async () => {
       backendConAlergias()
+      montarApp(crearServicioFalso(LUISA).servicio, '/recetas')
+
+      const tarjeta = await screen.findByRole('link', { name: /Arroz con leche/ })
+      expect(within(tarjeta).getByText('con ajuste para Samuel')).toBeInTheDocument()
+      expect(screen.queryByText(/Ocultamos/)).not.toBeInTheDocument()
+    })
+
+    it('una alergia grave oculta la receta por defecto y deja verla marcada', async () => {
+      backendConAlergias(PERFIL_CON_ALERGIA_GRAVE)
       montarApp(crearServicioFalso(LUISA).servicio, '/recetas')
       const usuario = userEvent.setup()
 
       expect(await screen.findByRole('link', { name: /Sopa de lentejas/ })).toBeInTheDocument()
       expect(screen.queryByRole('link', { name: /Arroz con leche/ })).not.toBeInTheDocument()
-      expect(screen.getByText(/Ocultamos 1 receta que no es apta/)).toBeInTheDocument()
+      expect(screen.getByText(/Ocultamos 1 receta que no es apta por una alergia grave/)).toBeInTheDocument()
 
       await usuario.click(screen.getByRole('button', { name: 'Ver todas' }))
       expect(within(screen.getByRole('link', { name: /Arroz con leche/ })).getByText('no apta para Samuel')).toBeInTheDocument()
     })
 
-    it('el detalle avisa a quién no le sirve y a quién le pide precaución', async () => {
-      backendConAlergias()
+    it('el detalle dice cómo adaptarla para cada persona y a quién pide precaución', async () => {
+      backendConAlergias(PERFIL_CON_ALERGIAS, {
+        'GET /adaptaciones': () =>
+          respuestaJson([
+            {
+              recetaId: 12,
+              estado: 'PLATO_APARTE',
+              cambios: [
+                {
+                  tipo: 'PLATO_APARTE',
+                  persona: 'Samuel',
+                  alergias: ['lactosa'],
+                  enDespensa: false,
+                  recetaAparteId: 10,
+                  recetaAparte: 'Sopa de lentejas',
+                },
+              ],
+            },
+          ]),
+      })
       montarApp(crearServicioFalso(LUISA).servicio, '/recetas/12')
 
-      expect(await screen.findByText('No apta para Samuel: lleva lactosa.')).toBeInTheDocument()
+      const ajustes = await screen.findByRole('region', { name: 'Ajustes por alergias' })
+      expect(ajustes).toHaveTextContent(
+        'Para Samuel (lactosa): no se puede cambiar lo principal del plato; prepárale aparte Sopa de lentejas.',
+      )
+      expect(within(ajustes).getByRole('link', { name: 'Ver Sopa de lentejas' })).toHaveAttribute('href', '/recetas/10')
       expect(screen.getByText(/Precaución para Luisa \(diabetes\)/)).toBeInTheDocument()
       expect(screen.getByText('Leche · 1 kg')).toBeInTheDocument()
       expect(screen.getByText('· lactosa')).toBeInTheDocument()
+    })
+
+    it('si no se pueden consultar los ajustes, igual avisa con lo que sabe del perfil', async () => {
+      backendConAlergias(PERFIL_CON_ALERGIA_GRAVE)
+      montarApp(crearServicioFalso(LUISA).servicio, '/recetas/12')
+
+      expect(await screen.findByText('No apta para Samuel: lleva lactosa.')).toBeInTheDocument()
     })
   })
 })

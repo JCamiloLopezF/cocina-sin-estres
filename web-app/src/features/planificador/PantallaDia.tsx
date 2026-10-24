@@ -7,6 +7,7 @@ import { mensajePlan, planSinHogar } from './mensajesPlan'
 import { ErrorCarga, PrimeroElHogar } from './PantallaPlan'
 import { COMIDAS, esDia, NOMBRE_COMIDA, NOMBRE_DIA, tituloDia } from './semana'
 import type { ComidaPlan, Dia, TipoComida } from './tipos'
+import { textoCambio } from '../recetario/adaptaciones'
 import { useSemana, type Semana } from './useSemana'
 import './planificador.css'
 
@@ -225,6 +226,17 @@ function Comida({ semana, comida, dia, ocupado, confirmando, alPreguntar, alOtra
         </span>
         {comida.preparada ? <span className="etiqueta">preparada</span> : <span className="fila__flecha" aria-hidden="true">›</span>}
       </Link>
+
+      {(semana.adaptaciones.get(comida.recetaId)?.cambios.length ?? 0) > 0 && (
+        <ul className="hueco__ajustes" aria-label={`Ajustes por alergias en ${nombre}`}>
+          {semana.adaptaciones.get(comida.recetaId)!.cambios.map((cambio, i) => (
+            <li key={i}>
+              {textoCambio(cambio)}{' '}
+              {cambio.recetaAparteId && <Link to={`/recetas/${cambio.recetaAparteId}`}>Ver receta</Link>}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {confirmando ? (
         <div className="confirmar hueco__confirmar">

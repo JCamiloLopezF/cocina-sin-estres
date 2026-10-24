@@ -40,6 +40,13 @@ function contarResultado(resultado: PlanGenerado, accion: 'armar' | 'ajustar'): 
   if (resultado.aprovecha.length) {
     partes.push(`Usamos primero lo que está por vencer: ${enLista(resultado.aprovecha)}.`)
   }
+  if (resultado.conAdaptaciones) {
+    partes.push(
+      resultado.conAdaptaciones === 1
+        ? '1 comida trae un cambio para quien tiene alergias: míralo en ese día.'
+        : `${resultado.conAdaptaciones} comidas traen un cambio para quien tiene alergias: míralo en cada día.`,
+    )
+  }
   if (resultado.paraNinos) {
     partes.push(
       resultado.paraNinos === 1

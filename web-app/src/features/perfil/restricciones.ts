@@ -1,7 +1,8 @@
 /**
  * Alergias y condiciones que maneja la app (tabla restriccion, V6). El código es el que
- * se guarda cifrado (ADR-20). Una ALERGIA saca la receta para esa persona; una
- * CONDICION solo avisa.
+ * se guarda cifrado (ADR-20). Una ALERGIA se adapta: a esa persona se le cambia el
+ * ingrediente o se le hace otro plato; si es grave, la receta no se propone (ADR-24).
+ * Una CONDICION solo avisa.
  */
 export const ALERGIAS = [
   { codigo: 'lactosa', texto: 'Lactosa' },

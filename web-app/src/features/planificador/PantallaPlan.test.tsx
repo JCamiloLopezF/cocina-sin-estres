@@ -244,6 +244,37 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
     expect(llamadas.some((l) => l.ruta === '/planes-semanales/7/comidas/71/marcar-preparada')).toBe(true)
   })
 
+  it('en el día muestra qué cambiarle a quien tiene alergias', async () => {
+    backendFalso({
+      ...conPlan([comida(71, 3, 'CENA', 11)]),
+      'GET /adaptaciones': () =>
+        respuestaJson([
+          {
+            recetaId: 11,
+            estado: 'ADAPTADA',
+            cambios: [
+              {
+                tipo: 'REEMPLAZO',
+                persona: 'Samuel',
+                alergias: ['huevo'],
+                producto: 'Huevos',
+                reemplazo: 'Pollo',
+                enDespensa: true,
+              },
+              { tipo: 'SIN', persona: 'ti', alergias: ['lactosa'], producto: 'Queso', enDespensa: false },
+            ],
+          },
+        ]),
+    })
+    montarApp(crearServicioFalso(LUISA).servicio, '/plan/dia/3')
+
+    const ajustes = await screen.findByRole('list', { name: 'Ajustes por alergias en Arroz con pollo' })
+    expect(within(ajustes).getAllByRole('listitem').map((li) => li.textContent?.trim())).toEqual([
+      'Para Samuel (huevo): cambia huevos por pollo, que ya tienes en la despensa.',
+      'Para ti (lactosa): sirve tu porción sin queso.',
+    ])
+  })
+
   it('quitar una comida se puede deshacer', async () => {
     const { llamadas } = backendFalso({
       ...conPlan([comida(71, 3, 'CENA', 11)]),

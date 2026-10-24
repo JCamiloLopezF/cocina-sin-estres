@@ -93,14 +93,20 @@ export const ARROZ_CON_LECHE: RecetaDetalle = {
   restricciones: ['diabetes', 'lactosa'],
 }
 
-/** Perfil con alergias por persona: Samuel no puede lactosa y Luisa tiene diabetes. */
+/** Perfil con alergias por persona: Samuel no puede lactosa (no grave) y Luisa tiene diabetes. */
 export const PERFIL_CON_ALERGIAS = {
   diasSinTiempo: [3],
   periodicidadIngreso: 'QUINCENAL',
   personas: [
-    { id: 1, nombre: 'Luisa', edad: 34, restricciones: ['diabetes'] },
-    { id: 2, nombre: 'Samuel', edad: 9, restricciones: ['lactosa'] },
+    { id: 1, nombre: 'Luisa', edad: 34, restricciones: ['diabetes'], alergiasGraves: [] as string[] },
+    { id: 2, nombre: 'Samuel', edad: 9, restricciones: ['lactosa'], alergiasGraves: [] as string[] },
   ],
+}
+
+/** El mismo hogar, pero la lactosa de Samuel es grave: la receta con leche no se cocina en casa. */
+export const PERFIL_CON_ALERGIA_GRAVE = {
+  ...PERFIL_CON_ALERGIAS,
+  personas: [PERFIL_CON_ALERGIAS.personas[0], { ...PERFIL_CON_ALERGIAS.personas[1], alergiasGraves: ['lactosa'] }],
 }
 
 const resumen = (r: RecetaDetalle) => ({

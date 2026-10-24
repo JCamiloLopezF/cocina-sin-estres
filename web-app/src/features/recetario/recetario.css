@@ -224,3 +224,8 @@
   color: var(--color-tenue);
   font-size: var(--texto-s);
 }
+
+.pildora--ajuste {
+  border-color: var(--color-tinta);
+  border-style: dashed;
+}

@@ -21,10 +21,12 @@ export interface Cocina {
 export interface PersonaHogar {
   nombre: string
   restricciones: string[]
+  /** Alergias graves: la receta no se propone ni adaptada (ADR-24). */
+  alergiasGraves: string[]
 }
 
 interface PerfilConPersonas {
-  personas: { nombre: string | null; restricciones?: string[] }[]
+  personas: { nombre: string | null; restricciones?: string[]; alergiasGraves?: string[] }[]
 }
 
 /** Si el hogar todavía no tiene perfil, la despensa y el catálogo responden este código. */
@@ -50,6 +52,7 @@ export async function cargarCocina(senal?: AbortSignal): Promise<Cocina> {
   const personas = (perfil?.personas ?? []).map((p, i) => ({
     nombre: p.nombre?.trim() || (i === 0 ? 'ti' : `la persona ${i + 1}`),
     restricciones: p.restricciones ?? [],
+    alergiasGraves: p.alergiasGraves ?? [],
   }))
   const existencias = new Map<number, number>()
   items
@@ -80,8 +83,10 @@ export interface RecetaVista {
   costoPorcion?: number
   /** Ingredientes obligatorios que no alcanzan con lo que hay en la despensa. */
   faltan: number
-  /** Personas del hogar alérgicas a algún ingrediente obligatorio: la receta no es apta para ellas. */
+  /** Personas con una alergia grave a un ingrediente obligatorio: la receta no se cocina en casa. */
   noAptaPara: Choque[]
+  /** Personas con una alergia (no grave): se les cambia el ingrediente o comen otro plato (ADR-24). */
+  ajustePara: Choque[]
   /** Personas con una condición (diabetes, hipertensión…) que un ingrediente toca: solo avisa. */
   precaucionPara: Choque[]
 }
@@ -127,18 +132,24 @@ export function analizarReceta(receta: RecetaDetalle, cocina: Cocina, porciones 
 }
 
 /** Cruza las restricciones de la receta con las de cada persona del hogar. */
-function choques(receta: RecetaDetalle, personas: PersonaHogar[]): Pick<RecetaVista, 'noAptaPara' | 'precaucionPara'> {
+function choques(
+  receta: RecetaDetalle,
+  personas: PersonaHogar[],
+): Pick<RecetaVista, 'noAptaPara' | 'ajustePara' | 'precaucionPara'> {
   const deLaReceta = new Set(receta.restricciones ?? [])
   const noAptaPara: Choque[] = []
+  const ajustePara: Choque[] = []
   const precaucionPara: Choque[] = []
   for (const persona of personas) {
     const comunes = persona.restricciones.filter((r) => deLaReceta.has(r))
-    const alergias = comunes.filter(esAlergia).map(nombreRestriccion)
+    const graves = comunes.filter((r) => esAlergia(r) && persona.alergiasGraves.includes(r)).map(nombreRestriccion)
+    const alergias = comunes.filter((r) => esAlergia(r) && !persona.alergiasGraves.includes(r)).map(nombreRestriccion)
     const condiciones = comunes.filter((r) => !esAlergia(r)).map(nombreRestriccion)
-    if (alergias.length) noAptaPara.push({ persona: persona.nombre, restricciones: alergias })
+    if (graves.length) noAptaPara.push({ persona: persona.nombre, restricciones: graves })
+    if (alergias.length) ajustePara.push({ persona: persona.nombre, restricciones: alergias })
     if (condiciones.length) precaucionPara.push({ persona: persona.nombre, restricciones: condiciones })
   }
-  return { noAptaPara, precaucionPara }
+  return { noAptaPara, ajustePara, precaucionPara }
 }
 
 /** "Samuel" · "Samuel y ti" · "Ana, Samuel y ti". */

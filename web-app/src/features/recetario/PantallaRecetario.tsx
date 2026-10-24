@@ -226,8 +226,8 @@ export function PantallaRecetario() {
           {ocultasPorAlergia > 0 && (
             <p className="recetario__ocultas">
               {ocultasPorAlergia === 1
-                ? 'Ocultamos 1 receta que no es apta por alergias del hogar.'
-                : `Ocultamos ${ocultasPorAlergia} recetas que no son aptas por alergias del hogar.`}{' '}
+                ? 'Ocultamos 1 receta que no es apta por una alergia grave en tu hogar.'
+                : `Ocultamos ${ocultasPorAlergia} recetas que no son aptas por alergias graves en tu hogar.`}{' '}
               <Boton variante="texto" onClick={() => setAplicarAlergias(false)}>
                 Ver todas
               </Boton>
@@ -263,6 +263,9 @@ export function TarjetaReceta({ vista, ruta }: { vista: RecetaVista; ruta: strin
           {receta.preparacionPrevia && <span className="pildora">preparación previa</span>}
           {vista.noAptaPara.length > 0 && (
             <span className="pildora pildora--alerta">no apta para {listaPersonas(vista.noAptaPara)}</span>
+          )}
+          {vista.noAptaPara.length === 0 && vista.ajustePara.length > 0 && (
+            <span className="pildora pildora--ajuste">con ajuste para {listaPersonas(vista.ajustePara)}</span>
           )}
         </span>
       </span>
