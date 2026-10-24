@@ -22,4 +22,12 @@ public interface StockEnDespensa {
      * @return cantidad utilizable por producto, sin los productos vencidos
      */
     Map<Long, BigDecimal> disponibles(Long hogarId, LocalDate hoy);
+
+    /**
+     * Productos con cantidad que vencen entre hoy y {@code hasta}, inclusive: el
+     * generador del plan los usa primero (ADR-24).
+     *
+     * @return nombre por producto
+     */
+    Map<Long, String> porVencer(Long hogarId, LocalDate hoy, LocalDate hasta);
 }

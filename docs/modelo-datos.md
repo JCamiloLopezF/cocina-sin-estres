@@ -66,6 +66,7 @@ erDiagram
         bigint hogar_id FK
         varchar nombre
         tinyint edad
+        text restricciones "cifrado AES-GCM (V6)"
     }
     restriccion {
         bigint id PK
@@ -110,6 +111,8 @@ erDiagram
         text pasos
         text preparacion_previa
         boolean activa
+        boolean es_plato_fuerte "V7"
+        boolean gusta_a_ninos "V7"
         bigint modificado_por FK
     }
     ingrediente_receta {
