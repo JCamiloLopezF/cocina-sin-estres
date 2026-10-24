@@ -36,6 +36,10 @@ public class PlanSemanal {
     @Column(name = "creado_en", nullable = false, insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
+    /** La armó la app sola (motor de avisos, ADR-24); la usuaria todavía no la confirma. V11. */
+    @Column(name = "borrador", nullable = false)
+    private boolean borrador;
+
     protected PlanSemanal() {
         // JPA
     }
@@ -59,5 +63,13 @@ public class PlanSemanal {
 
     public LocalDateTime getCreadoEn() {
         return creadoEn;
+    }
+
+    public boolean isBorrador() {
+        return borrador;
+    }
+
+    public void setBorrador(boolean borrador) {
+        this.borrador = borrador;
     }
 }

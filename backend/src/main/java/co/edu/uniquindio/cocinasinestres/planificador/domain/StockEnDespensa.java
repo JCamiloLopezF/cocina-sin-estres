@@ -32,6 +32,14 @@ public interface StockEnDespensa {
     Map<Long, String> porVencer(Long hogarId, LocalDate hoy, LocalDate hasta);
 
     /**
+     * Fecha de vencimiento de cada producto con cantidad que vence entre hoy y
+     * {@code hasta}, inclusive. El modo rescate ordena con esto (KAN-25).
+     */
+    default Map<Long, LocalDate> vencimientos(Long hogarId, LocalDate hoy, LocalDate hasta) {
+        return Map.of();
+    }
+
+    /**
      * Productos que quedaron por debajo de su cantidad mínima: van solos a la lista de
      * compras para reponer (ADR-24).
      *

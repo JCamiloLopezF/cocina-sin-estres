@@ -16,7 +16,7 @@ La aplicación deja de esperar a que la usuaria llene todo a mano cada semana. E
 3. **Motor de avisos** (ADR-17), que además deja un borrador de la semana siguiente cuando esta llega sin plan.
 4. **Modo rescate** (KAN-25). Ante un imprevisto, propone qué cocinar hoy solo con lo que hay.
 
-Este ADR detalla las piezas 1 y 2. Las piezas 3 y 4 se precisan en su propia tarea, sin cambiar las reglas de aquí.
+Este ADR detalla las piezas 1 y 2. La pieza 3 se precisa en ADR-17 y en la sección de abajo; la 4, también abajo.
 
 ## Contexto
 
@@ -81,6 +81,24 @@ Las rutas del plan regeneran la lista de compras una sola vez, al final.
 - Lo comprado queda en la lista aunque el plan cambie, para poder deshacerlo. Antes se guardaba en el teléfono; ahora se guarda en el servidor.
 - **Puertos:** el planificador mueve la despensa con su propio puerto `MovimientosDespensa` (SQL directo sobre `item_despensa`), sin las entidades del módulo de despensa (RNF-26).
 - **Vida útil:** la vida útil del catálogo inicial es una referencia para una casa colombiana (granos 1 año, pollo y carne 3 días en la nevera, leche 7 días…). El curador la corrige en la ficha del producto.
+
+## Borrador de la semana y modo rescate (piezas 3 y 4, KAN-27 y KAN-25)
+
+**Borrador automático.** Desde el viernes, cuando la usuaria abre la app (`GET /api/avisos`) y la semana siguiente no tiene comidas, el motor de avisos le pide al generador que la arme. El plan queda con `plan_semanal.borrador = TRUE` (V11) y el aviso «Te armamos la próxima semana» lleva a revisarlo (`/plan?semana=proxima`).
+
+- Si la usuaria ya puso alguna comida en esa semana, no se toca.
+- Se confirma con «Me sirve, la dejo así» (`PUT /api/planes-semanales/{id}/confirmar`). Mientras tanto se puede cambiar como cualquier plan.
+- Si el generador no encuentra recetas, no hay borrador: el aviso invita a armar la semana.
+- El tipo de aviso «Próxima semana» se puede apagar; apagado, tampoco se arma el borrador.
+
+**Modo rescate** (`GET /api/rescate`, pantalla «¿Qué cocino hoy?»). Propone recetas que se pueden hacer hoy **sin comprar nada**:
+
+- La despensa (sin lo vencido) alcanza para todos los ingredientes obligatorios.
+- Nadie tiene alergia grave a la receta. Cada reemplazo por alergia ya está en la despensa, y si a alguien le toca plato aparte, ese plato también se puede hacer con lo que hay.
+- Orden: primero la que salva el producto que vence antes (ventana de 7 días, la misma de la despensa), luego las que aprovechan más productos, los platos fuertes, las que todos comen igual y las más rápidas.
+- Se puede limitar el tiempo (20 o 40 minutos).
+
+El aviso «Aprovechar lo que tienes» (ADR-17) es la primera opción del modo rescate que salva algo que vence en 3 días o menos.
 
 ## Alternativas
 

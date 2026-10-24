@@ -221,7 +221,7 @@ public class GeneradorPlanService {
 
         PlanSemanalResponse respuesta = new PlanSemanalResponse(
             plan.getId(), plan.getSemanaInicio(), plan.getCreadoEn(),
-            finales.stream().map(this::aRespuesta).toList());
+            finales.stream().map(this::aRespuesta).toList(), plan.isBorrador());
         return new PlanGeneradoResponse(
             respuesta,
             cambios,

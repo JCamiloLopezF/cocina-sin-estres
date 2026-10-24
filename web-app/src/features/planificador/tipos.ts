@@ -21,6 +21,8 @@ export interface PlanSemanal {
   /** Lunes de la semana, AAAA-MM-DD. */
   semanaInicio: string
   comidas: ComidaPlan[]
+  /** La armó la app sola (motor de avisos, ADR-24) y la usuaria todavía no la confirma. */
+  borrador?: boolean
 }
 
 /** `GET /api/planes-semanales/{id}/costo` (PlanCostoResponse, ADR-14). */

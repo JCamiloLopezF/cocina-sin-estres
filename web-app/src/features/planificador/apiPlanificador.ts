@@ -69,3 +69,8 @@ export function otraOpcion(planId: number, comidaId: number, excluir: number[]) 
 export function ajustarPresupuesto(planId: number) {
   return pedir<PlanGenerado>(`/planes-semanales/${planId}/ajustar-presupuesto`, { metodo: 'POST' })
 }
+
+/** La usuaria se queda con la semana que la app armó sola: deja de ser borrador (ADR-24). */
+export function confirmarBorrador(planId: number) {
+  return pedir<PlanSemanal>(`/planes-semanales/${planId}/confirmar`, { metodo: 'PUT' })
+}

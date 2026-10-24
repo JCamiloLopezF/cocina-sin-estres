@@ -86,4 +86,24 @@ public class StockEnDespensaJdbc implements StockEnDespensa {
             .forEach(fila -> productos.putIfAbsent(fila.getKey(), fila.getValue()));
         return productos;
     }
+
+    @Override
+    public Map<Long, LocalDate> vencimientos(Long hogarId, LocalDate hoy, LocalDate hasta) {
+        Map<Long, LocalDate> fechas = new LinkedHashMap<>();
+        jdbc.sql("""
+                SELECT producto_id, vence_en
+                FROM item_despensa
+                WHERE hogar_id = :hogarId
+                  AND cantidad > 0
+                  AND vence_en BETWEEN :hoy AND :hasta
+                ORDER BY vence_en, producto_id
+                """)
+            .param("hogarId", hogarId)
+            .param("hoy", hoy)
+            .param("hasta", hasta)
+            .query((rs, rowNum) -> Map.entry(rs.getLong("producto_id"), rs.getObject("vence_en", LocalDate.class)))
+            .list()
+            .forEach(fila -> fechas.putIfAbsent(fila.getKey(), fila.getValue()));
+        return fechas;
+    }
 }

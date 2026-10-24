@@ -320,3 +320,48 @@
 .lista__aviso {
   margin-bottom: var(--espacio-3);
 }
+
+/* Esta semana o la siguiente (el borrador que arma la app desde el viernes, ADR-24). */
+.selector-semana {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-1);
+  margin-bottom: var(--espacio-4);
+  padding: var(--espacio-1);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+}
+
+.selector-semana__opcion {
+  display: grid;
+  place-items: center;
+  min-height: 2.5rem;
+  border-radius: calc(var(--radio-control) - 4px);
+  color: var(--color-tinta);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.selector-semana__opcion[aria-current='page'] {
+  background: var(--color-primario);
+}
+
+.borrador-plan {
+  display: grid;
+  gap: var(--espacio-2);
+  margin-bottom: var(--espacio-4);
+  padding: var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-crema);
+}
+
+.borrador-plan h2 {
+  margin: 0;
+  font-size: var(--texto-m);
+}
+
+.borrador-plan p {
+  margin: 0;
+}

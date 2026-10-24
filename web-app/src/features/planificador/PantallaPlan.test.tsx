@@ -5,7 +5,7 @@ import { backendFalso } from '../../prueba/backendFalso'
 import { rutasCocina } from '../../prueba/cocinaFalsa'
 import { montarApp } from '../../prueba/montar'
 import { crearServicioFalso, LUISA, respuestaJson } from '../../prueba/servicioFalso'
-import { aIso, lunesDe } from './semana'
+import { aIso, fechaDelDia, lunesDe } from './semana'
 import type { ComidaPlan } from './tipos'
 
 const LUNES = aIso(lunesDe(new Date()))
@@ -365,5 +365,74 @@ describe('Lista de compras (pantalla 31)', () => {
     })
     montarApp(crearServicioFalso(LUISA).servicio, '/plan/lista')
     expect(await screen.findByRole('heading', { name: 'No te falta nada' })).toBeInTheDocument()
+  })
+
+  it('la próxima semana muestra el borrador que armó la app y se puede confirmar', async () => {
+    const proximoLunes = aIso(fechaDelDia(LUNES, 8))
+    let borrador = true
+    const { llamadas } = backendFalso({
+      ...rutasCocina(),
+      'GET /planes-semanales': (_cuerpo, url) =>
+        url.searchParams.get('semanaInicio') === proximoLunes
+          ? respuestaJson({ id: 8, semanaInicio: proximoLunes, comidas: [{ ...comida(81, 1, 'ALMUERZO', 10), planSemanalId: 8 }], borrador })
+          : respuestaJson({ id: 7, semanaInicio: LUNES, comidas: [comida(71, 1, 'ALMUERZO', 11)] }),
+      'GET /planes-semanales/8/costo': () =>
+        respuestaJson({ costoAcumuladoPorDia: Array(7).fill(3600), presupuestoSemanal: 195000, excedePresupuesto: false }),
+      'GET /planes-semanales/7/costo': () =>
+        respuestaJson({ costoAcumuladoPorDia: Array(7).fill(3100), presupuestoSemanal: 195000, excedePresupuesto: false }),
+      'PUT /planes-semanales/8/confirmar': () => {
+        borrador = false
+        return respuestaJson({ id: 8, semanaInicio: proximoLunes, comidas: [], borrador: false })
+      },
+    })
+    montarApp(crearServicioFalso(LUISA).servicio, '/plan?semana=proxima')
+    const usuario = userEvent.setup()
+
+    expect(await screen.findByRole('heading', { name: 'La armamos por ti' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Próxima semana' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Próxima semana' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: /Sopa de lentejas/ })).toHaveAttribute('href', '/plan/dia/1?semana=proxima')
+    expect(screen.getByRole('link', { name: 'Ver lista de compras' })).toHaveAttribute('href', '/plan/lista?semana=proxima')
+
+    await usuario.click(screen.getByRole('button', { name: 'Me sirve, la dejo así' }))
+    expect(await screen.findByText(/la semana queda así/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'La armamos por ti' })).not.toBeInTheDocument()
+    expect(llamadas.some((l) => l.metodo === 'PUT' && l.ruta === '/planes-semanales/8/confirmar')).toBe(true)
+
+    await usuario.click(screen.getByRole('link', { name: 'Esta semana' }))
+    expect(await screen.findByRole('link', { name: /Arroz con pollo/ })).toHaveAttribute('href', '/plan/dia/1')
+    expect(screen.getByRole('heading', { level: 1, name: 'Mi semana' })).toBeInTheDocument()
+  })
+
+  it('desde un día de la próxima semana, el recetario agrega la receta a esa semana', async () => {
+    const proximoLunes = aIso(fechaDelDia(LUNES, 8))
+    const { llamadas } = backendFalso({
+      ...rutasCocina(),
+      'GET /planes-semanales': (_cuerpo, url) =>
+        url.searchParams.get('semanaInicio') === proximoLunes
+          ? respuestaJson({ id: 8, semanaInicio: proximoLunes, comidas: [] })
+          : respuestaJson({ status: 404, codigo: 'RECURSO_NO_ENCONTRADO' }, 404),
+      'GET /planes-semanales/8/costo': () =>
+        respuestaJson({ costoAcumuladoPorDia: Array(7).fill(0), presupuestoSemanal: 195000, excedePresupuesto: false }),
+      'PUT /planes-semanales/8/comidas': (cuerpo) => respuestaJson({ id: 90, planSemanalId: 8, ...(cuerpo as object) }),
+    })
+    const { router } = montarApp(crearServicioFalso(LUISA).servicio, '/plan/dia/2?semana=proxima')
+    const usuario = userEvent.setup()
+
+    const agregar = (await screen.findAllByRole('link', { name: '+ Agregar receta' }))[1]
+    expect(agregar).toHaveAttribute('href', '/recetas?dia=2&comida=ALMUERZO&semana=proxima')
+    await usuario.click(agregar)
+    expect(await screen.findByText(/de la próxima semana/)).toBeInTheDocument()
+    await usuario.click(await screen.findByRole('link', { name: /Sopa de lentejas/ }))
+    await usuario.click(await screen.findByRole('link', { name: 'Agregar al plan' }))
+    await usuario.click(await screen.findByRole('button', { name: 'Continuar' }))
+
+    expect(await screen.findByText(/quedó para el martes/)).toBeInTheDocument()
+    expect(router.state.location.search).toBe('?semana=proxima')
+    expect(llamadas.find((l) => l.metodo === 'PUT' && l.ruta === '/planes-semanales/8/comidas')?.cuerpo).toMatchObject({
+      dia: 2,
+      tipoComida: 'ALMUERZO',
+      recetaId: 10,
+    })
   })
 })

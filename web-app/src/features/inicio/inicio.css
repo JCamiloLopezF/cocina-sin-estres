@@ -83,3 +83,13 @@
   color: var(--color-tenue);
   font-size: var(--texto-s);
 }
+
+.mosaico--rescate {
+  border-color: var(--color-tinta);
+  background: var(--color-crema);
+}
+
+.mosaico__titulo {
+  font-size: var(--texto-m);
+  font-weight: 700;
+}

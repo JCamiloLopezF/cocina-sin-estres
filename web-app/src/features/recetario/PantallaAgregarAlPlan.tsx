@@ -4,13 +4,14 @@ import { Alerta, Boton, Cargando, EncabezadoPagina, GrupoOpciones } from '../../
 import { asignarComida, crearPlan, obtenerPlan } from '../planificador/apiPlanificador'
 import { mensajePlan } from '../planificador/mensajesPlan'
 import {
-  aIso,
   COMIDAS,
+  conSemana,
   DIAS,
   esComida,
   esDia,
+  esProxima,
   INICIAL_DIA,
-  lunesDe,
+  lunesDeSemana,
   NOMBRE_COMIDA,
   NOMBRE_DIA,
 } from '../planificador/semana'
@@ -29,7 +30,8 @@ export function PantallaAgregarAlPlan() {
   const { id } = useParams()
   const navegar = useNavigate()
   const [parametros] = useSearchParams()
-  const [lunes] = useState(() => aIso(lunesDe(new Date())))
+  const proxima = esProxima(parametros)
+  const [lunes] = useState(() => lunesDeSemana(proxima))
   const [estado, setEstado] = useState<Estado>({ tipo: 'cargando' })
   const [version, setVersion] = useState(0)
   const [dia, setDia] = useState<Dia | undefined>(() => {
@@ -97,7 +99,7 @@ export function PantallaAgregarAlPlan() {
     try {
       const planActual = plan ?? (await crearPlan(lunes))
       await asignarComida(planActual.id, dia, comida, receta.id)
-      navegar(`/plan/dia/${dia}`, {
+      navegar(conSemana(`/plan/dia/${dia}`, proxima), {
         state: { aviso: `${receta.nombre} quedó para el ${NOMBRE_DIA[dia].toLowerCase()} · ${NOMBRE_COMIDA[comida].toLowerCase()}.` },
       })
     } catch (error) {
@@ -108,7 +110,7 @@ export function PantallaAgregarAlPlan() {
 
   return (
     <>
-      <EncabezadoPagina titulo="¿Cuándo la preparas?" detalle={receta.nombre} detalleAbajo volver={volver} />
+      <EncabezadoPagina titulo="¿Cuándo la preparas?" detalle={proxima ? `${receta.nombre} · próxima semana` : receta.nombre} detalleAbajo volver={volver} />
       <div className="agregar-plan">
         <fieldset className="opciones opciones--segmentos opciones--dias" aria-invalid={intento && !dia ? true : undefined}>
           <legend className="campo__etiqueta">Día</legend>

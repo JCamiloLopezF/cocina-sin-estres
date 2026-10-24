@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina, EstadoVacio } from '../../shared/componentes'
 import { enPesos } from '../despensa/formato'
-import { ajustarPresupuesto, asignarComida, crearPlan, generarPlan, obtenerPlan } from './apiPlanificador'
+import { ajustarPresupuesto, asignarComida, confirmarBorrador, crearPlan, generarPlan, obtenerPlan } from './apiPlanificador'
 import { mensajePlan, planSinHogar } from './mensajesPlan'
-import { aIso, COMIDAS, DIAS, diaDe, fechaDelDia, NOMBRE_COMIDA, rangoSemana, tituloDia } from './semana'
+import { aIso, COMIDAS, conSemana, DIAS, diaDe, fechaDelDia, NOMBRE_COMIDA, rangoSemana, tituloDia } from './semana'
 import type { Dia, PlanGenerado } from './tipos'
 import { useSemana, type Semana } from './useSemana'
 import './planificador.css'
@@ -14,7 +14,7 @@ const NOMBRE_PERIODICIDAD = { SEMANAL: 'semanal', QUINCENAL: 'quincenal', MENSUA
 /** Comidas que llena "Armar mi semana" (el desayuno es opcional). */
 const COMIDAS_A_LLENAR = ['ALMUERZO', 'CENA'] as const
 
-type Accion = 'nueva' | 'repetir' | 'vacia' | 'completar' | 'ajustar'
+type Accion = 'nueva' | 'repetir' | 'vacia' | 'completar' | 'ajustar' | 'confirmar'
 
 /** "Pollo" · "Pollo y leche" · "Pollo, leche y queso". */
 function enLista(nombres: string[]): string {
@@ -65,17 +65,19 @@ function contarResultado(resultado: PlanGenerado, accion: 'armar' | 'ajustar'): 
 
 /** Pantallas 27, 28 y 30: la semana sin armar, el plan semanal y el aviso de presupuesto. */
 export function PantallaPlan() {
-  const { estado, recargar } = useSemana()
+  const { estado, recargar, proxima } = useSemana()
   const [armando, setArmando] = useState<Accion>()
   const [errorArmar, setErrorArmar] = useState<unknown>()
   const [resultado, setResultado] = useState<string>()
-  // La semana que se muestra siempre es la actual.
+  // "Hoy" solo se marca en la semana actual.
   const [hoy] = useState(() => diaDe(new Date()))
+  const titulo = proxima ? 'Próxima semana' : 'Mi semana'
 
   if (estado.tipo === 'cargando') {
     return (
       <>
-        <EncabezadoPagina titulo="Mi semana" />
+        <EncabezadoPagina titulo={titulo} />
+        <SelectorSemana proxima={proxima} />
         <Cargando texto="Cargando tu semana…" />
       </>
     )
@@ -83,7 +85,7 @@ export function PantallaPlan() {
   if (estado.tipo === 'error') {
     return (
       <>
-        <EncabezadoPagina titulo="Mi semana" />
+        <EncabezadoPagina titulo={titulo} />
         {planSinHogar(estado.error) ? <PrimeroElHogar /> : <ErrorCarga error={estado.error} reintentar={recargar} />}
       </>
     )
@@ -134,6 +136,22 @@ export function PantallaPlan() {
     }
   }
 
+  /** La usuaria se queda con el borrador que armó la app. */
+  async function confirmar() {
+    if (!plan) return
+    setArmando('confirmar')
+    setErrorArmar(undefined)
+    try {
+      await confirmarBorrador(plan.id)
+      setResultado('Listo: la semana queda así. La puedes seguir cambiando cuando quieras.')
+      recargar()
+    } catch (error) {
+      setErrorArmar(error)
+    } finally {
+      setArmando(undefined)
+    }
+  }
+
   const avisoError = errorArmar !== undefined && (
     <Alerta tono={typeof errorArmar === 'string' ? 'info' : 'error'}>
       {typeof errorArmar === 'string' ? errorArmar : mensajePlan(errorArmar)}
@@ -143,9 +161,10 @@ export function PantallaPlan() {
   if (!plan) {
     return (
       <>
-        <EncabezadoPagina titulo="Mi semana" detalle={rangoSemana(semana.lunes)} />
+        <EncabezadoPagina titulo={titulo} detalle={rangoSemana(semana.lunes)} />
+        <SelectorSemana proxima={proxima} />
         <EstadoVacio
-          titulo="Todavía no armas esta semana"
+          titulo={proxima ? 'Todavía no armas la próxima semana' : 'Todavía no armas esta semana'}
           texto="Te proponemos almuerzo y cena para los siete días según lo que hay en tu despensa, tu presupuesto, las alergias de cada persona y los días en que no tienes tiempo. Después cambias lo que quieras."
           acciones={
             <>
@@ -179,7 +198,20 @@ export function PantallaPlan() {
 
   return (
     <>
-      <EncabezadoPagina titulo="Mi semana" detalle={rangoSemana(semana.lunes)} />
+      <EncabezadoPagina titulo={titulo} detalle={rangoSemana(semana.lunes)} />
+      <SelectorSemana proxima={proxima} />
+      {plan.borrador && (
+        <section className="borrador-plan" aria-labelledby="titulo-borrador">
+          <h2 id="titulo-borrador">La armamos por ti</h2>
+          <p>
+            Es un borrador con lo que hay en tu despensa, tu presupuesto y las alergias de tu hogar. Revisa cada día y
+            cambia lo que quieras; cuando te guste, confírmalo.
+          </p>
+          <Boton ancho cargando={armando === 'confirmar'} disabled={armando !== undefined} onClick={() => void confirmar()}>
+            Me sirve, la dejo así
+          </Boton>
+        </section>
+      )}
       {resultado && (
         <div className="plan__resultado">
           <Alerta tono="exito">{resultado}</Alerta>
@@ -203,12 +235,12 @@ export function PantallaPlan() {
       <ul className="semana">
         {DIAS.map((dia) => (
           <li key={dia}>
-            <TarjetaDia semana={semana} dia={dia} hoy={hoy === dia} />
+            <TarjetaDia semana={semana} dia={dia} hoy={!proxima && hoy === dia} proxima={proxima} />
           </li>
         ))}
       </ul>
 
-      <Link className="boton boton--primario boton--ancho plan__lista" to="/plan/lista">
+      <Link className="boton boton--primario boton--ancho plan__lista" to={conSemana('/plan/lista', proxima)}>
         Ver lista de compras
       </Link>
     </>
@@ -275,7 +307,21 @@ function ResumenCosto({ semana, ajustando, alAjustar }: { semana: Semana; ajusta
   )
 }
 
-function TarjetaDia({ semana, dia, hoy }: { semana: Semana; dia: Dia; hoy: boolean }) {
+/** Esta semana o la siguiente (donde queda el borrador que arma la app desde el viernes). */
+function SelectorSemana({ proxima }: { proxima: boolean }) {
+  return (
+    <nav className="selector-semana" aria-label="Semana">
+      <Link className="selector-semana__opcion" to="/plan" aria-current={proxima ? undefined : 'page'}>
+        Esta semana
+      </Link>
+      <Link className="selector-semana__opcion" to="/plan?semana=proxima" aria-current={proxima ? 'page' : undefined}>
+        Próxima semana
+      </Link>
+    </nav>
+  )
+}
+
+function TarjetaDia({ semana, dia, hoy, proxima }: { semana: Semana; dia: Dia; hoy: boolean; proxima: boolean }) {
   const comidas = (semana.plan?.comidas ?? [])
     .filter((c) => c.dia === dia)
     .sort((a, b) => COMIDAS.indexOf(a.tipoComida) - COMIDAS.indexOf(b.tipoComida))
@@ -284,7 +330,7 @@ function TarjetaDia({ semana, dia, hoy }: { semana: Semana; dia: Dia; hoy: boole
   const clases = ['dia', hoy && 'dia--hoy', comidas.length === 0 && 'dia--libre'].filter(Boolean).join(' ')
 
   return (
-    <Link className={clases} to={`/plan/dia/${dia}`}>
+    <Link className={clases} to={conSemana(`/plan/dia/${dia}`, proxima)}>
       <span className="dia__titulo">
         <strong>{tituloDia(semana.lunes, dia)}</strong>
         {marcas && <span className="dia__marcas">{marcas}</span>}

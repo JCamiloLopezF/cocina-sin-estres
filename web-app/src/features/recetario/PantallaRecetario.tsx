@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina, EstadoVacio, GrupoOpciones } from '../../shared/componentes'
 import { enPesos } from '../despensa/formato'
 import { mensajePlan } from '../planificador/mensajesPlan'
-import { huecoDesde, NOMBRE_COMIDA, NOMBRE_DIA } from '../planificador/semana'
+import { conSemana, esProxima, huecoDesde, NOMBRE_COMIDA, NOMBRE_DIA } from '../planificador/semana'
 import { listarRecetasConDetalle } from './apiRecetario'
 import { analizarReceta, cargarCocina, listaPersonas, type RecetaVista } from './cocina'
 import './recetario.css'
@@ -39,6 +39,7 @@ type Estado = { tipo: 'cargando' } | { tipo: 'listo'; recetas: RecetaVista[] } |
 export function PantallaRecetario() {
   const [parametros] = useSearchParams()
   const hueco = huecoDesde(parametros)
+  const proxima = esProxima(parametros)
   const [estado, setEstado] = useState<Estado>({ tipo: 'cargando' })
   const [version, setVersion] = useState(0)
   const [buscar, setBuscar] = useState('')
@@ -74,7 +75,7 @@ export function PantallaRecetario() {
   const visibles = aplicarAlergias ? candidatas.filter((v) => v.noAptaPara.length === 0) : candidatas
   const ocultasPorAlergia = candidatas.length - visibles.length
   const conFiltros = JSON.stringify(filtros) !== JSON.stringify(SIN_FILTROS)
-  const sufijo = hueco ? `?dia=${hueco.dia}&comida=${hueco.comida}` : ''
+  const sufijo = hueco ? `?dia=${hueco.dia}&comida=${hueco.comida}${proxima ? '&semana=proxima' : ''}` : ''
 
   return (
     <>
@@ -86,8 +87,9 @@ export function PantallaRecetario() {
       {hueco && (
         <div className="recetario__hueco">
           <Alerta tono="info">
-            Eligiendo para el {NOMBRE_DIA[hueco.dia].toLowerCase()} · {NOMBRE_COMIDA[hueco.comida].toLowerCase()}.{' '}
-            <Link to={`/plan/dia/${hueco.dia}`}>Volver al día</Link>
+            Eligiendo para el {NOMBRE_DIA[hueco.dia].toLowerCase()}{proxima ? ' de la próxima semana' : ''} ·{' '}
+            {NOMBRE_COMIDA[hueco.comida].toLowerCase()}.{' '}
+            <Link to={conSemana(`/plan/dia/${hueco.dia}`, proxima)}>Volver al día</Link>
           </Alerta>
         </div>
       )}

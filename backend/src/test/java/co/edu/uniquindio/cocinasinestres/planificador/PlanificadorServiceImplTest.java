@@ -11,6 +11,7 @@ import co.edu.uniquindio.cocinasinestres.planificador.domain.MovimientosDespensa
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanSemanalResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.model.PlanSemanal;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.ComidaPlanRepository;
@@ -229,4 +230,33 @@ class PlanificadorServiceImplTest {
         verify(movimientosDespensa, times(1)).descontarReceta(10L, 4L);
         assertTrue(comida.isPreparada());
     }
+
+    @Test
+    void confirmarBorrador_dejaDeSerBorradorYEsIdempotente() {
+        PlanSemanal plan = planConId(30L);
+        plan.setBorrador(true);
+        when(hogarRepository.findByUsuario_Id(1L)).thenReturn(Optional.of(hogarMock));
+        when(planSemanalRepository.findById(30L)).thenReturn(Optional.of(plan));
+
+        PlanSemanalResponse respuesta = service.confirmarBorrador(30L);
+
+        assertFalse(respuesta.borrador());
+        assertFalse(plan.isBorrador());
+        verify(planSemanalRepository).save(plan);
+
+        service.confirmarBorrador(30L);
+        verify(planSemanalRepository, times(1)).save(plan);
+    }
+
+    @Test
+    void confirmarBorrador_planDeOtroHogar_respondeNoEncontrado() {
+        PlanSemanal ajeno = new PlanSemanal(mock(Hogar.class), LocalDate.of(2026, 10, 26));
+        ReflectionTestUtils.setField(ajeno, "id", 31L);
+        when(hogarRepository.findByUsuario_Id(1L)).thenReturn(Optional.of(hogarMock));
+        when(planSemanalRepository.findById(31L)).thenReturn(Optional.of(ajeno));
+
+        assertThrows(RecursoNoEncontradoException.class, () -> service.confirmarBorrador(31L));
+        verify(planSemanalRepository, never()).save(any());
+    }
 }
+
