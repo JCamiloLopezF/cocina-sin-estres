@@ -110,3 +110,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `GET /api/curaduria/productos/{id}/reemplazos` | (CURADOR) Reemplazos del producto para adaptar recetas, activos y quitados, con su `origen` (`SISTEMA` o `CURADOR`). |
 | `PUT /api/curaduria/productos/{id}/reemplazos/{reemplazoId}` | (CURADOR) Agrega el reemplazo o lo vuelve a usar. Idempotente. Queda en la auditoría del catálogo. |
 | `DELETE /api/curaduria/productos/{id}/reemplazos/{reemplazoId}` | (CURADOR) Lo quita; la aplicación no lo vuelve a proponer. Idempotente. |
+| `POST /api/preparaciones` | Cuerpo `{ "recetaId": 10 }`: "La preparé" del Modo cocinar cuando la receta no está en el plan. Descuenta sus ingredientes obligatorios de la despensa (KAN-16). Responde 204. Si está en el plan se usa `marcar-preparada`. |
+| `GET /api/curaduria/recetas` | (CURADOR) Recetas activas con su video y `maximoSegundos` (la mitad del tiempo de la receta, ADR-25). |
+| `PUT /api/curaduria/recetas/{id}/video` | (CURADOR) Cuerpo `{ "enlace": "https://youtu.be/…", "inicioSeg": 30, "finSeg": 210 }`. Acepta enlaces de `watch`, `youtu.be`, `shorts`, `embed` y `live`. 400 `RECETA_VIDEO_ENLACE_INVALIDO`, `RECETA_VIDEO_FRAGMENTO_INVALIDO` o `RECETA_VIDEO_MUY_LARGO`. Queda en la auditoría del catálogo. |
+| `DELETE /api/curaduria/recetas/{id}/video` | (CURADOR) Quita el video. Idempotente. |

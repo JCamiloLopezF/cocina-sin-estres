@@ -116,6 +116,9 @@ erDiagram
         boolean activa
         boolean es_plato_fuerte "V7"
         boolean gusta_a_ninos "V7"
+        varchar video_youtube_id "V10"
+        int video_inicio_seg "V10"
+        int video_fin_seg "V10, máx. la mitad del tiempo"
         bigint modificado_por FK
     }
     ingrediente_receta {

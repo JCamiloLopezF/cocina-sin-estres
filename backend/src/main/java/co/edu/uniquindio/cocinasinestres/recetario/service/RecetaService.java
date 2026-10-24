@@ -5,6 +5,7 @@ import co.edu.uniquindio.cocinasinestres.recetario.domain.RestriccionesDeProduct
 import co.edu.uniquindio.cocinasinestres.recetario.dto.IngredienteRecetaResponse;
 import co.edu.uniquindio.cocinasinestres.recetario.dto.RecetaDetalleResponse;
 import co.edu.uniquindio.cocinasinestres.recetario.dto.RecetaResponse;
+import co.edu.uniquindio.cocinasinestres.recetario.dto.VideoRecetaResponse;
 import co.edu.uniquindio.cocinasinestres.recetario.model.IngredienteReceta;
 import co.edu.uniquindio.cocinasinestres.recetario.model.Receta;
 import co.edu.uniquindio.cocinasinestres.recetario.repository.RecetaRepository;
@@ -90,7 +91,11 @@ public class RecetaService {
             receta.getPreparacionPrevia(),
             receta.pasosEnLista(),
             ingredientes,
-            deLaReceta
+            deLaReceta,
+            receta.getVideoYoutubeId() == null
+                ? null
+                : new VideoRecetaResponse(
+                    receta.getVideoYoutubeId(), receta.getVideoInicioSeg(), receta.getVideoFinSeg())
         );
     }
 }

@@ -30,8 +30,9 @@ Cada decisión de arquitectura queda registrada con su contexto, alternativas, j
 | [ADR-22](ADR-22-proveedor-nube.md) | Proveedor de nube: AWS para backend y base de datos; Firebase para identidad y frontend | Aprobada |
 | [ADR-23](ADR-23-trazabilidad-catalogo.md) | Trazabilidad del catálogo | Abierta |
 | [ADR-24](ADR-24-automatizacion-ciclo-semanal.md) | Automatización del ciclo semanal (generador del plan) | Propuesta |
+| [ADR-25](ADR-25-modo-cocinar.md) | Modo cocinar con asistente de voz y video de la receta | Propuesta |
 
-ADR-01 a ADR-12 están en el documento de Arquitectura C4 (`docs/curso/`). ADR-13 a ADR-24 están aquí, un archivo por decisión. Una ADR *Abierta* sigue en discusión: antes de construir sobre ella, confírmala con el equipo.
+ADR-01 a ADR-12 están en el documento de Arquitectura C4 (`docs/curso/`). ADR-13 a ADR-25 están aquí, un archivo por decisión. Una ADR *Abierta* sigue en discusión: antes de construir sobre ella, confírmala con el equipo.
 
 ## Plantilla
 
