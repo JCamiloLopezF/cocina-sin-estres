@@ -18,6 +18,13 @@ export interface IngredienteReceta {
   restricciones?: string[]
 }
 
+/** Fragmento de YouTube de la receta (V10): segundos de inicio y fin dentro del video. */
+export interface VideoReceta {
+  youtubeId: string
+  inicioSeg: number
+  finSeg: number
+}
+
 /** `GET /api/recetas/{id}` (RecetaDetalleResponse). */
 export interface RecetaDetalle extends Receta {
   preparacionPrevia?: string
@@ -25,4 +32,6 @@ export interface RecetaDetalle extends Receta {
   ingredientes: IngredienteReceta[]
   /** Restricciones de los ingredientes obligatorios. */
   restricciones?: string[]
+  /** Solo si el curador le puso video. */
+  video?: VideoReceta | null
 }

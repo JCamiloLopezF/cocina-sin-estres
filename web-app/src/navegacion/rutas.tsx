@@ -4,8 +4,10 @@ import { PantallaBienvenida } from '../features/auth/PantallaBienvenida'
 import { PantallaEntrar } from '../features/auth/PantallaEntrar'
 import { PantallaRecuperar } from '../features/auth/PantallaRecuperar'
 import { PantallaRegistro } from '../features/auth/PantallaRegistro'
+import { PantallaCocinar } from '../features/cocinar/PantallaCocinar'
 import { PantallaCuraduria } from '../features/curaduria/PantallaCuraduria'
 import { PantallaProductoCurado } from '../features/curaduria/PantallaProductoCurado'
+import { PantallaVideosRecetas } from '../features/curaduria/PantallaVideosRecetas'
 import { PantallaAgregarProducto } from '../features/despensa/PantallaAgregarProducto'
 import { PantallaCargaRapida } from '../features/despensa/PantallaCargaRapida'
 import { PantallaProductoAdicional } from '../features/despensa/PantallaProductoAdicional'
@@ -68,6 +70,8 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
                 { path: '/listo', element: <PantallaTodoListo /> },
               ],
             },
+            // Modo cocinar: pantalla completa, sin la barra inferior.
+            { path: '/recetas/:id/cocinar', element: <PantallaCocinar /> },
           ],
         },
         {
@@ -79,6 +83,7 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
                 { path: '/curaduria', element: <PantallaCuraduria /> },
                 { path: '/curaduria/productos/nuevo', element: <PantallaProductoCurado /> },
                 { path: '/curaduria/productos/:id', element: <PantallaProductoCurado /> },
+                { path: '/curaduria/recetas', element: <PantallaVideosRecetas /> },
               ],
             },
           ],

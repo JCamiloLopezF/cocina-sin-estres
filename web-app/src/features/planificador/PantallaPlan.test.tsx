@@ -206,6 +206,11 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
     montarApp(crearServicioFalso(LUISA).servicio, '/plan/dia/3')
     const usuario = userEvent.setup()
 
+    // Modo cocinar desde el plan: al terminar marca esta comida como preparada.
+    expect(await screen.findByRole('link', { name: /Cocinar ahora/ })).toHaveAttribute(
+      'href',
+      '/recetas/11/cocinar?plan=7&comida=71',
+    )
     await usuario.click(await screen.findByRole('button', { name: 'Otra opción' }))
     expect(await screen.findByText('Cambiamos Arroz con pollo por Sopa de lentejas.')).toBeInTheDocument()
     expect(llamadas.find((l) => l.ruta.endsWith('/otra-opcion'))?.cuerpo).toEqual({ excluir: [11] })

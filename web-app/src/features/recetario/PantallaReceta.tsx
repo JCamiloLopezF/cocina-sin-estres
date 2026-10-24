@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina } from '../../shared/componentes'
+import { VideoReceta } from '../cocinar/VideoReceta'
 import { cantidadConUnidad, enPesos } from '../despensa/formato'
 import { mensajePlan } from '../planificador/mensajesPlan'
 import { diaDe } from '../planificador/semana'
@@ -175,17 +176,22 @@ export function PantallaReceta() {
       )}
 
       <h2 className="rotulo receta__seccion">Preparación</h2>
+      {receta.video && <VideoReceta video={receta.video} receta={receta.nombre} />}
       <ol className="receta__pasos">
         {receta.pasos.map((paso, i) => (
           <li key={i}>{paso}</li>
         ))}
       </ol>
 
+      <Link className="boton boton--primario boton--ancho receta__cocinar" to={`/recetas/${receta.id}/cocinar?porciones=${elegidas}`}>
+        👩‍🍳 Cocinar ahora, paso a paso
+      </Link>
+
       <div className="receta__acciones">
         <Link className="boton boton--secundario" to={`/recetas/${receta.id}/agregar?${hoy.toString()}`}>
-          Cocinar hoy
+          Ponerla hoy en el plan
         </Link>
-        <Link className="boton boton--primario" to={`/recetas/${receta.id}/agregar${consulta}`}>
+        <Link className="boton boton--secundario" to={`/recetas/${receta.id}/agregar${consulta}`}>
           Agregar al plan
         </Link>
       </div>

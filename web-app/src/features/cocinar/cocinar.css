@@ -1,0 +1,404 @@
+/*
+ * Modo cocinar: pantalla completa, sin barra inferior, letra grande y botones
+ * grandes para tocarlos con las manos ocupadas.
+ */
+.cocinar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  min-height: 100dvh;
+  max-width: var(--ancho-app);
+  margin: 0 auto;
+  padding: 0 var(--espacio-4) var(--espacio-6);
+  background: var(--color-crema);
+}
+
+.cocinar__barra {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0 calc(-1 * var(--espacio-4));
+  padding: var(--espacio-3) var(--espacio-4);
+  border-bottom: var(--borde) solid var(--color-linea);
+  background: var(--color-crema);
+}
+
+.cocinar__salir {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--espacio-2);
+  color: var(--color-tinta);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cocinar__nombre {
+  margin: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cocinar__botones {
+  display: flex;
+  gap: var(--espacio-1);
+}
+
+.cocinar__icono {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: 50%;
+  background: var(--color-superficie);
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cocinar__icono[aria-pressed='true'] {
+  background: var(--color-primario);
+}
+
+.cocinar__avance {
+  height: 0.625rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-linea);
+}
+
+.cocinar__avance span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primario-hondo);
+  transition: width 300ms ease-out;
+}
+
+.cocinar__escucha {
+  margin: 0;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.cocinar__tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  padding: var(--espacio-5);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-superficie);
+}
+
+.cocinar__tarjeta--final {
+  text-align: center;
+}
+
+.cocinar__etapa {
+  margin: 0;
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cocinar__titulo {
+  margin: 0;
+  font-size: var(--texto-l);
+  line-height: 1.25;
+}
+
+/* El paso se lee de lejos, desde el fogón. */
+.cocinar__paso {
+  margin: 0;
+  font-size: var(--texto-xl);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.cocinar__previa {
+  margin: 0;
+  padding: var(--espacio-3);
+  border-radius: var(--radio-control);
+  background: var(--color-beige);
+}
+
+.cocinar__ajustes {
+  margin: 0;
+  padding: var(--espacio-3) var(--espacio-3) var(--espacio-3) var(--espacio-6);
+  border-left: 4px solid var(--color-primario-hondo);
+  border-radius: var(--radio-control);
+  background: var(--color-crema);
+}
+
+.cocinar__ingredientes {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cocinar__ingrediente {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: 3rem;
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  font-size: var(--texto-m);
+  cursor: pointer;
+}
+
+.cocinar__ingrediente input {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  accent-color: var(--color-tinta);
+}
+
+.cocinar__ingrediente:has(input:checked) {
+  border-color: var(--color-primario-hondo);
+  background: var(--color-crema);
+}
+
+.cocinar__ingrediente:has(input:checked) span {
+  color: var(--color-tenue);
+  text-decoration: line-through;
+}
+
+.cocinar__opcional {
+  color: var(--color-tenue);
+}
+
+.cocinar__acciones {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--espacio-2);
+}
+
+.cocinar__acciones--tres {
+  grid-template-columns: 1fr 1fr 2fr;
+}
+
+.cocinar__acciones .boton {
+  min-height: 3.5rem;
+  font-size: var(--texto-m);
+}
+
+.cocinar__celebracion {
+  margin: 0;
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+/* Temporizador del paso. */
+.temporizador {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-superficie);
+}
+
+.temporizador--fin {
+  background: var(--color-primario);
+  animation: temporizador-latido 900ms ease-in-out infinite;
+}
+
+.temporizador__reloj {
+  margin: 0;
+  font-size: var(--texto-xl);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.temporizador__acciones {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+@keyframes temporizador-latido {
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* Introducción (la primera vez y con el botón «?»). */
+.intro-cocina {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-4);
+  padding: var(--espacio-6) var(--espacio-5);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-superficie);
+  text-align: center;
+}
+
+.intro-cocina__puntos {
+  display: flex;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intro-cocina__punto {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--color-linea);
+  transition: width 200ms ease-out;
+}
+
+.intro-cocina__punto--actual {
+  width: 1.75rem;
+  border-radius: 999px;
+  background: var(--color-primario-hondo);
+}
+
+.intro-cocina__icono {
+  display: grid;
+  place-items: center;
+  width: 6rem;
+  height: 6rem;
+  margin: 0;
+  border-radius: 50%;
+  background: var(--color-crema);
+  font-size: 3.25rem;
+}
+
+.intro-cocina__titulo {
+  margin: 0;
+  font-size: var(--texto-l);
+}
+
+.intro-cocina__texto {
+  margin: 0;
+  font-size: var(--texto-m);
+  line-height: 1.5;
+}
+
+.intro-cocina__ajustes {
+  display: grid;
+  gap: var(--espacio-3);
+  width: 100%;
+  text-align: left;
+}
+
+.intro-cocina__manos-libres {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  cursor: pointer;
+}
+
+.intro-cocina__manos-libres input {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  margin-top: 0.1rem;
+  accent-color: var(--color-tinta);
+}
+
+.intro-cocina__manos-libres > span {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+.intro-cocina__acciones {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  width: 100%;
+}
+
+.intro-cocina__acciones .boton--primario:not(.boton--ancho) {
+  margin-left: auto;
+  min-width: 9rem;
+}
+
+/* Video de la receta (en el detalle, no en el modo cocinar). */
+.video-receta {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.video-receta__marco {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-tinta);
+}
+
+.video-receta__marco iframe,
+.video-receta__portada img {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+
+.video-receta__portada {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.video-receta__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.video-receta__play span {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: 50%;
+  background: var(--color-primario);
+  font-size: 1.5rem;
+}
+
+.video-receta__nota {
+  margin: 0;
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .temporizador--fin {
+    animation: none;
+  }
+}

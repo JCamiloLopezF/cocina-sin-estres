@@ -256,6 +256,14 @@ function Comida({ semana, comida, dia, ocupado, confirmando, alPreguntar, alOtra
       ) : (
         <div className="hueco__acciones">
           {!comida.preparada && (
+            <Link
+              className="boton boton--primario hueco__cocinar"
+              to={`/recetas/${comida.recetaId}/cocinar?plan=${comida.planSemanalId}&comida=${comida.id}`}
+            >
+              👩‍🍳 Cocinar ahora
+            </Link>
+          )}
+          {!comida.preparada && (
             <Boton variante="secundario" cargando={ocupado} onClick={alOtraOpcion}>
               Otra opción
             </Boton>

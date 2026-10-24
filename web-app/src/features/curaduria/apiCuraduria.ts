@@ -68,12 +68,36 @@ export function quitarReemplazo(productoId: number, reemplazoId: number) {
   return pedir<Reemplazo[]>(`/curaduria/productos/${productoId}/reemplazos/${reemplazoId}`, { metodo: 'DELETE' })
 }
 
+/** `GET /api/curaduria/recetas`: cada receta con su video (V10). */
+export interface RecetaConVideo {
+  id: number
+  nombre: string
+  tiempoMinutos: number
+  /** Lo más que puede durar el fragmento: la mitad del tiempo de la receta. */
+  maximoSegundos: number
+  youtubeId?: string | null
+  inicioSeg?: number | null
+  finSeg?: number | null
+}
+
+export function listarVideosRecetas(senal?: AbortSignal) {
+  return pedir<RecetaConVideo[]>('/curaduria/recetas', { senal })
+}
+
+export function guardarVideoReceta(recetaId: number, datos: { enlace: string; inicioSeg: number; finSeg: number }) {
+  return pedir<RecetaConVideo>(`/curaduria/recetas/${recetaId}/video`, { metodo: 'PUT', cuerpo: datos })
+}
+
+export function quitarVideoReceta(recetaId: number) {
+  return pedir<RecetaConVideo>(`/curaduria/recetas/${recetaId}/video`, { metodo: 'DELETE' })
+}
+
 /**
- * Los errores de validación del catálogo (`PRODUCTO_*`) ya traen en el detalle qué dato
+ * Los errores de validación del catálogo (`PRODUCTO_*`, `RECETA_*`) ya traen en el detalle qué dato
  * falló, redactado para quien cura el catálogo; los demás usan el mensaje general.
  */
 export function mensajeCuraduria(error: unknown): string {
-  if (error instanceof ErrorApi && error.codigo.startsWith('PRODUCTO_') && error.message) {
+  if (error instanceof ErrorApi && /^(PRODUCTO|RECETA)_/.test(error.codigo) && error.message) {
     return error.message
   }
   return mensajeDeError(error)
