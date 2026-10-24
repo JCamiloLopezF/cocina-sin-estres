@@ -5,7 +5,7 @@ import { enPesos } from '../despensa/formato'
 import { mensajePlan } from '../planificador/mensajesPlan'
 import { huecoDesde, NOMBRE_COMIDA, NOMBRE_DIA } from '../planificador/semana'
 import { listarRecetasConDetalle } from './apiRecetario'
-import { analizarReceta, cargarCocina, type RecetaVista } from './cocina'
+import { analizarReceta, cargarCocina, listaPersonas, type RecetaVista } from './cocina'
 import './recetario.css'
 
 type Atajo = 'TODAS' | 'RAPIDAS' | 'ECONOMICAS' | 'CON_LO_QUE_TENGO'
@@ -47,6 +47,8 @@ export function PantallaRecetario() {
     return ATAJOS.some((a) => a.valor === valor) ? (valor as Atajo) : 'TODAS'
   })
   const [abiertos, setAbiertos] = useState(false)
+  // Por defecto se ocultan las recetas con alergias de alguien del hogar (ajuste del prototipo 2).
+  const [aplicarAlergias, setAplicarAlergias] = useState(true)
   // Desde un día sin tiempo el plan abre el recetario con ?tiempo=20.
   const [filtros, setFiltros] = useState<Filtros>(() => ({
     ...SIN_FILTROS,
@@ -65,10 +67,12 @@ export function PantallaRecetario() {
     return () => control.abort()
   }, [version])
 
-  const visibles = useMemo(
+  const candidatas = useMemo(
     () => (estado.tipo === 'listo' ? estado.recetas.filter((v) => cumple(v, buscar, atajo, filtros)) : []),
     [estado, buscar, atajo, filtros],
   )
+  const visibles = aplicarAlergias ? candidatas.filter((v) => v.noAptaPara.length === 0) : candidatas
+  const ocultasPorAlergia = candidatas.length - visibles.length
   const conFiltros = JSON.stringify(filtros) !== JSON.stringify(SIN_FILTROS)
   const sufijo = hueco ? `?dia=${hueco.dia}&comida=${hueco.comida}` : ''
 
@@ -160,6 +164,14 @@ export function PantallaRecetario() {
                 />
               </div>
               <label className="casilla casilla--tarjeta">
+                Aplicar alergias del hogar
+                <input
+                  type="checkbox"
+                  checked={aplicarAlergias}
+                  onChange={(e) => setAplicarAlergias(e.target.checked)}
+                />
+              </label>
+              <label className="casilla casilla--tarjeta">
                 Solo lo que puedo cocinar hoy
                 <input
                   type="checkbox"
@@ -211,6 +223,16 @@ export function PantallaRecetario() {
               ))}
             </ul>
           )}
+          {ocultasPorAlergia > 0 && (
+            <p className="recetario__ocultas">
+              {ocultasPorAlergia === 1
+                ? 'Ocultamos 1 receta que no es apta por alergias del hogar.'
+                : `Ocultamos ${ocultasPorAlergia} recetas que no son aptas por alergias del hogar.`}{' '}
+              <Boton variante="texto" onClick={() => setAplicarAlergias(false)}>
+                Ver todas
+              </Boton>
+            </p>
+          )}
         </>
       )}
     </>
@@ -239,6 +261,9 @@ export function TarjetaReceta({ vista, ruta }: { vista: RecetaVista; ruta: strin
             </span>
           )}
           {receta.preparacionPrevia && <span className="pildora">preparación previa</span>}
+          {vista.noAptaPara.length > 0 && (
+            <span className="pildora pildora--alerta">no apta para {listaPersonas(vista.noAptaPara)}</span>
+          )}
         </span>
       </span>
       <span className="fila__flecha" aria-hidden="true">

@@ -197,3 +197,30 @@
 .opciones--dias .opciones__opcion span[aria-hidden='true'] {
   font-weight: 700;
 }
+
+/* Alergias del hogar (ajuste del prototipo 2): el texto dice el motivo, no solo el color. */
+.pildora--alerta {
+  border-color: var(--color-tinta);
+  background: var(--color-crema);
+  font-weight: 700;
+}
+
+.recetario__ocultas {
+  margin: var(--espacio-4) 0 0;
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.recetario__ocultas .boton--texto {
+  min-height: auto;
+  padding: 0;
+}
+
+.receta__aviso {
+  margin-bottom: var(--espacio-3);
+}
+
+.receta__restriccion {
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}

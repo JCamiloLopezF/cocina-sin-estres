@@ -1,12 +1,14 @@
 package co.edu.uniquindio.cocinasinestres.recetario.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
+import co.edu.uniquindio.cocinasinestres.recetario.domain.RestriccionesDeProductos;
 import co.edu.uniquindio.cocinasinestres.recetario.dto.RecetaDetalleResponse;
 import co.edu.uniquindio.cocinasinestres.recetario.dto.RecetaResponse;
 import co.edu.uniquindio.cocinasinestres.recetario.model.Receta;
 import co.edu.uniquindio.cocinasinestres.recetario.repository.RecetaRepository;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +25,9 @@ class RecetaServiceTest {
 
     @Mock
     private RecetaRepository recetaRepository;
+
+    @Mock
+    private RestriccionesDeProductos restriccionesDeProductos;
 
     @InjectMocks
     private RecetaService service;
@@ -83,6 +88,20 @@ class RecetaServiceTest {
         assertEquals(new BigDecimal("500.000"), detalle.ingredientes().get(0).cantidad());
         assertFalse(detalle.ingredientes().get(0).opcional());
         assertTrue(detalle.ingredientes().get(1).opcional());
+    }
+
+    @Test
+    void obtenerPorId_lasRestriccionesDeLaRecetaSonLasDeSusIngredientesObligatorios() {
+        when(recetaRepository.findById(1L)).thenReturn(Optional.of(recetaDePrueba(true)));
+        // El 12 es obligatorio y tiene lactosa; el 16 es opcional y tiene gluten.
+        when(restriccionesDeProductos.codigosPorProducto(List.of(12L, 16L)))
+            .thenReturn(Map.of(12L, List.of("lactosa"), 16L, List.of("gluten")));
+
+        RecetaDetalleResponse detalle = service.obtenerPorId(1L);
+
+        assertEquals(List.of("lactosa"), detalle.ingredientes().get(0).restricciones());
+        assertEquals(List.of("gluten"), detalle.ingredientes().get(1).restricciones());
+        assertEquals(List.of("lactosa"), detalle.restricciones());
     }
 
     @Test

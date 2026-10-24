@@ -6,7 +6,7 @@ import { enfocarPrimerError } from './enfocarPrimerError'
 import { mensajeDeErrorAuth } from './mensajesAuth'
 import { useSesion } from './contextoSesion'
 import {
-  LARGO_MINIMO_CONTRASENA,
+  REGLAS_CONTRASENA,
   validarConfirmacion,
   validarContrasenaNueva,
   validarCorreo,
@@ -84,7 +84,7 @@ export function PantallaRegistro() {
         />
         <CampoTexto
           etiqueta="Contraseña"
-          ayuda={`Mínimo ${LARGO_MINIMO_CONTRASENA} caracteres.`}
+          ayuda="Debe cumplir las reglas de la lista."
           type={mostrar ? 'text' : 'password'}
           name="contrasena"
           autoComplete="new-password"
@@ -92,6 +92,17 @@ export function PantallaRegistro() {
           onChange={(e) => setContrasena(e.target.value)}
           error={errores.contrasena}
         />
+        <ul className="reglas-contrasena" aria-label="Reglas de la contraseña">
+          {REGLAS_CONTRASENA.map((regla) => {
+            const cumple = regla.cumple(contrasena)
+            return (
+              <li key={regla.texto} className={cumple ? 'reglas-contrasena__ok' : undefined}>
+                <span aria-hidden="true">{cumple ? '✓' : '○'}</span> {regla.texto}
+                <span className="solo-lectores">{cumple ? ' (cumple)' : ' (falta)'}</span>
+              </li>
+            )
+          })}
+        </ul>
         <CampoTexto
           etiqueta="Confirmar contraseña"
           type={mostrar ? 'text' : 'password'}

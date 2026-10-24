@@ -37,6 +37,10 @@ public class Persona {
     @Column(name = "edad", nullable = false)
     private Integer edad;
 
+    // Datos de salud: lista JSON de códigos de restriccion, cifrada con AES-GCM (ADR-20).
+    @Column(name = "restricciones", columnDefinition = "text")
+    private String restricciones;
+
     /**
      * Constructor requerido por JPA.
      */
@@ -77,5 +81,14 @@ public class Persona {
     public void setEdad(Integer edad) {
         this.edad = Objects.requireNonNull(
             edad, "La edad es obligatoria");
+    }
+
+    /** Restricciones cifradas; {@code null} si la persona no tiene o no hay consentimiento. */
+    public String getRestricciones() {
+        return restricciones;
+    }
+
+    public void setRestricciones(String restricciones) {
+        this.restricciones = restricciones;
     }
 }
