@@ -73,6 +73,7 @@ describe('Catálogo del curador (pantallas 43 y 44)', () => {
     await usuario.type(screen.getByLabelText('Presentación de compra'), 'Libra')
     await usuario.type(screen.getByLabelText('Cuánto trae'), '500')
     await usuario.type(screen.getByLabelText('Precio'), '6500')
+    await usuario.type(screen.getByLabelText('Vida útil (opcional)'), '14')
     await usuario.click(screen.getByRole('button', { name: 'Guardar producto' }))
 
     expect(await screen.findByText('Queso campesino quedó guardado en el catálogo.')).toBeInTheDocument()
@@ -86,6 +87,7 @@ describe('Catálogo del curador (pantallas 43 y 44)', () => {
       cantidadUnidadCompra: 500,
       precioUnidadCompra: 6500,
       esBasico: false,
+      vidaUtilDias: 14,
     })
   })
 

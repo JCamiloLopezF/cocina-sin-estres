@@ -26,6 +26,7 @@ interface Formulario {
   precioUnidadCompra: string
   capacidadReferencia: string
   esBasico: boolean
+  vidaUtilDias: string
 }
 
 type Errores = Partial<Record<keyof Formulario, string>>
@@ -40,6 +41,7 @@ const VACIO: Formulario = {
   precioUnidadCompra: '',
   capacidadReferencia: '',
   esBasico: false,
+  vidaUtilDias: '',
 }
 
 const NOMBRE_UNIDAD: Record<UnidadBase, string> = { g: 'gramos', ml: 'mililitros', unidad: 'unidades' }
@@ -55,6 +57,7 @@ function desde(p: ProductoCurado): Formulario {
     precioUnidadCompra: String(p.precioUnidadCompra),
     capacidadReferencia: p.capacidadReferencia != null ? String(p.capacidadReferencia) : '',
     esBasico: p.esBasico,
+    vidaUtilDias: p.vidaUtilDias != null ? String(p.vidaUtilDias) : '',
   }
 }
 
@@ -114,6 +117,7 @@ export function PantallaProductoCurado() {
       precioUnidadCompra: Number(formulario.precioUnidadCompra),
       capacidadReferencia: granel ? Number(formulario.capacidadReferencia) : undefined,
       esBasico: formulario.esBasico,
+      vidaUtilDias: formulario.vidaUtilDias.trim() ? Number(formulario.vidaUtilDias) : null,
     }
     setGuardando(true)
     try {
@@ -244,6 +248,16 @@ export function PantallaProductoCurado() {
           />
         </fieldset>
 
+        <CampoTexto
+          etiqueta="Vida útil (opcional)"
+          ayuda="Cuántos días dura desde que se compra, bien guardado. Con esto, lo que la usuaria compra entra a su despensa con fecha de vencimiento."
+          inputMode="numeric"
+          value={formulario.vidaUtilDias}
+          onChange={(e) => cambiar('vidaUtilDias', e.target.value.replace(/\D/g, ''))}
+          error={errores.vidaUtilDias}
+          sufijo="días"
+        />
+
         <label className="casilla casilla--tarjeta">
           Producto básico (se sugiere en la carga rápida)
           <input type="checkbox" checked={formulario.esBasico} onChange={(e) => cambiar('esBasico', e.target.checked)} />
@@ -298,5 +312,9 @@ function validar(f: Formulario): Errores {
     cantidadUnidadCompra: positivo(f.cantidadUnidadCompra) ? undefined : 'Indica cuánto trae, mayor que cero.',
     precioUnidadCompra:
       f.precioUnidadCompra.trim() !== '' && Number(f.precioUnidadCompra) >= 0 ? undefined : 'Escribe el precio en pesos.',
+    vidaUtilDias:
+      f.vidaUtilDias.trim() === '' || (Number(f.vidaUtilDias) >= 1 && Number(f.vidaUtilDias) <= 3650)
+        ? undefined
+        : 'Entre 1 y 3650 días, o déjalo vacío.',
   }
 }

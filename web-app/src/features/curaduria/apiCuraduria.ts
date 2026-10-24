@@ -16,6 +16,8 @@ export interface ProductoCurado {
   capacidadReferencia?: number
   esBasico: boolean
   activo: boolean
+  /** Días que dura desde que se compra: lo comprado entra a la despensa con ese vencimiento (ADR-24). */
+  vidaUtilDias?: number | null
 }
 
 export type DatosProducto = Omit<ProductoCurado, 'id' | 'activo'>

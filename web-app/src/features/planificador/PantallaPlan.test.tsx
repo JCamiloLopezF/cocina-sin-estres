@@ -240,7 +240,9 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
     await usuario.click(screen.getByRole('button', { name: 'Preparada' }))
     expect(screen.getByText('¿Preparaste esta comida?')).toBeInTheDocument()
     await usuario.click(screen.getByRole('button', { name: 'Sí, la preparé' }))
-    expect(await screen.findByText('¡Bien! Marcamos Arroz con pollo como preparada.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('¡Bien! Marcamos Arroz con pollo como preparada y descontamos sus ingredientes de tu despensa.'),
+    ).toBeInTheDocument()
     expect(llamadas.some((l) => l.ruta === '/planes-semanales/7/comidas/71/marcar-preparada')).toBe(true)
   })
 
@@ -302,8 +304,8 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
 })
 
 describe('Lista de compras (pantalla 31)', () => {
-  it('agrupa por prioridad, nombra los productos y recuerda lo comprado', async () => {
-    backendFalso({
+  it('agrupa por prioridad, nombra los productos y lo comprado pasa a la despensa', async () => {
+    const { llamadas } = backendFalso({
       ...conPlan([comida(71, 3, 'CENA', 11)]),
       'GET /planes-semanales/7/lista-compras': () =>
         respuestaJson({
@@ -311,9 +313,23 @@ describe('Lista de compras (pantalla 31)', () => {
           planSemanalId: 7,
           costoTotal: 11600,
           items: [
-            { id: 1, productoId: 5, cantidad: 500, costoEstimado: 9800, prioridad: 1, comprado: false },
-            { id: 2, productoId: 4, cantidad: 400, costoEstimado: 1800, prioridad: 2, comprado: false },
+            { id: 1, productoId: 5, cantidad: 500, costoEstimado: 9800, prioridad: 1, comprado: false, motivo: 'PLAN' },
+            { id: 2, productoId: 4, cantidad: 400, costoEstimado: 1800, prioridad: 2, comprado: false, motivo: 'REPONER' },
           ],
+        }),
+      'PUT /planes-semanales/7/lista-compras/items/1': (cuerpo) =>
+        respuestaJson({
+          item: {
+            id: 1,
+            productoId: 5,
+            cantidad: 500,
+            costoEstimado: 9800,
+            prioridad: 1,
+            comprado: (cuerpo as { comprado: boolean }).comprado,
+            motivo: 'PLAN',
+            cantidadAgregada: 500,
+          },
+          venceEn: '2026-10-27',
         }),
     })
     montarApp(crearServicioFalso(LUISA).servicio, '/plan/lista')
@@ -324,11 +340,17 @@ describe('Lista de compras (pantalla 31)', () => {
     const indispensable = within(screen.getByRole('region', { name: 'Indispensable' }))
     expect(indispensable.getByText('Pollo · 500 g')).toBeInTheDocument()
     expect(indispensable.getByText('Arroz con pollo')).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'Postergable' })).getByText('Arroz · 400 g')).toBeInTheDocument()
+    const reponer = within(screen.getByRole('region', { name: 'Para reponer' }))
+    expect(reponer.getByText('Arroz · 400 g')).toBeInTheDocument()
+    expect(reponer.getByText('Quedó por debajo del mínimo de tu despensa')).toBeInTheDocument()
 
     await usuario.click(screen.getByRole('checkbox', { name: /Pollo/ }))
-    expect(screen.getByText('1 de 2 marcados como comprados')).toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('cocina-sin-estres:comprados:7') ?? '[]')).toEqual([5])
+    expect(await screen.findByText('Pollo pasó a tu despensa; vence el 27/10/2026.')).toBeInTheDocument()
+    expect(screen.getByText(/1 de 2 comprados/)).toBeInTheDocument()
+    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toEqual({ comprado: true })
+
+    await usuario.click(screen.getByRole('checkbox', { name: /Pollo/ }))
+    expect(await screen.findByText('Quitamos pollo de tu despensa.')).toBeInTheDocument()
   })
 
   it('si la despensa alcanza, dice que no falta nada', async () => {

@@ -159,7 +159,7 @@ export function PantallaDia() {
                   void accion(
                     comida,
                     () => marcarPreparada(comida.planSemanalId, comida.id),
-                    `¡Bien! Marcamos ${nombreDe(comida)} como preparada.`,
+                    `¡Bien! Marcamos ${nombreDe(comida)} como preparada y descontamos sus ingredientes de tu despensa.`,
                   )
                 }
                 alQuitar={() =>
