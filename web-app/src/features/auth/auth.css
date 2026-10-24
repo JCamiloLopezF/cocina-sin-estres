@@ -115,3 +115,19 @@
   font-size: var(--texto-xs);
   text-align: center;
 }
+
+/* Reglas de la contraseña: se marcan mientras se escribe; el texto dice si cumple. */
+.reglas-contrasena {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: calc(-1 * var(--espacio-2)) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.reglas-contrasena__ok {
+  color: var(--color-tinta);
+  font-weight: 700;
+}

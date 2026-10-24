@@ -14,6 +14,8 @@ export interface IngredienteReceta {
   productoId: number
   cantidad: number
   opcional: boolean
+  /** Alergias y condiciones del producto (V6), por ejemplo `lactosa`. */
+  restricciones?: string[]
 }
 
 /** `GET /api/recetas/{id}` (RecetaDetalleResponse). */
@@ -21,4 +23,6 @@ export interface RecetaDetalle extends Receta {
   preparacionPrevia?: string
   pasos: string[]
   ingredientes: IngredienteReceta[]
+  /** Restricciones de los ingredientes obligatorios. */
+  restricciones?: string[]
 }

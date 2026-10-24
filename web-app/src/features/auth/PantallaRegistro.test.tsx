@@ -14,8 +14,8 @@ describe('Registro (pantalla 02)', () => {
 
     await usuario.type(await screen.findByLabelText('Tu nombre'), 'Luisa')
     await usuario.type(screen.getByLabelText('Correo'), 'luisa@correo.com')
-    await usuario.type(screen.getByLabelText('Contraseña'), 'cocina2026')
-    await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'cocina2025')
+    await usuario.type(screen.getByLabelText('Contraseña'), 'Cocina#2026')
+    await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'Cocina#2025')
     await usuario.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
     expect(screen.getByText('Las contraseñas no coinciden.')).toBeInTheDocument()
@@ -23,10 +23,10 @@ describe('Registro (pantalla 02)', () => {
     expect(servicio.registrar).not.toHaveBeenCalled()
 
     await usuario.clear(screen.getByLabelText('Confirmar contraseña'))
-    await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'cocina2026')
+    await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'Cocina#2026')
     await usuario.click(screen.getByRole('checkbox', { name: /Autorizo el tratamiento/ }))
     await usuario.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
-    expect(servicio.registrar).toHaveBeenCalledWith('Luisa', 'luisa@correo.com', 'cocina2026')
+    expect(servicio.registrar).toHaveBeenCalledWith('Luisa', 'luisa@correo.com', 'Cocina#2026')
   })
 })

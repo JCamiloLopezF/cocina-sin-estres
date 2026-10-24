@@ -1,12 +1,15 @@
 package co.edu.uniquindio.cocinasinestres.recetario.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
+import co.edu.uniquindio.cocinasinestres.recetario.domain.RestriccionesDeProductos;
 import co.edu.uniquindio.cocinasinestres.recetario.dto.IngredienteRecetaResponse;
 import co.edu.uniquindio.cocinasinestres.recetario.dto.RecetaDetalleResponse;
 import co.edu.uniquindio.cocinasinestres.recetario.dto.RecetaResponse;
+import co.edu.uniquindio.cocinasinestres.recetario.model.IngredienteReceta;
 import co.edu.uniquindio.cocinasinestres.recetario.model.Receta;
 import co.edu.uniquindio.cocinasinestres.recetario.repository.RecetaRepository;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class RecetaService {
 
     private final RecetaRepository recetaRepository;
+    private final RestriccionesDeProductos restriccionesDeProductos;
 
-    public RecetaService(RecetaRepository recetaRepository) {
+    public RecetaService(RecetaRepository recetaRepository, RestriccionesDeProductos restriccionesDeProductos) {
         this.recetaRepository = recetaRepository;
+        this.restriccionesDeProductos = restriccionesDeProductos;
     }
 
     /** Recetas activas ordenadas por nombre, sin pasos ni ingredientes. */
@@ -44,7 +49,9 @@ public class RecetaService {
             .orElseThrow(() ->
                 new RecursoNoEncontradoException("La receta solicitada no existe."));
 
-        return aDetalle(receta);
+        Map<Long, List<String>> restricciones = restriccionesDeProductos.codigosPorProducto(
+            receta.getIngredientes().stream().map(IngredienteReceta::getProductoId).toList());
+        return aDetalle(receta, restricciones);
     }
 
     private static RecetaResponse aResponse(Receta receta) {
@@ -57,13 +64,21 @@ public class RecetaService {
         );
     }
 
-    private static RecetaDetalleResponse aDetalle(Receta receta) {
+    private static RecetaDetalleResponse aDetalle(Receta receta, Map<Long, List<String>> restricciones) {
         List<IngredienteRecetaResponse> ingredientes = receta.getIngredientes()
             .stream()
             .map(ingrediente -> new IngredienteRecetaResponse(
                 ingrediente.getProductoId(),
                 ingrediente.getCantidad(),
-                ingrediente.isOpcional()))
+                ingrediente.isOpcional(),
+                restricciones.getOrDefault(ingrediente.getProductoId(), List.of())))
+            .toList();
+
+        List<String> deLaReceta = ingredientes.stream()
+            .filter(ingrediente -> !ingrediente.opcional())
+            .flatMap(ingrediente -> ingrediente.restricciones().stream())
+            .distinct()
+            .sorted()
             .toList();
 
         return new RecetaDetalleResponse(
@@ -74,7 +89,8 @@ public class RecetaService {
             receta.getPorciones(),
             receta.getPreparacionPrevia(),
             receta.pasosEnLista(),
-            ingredientes
+            ingredientes,
+            deLaReceta
         );
     }
 }

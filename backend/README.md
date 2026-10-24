@@ -103,7 +103,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `GET /api/planes-semanales/{planId}/lista-compras` | Lista de compras generada del plan con su costo total, ya descontando lo que el hogar tiene en su despensa (sin contar lo vencido). Si el plan no tiene comidas aún, responde lista vacía y costo cero. 404 si el plan no existe o es de otro hogar. |
 | `GET /api/planes-semanales/{planId}/costo` | Costo acumulado del plan por día (índice 0 = lunes), presupuesto semanal del hogar (ADR-14) y `excedePresupuesto`. El hogar sale de la usuaria autenticada. 404 si el plan no existe o es de otro hogar. |
 | `GET /api/recetas` | Lista las recetas activas ordenadas por nombre (resumen, sin pasos ni ingredientes). |
-| `GET /api/recetas/{id}` | Detalle de una receta: pasos separados e ingredientes con sus cantidades. 404 si no existe o está desactivada. |
+| `GET /api/recetas/{id}` | Detalle de una receta: pasos separados, ingredientes con sus cantidades y sus `restricciones` (alergias y condiciones, V6), y las `restricciones` de la receta (las de sus ingredientes obligatorios). 404 si no existe o está desactivada. |
 
 Cada módulo agrega sus rutas; las convenciones están en [`CONTRIBUTING.md`](../CONTRIBUTING.md#api-rest).
 

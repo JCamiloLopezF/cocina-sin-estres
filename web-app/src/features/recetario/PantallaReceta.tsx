@@ -76,6 +76,21 @@ export function PantallaReceta() {
         )}
       </ul>
 
+      {vista.noAptaPara.map((choque) => (
+        <div key={`a-${choque.persona}`} className="receta__aviso">
+          <Alerta tono="error">
+            No apta para {choque.persona}: lleva {choque.restricciones.join(', ').toLowerCase()}.
+          </Alerta>
+        </div>
+      ))}
+      {vista.precaucionPara.map((choque) => (
+        <div key={`p-${choque.persona}`} className="receta__aviso">
+          <Alerta tono="info">
+            Precaución para {choque.persona} ({choque.restricciones.join(', ').toLowerCase()}): revisa los ingredientes marcados.
+          </Alerta>
+        </div>
+      ))}
+
       <div className="receta__porciones">
         <span id="etiqueta-porciones">Porciones</span>
         <div className="contador" role="group" aria-labelledby="etiqueta-porciones">
@@ -102,6 +117,9 @@ export function PantallaReceta() {
           <li key={ing.productoId} className={ing.enDespensa || ing.opcional ? undefined : 'receta__falta'}>
             <span>
               {ing.nombre} · {cantidadConUnidad(redondear(ing.cantidad), ing.unidad)}
+              {ing.restricciones.length > 0 && (
+                <span className="receta__restriccion"> · {ing.restricciones.join(', ').toLowerCase()}</span>
+              )}
             </span>
             <span className="receta__estado">
               {ing.enDespensa ? 'en despensa' : ing.opcional ? 'opcional' : 'falta'}

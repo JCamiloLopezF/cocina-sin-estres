@@ -230,3 +230,22 @@
   justify-self: center;
   color: var(--color-tinta);
 }
+
+/* Paso 2: alergias y condiciones por persona (ajuste del prototipo 2). */
+.persona-salud {
+  display: grid;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-tarjeta);
+}
+
+.persona-salud__nombre {
+  margin: 0;
+  font-size: var(--texto-m);
+}
+
+.persona-salud__edad {
+  color: var(--color-tenue);
+  font-weight: 400;
+}
