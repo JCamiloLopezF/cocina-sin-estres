@@ -28,6 +28,8 @@ export const CATALOGO: ProductoDisponible[] = [
   producto(4, 'Arroz', 'g', 1000, 4500),
   producto(5, 'Pollo', 'g', 500, 9800),
   producto(6, 'Sal', 'g', 1000, 2000),
+  producto(7, 'Leche', 'g', 1000, 3800),
+  producto(8, 'Azúcar', 'g', 1000, 4500),
 ]
 
 function enDespensa(id: number, productoId: number, nombre: string, cantidad: number, unidadBase: 'g' | 'unidad'): ItemDespensa {
@@ -76,6 +78,31 @@ export const ARROZ_CON_POLLO: RecetaDetalle = {
   ],
 }
 
+/** Lleva leche (lactosa) y azúcar (diabetes): sirve para probar las alergias por persona. */
+export const ARROZ_CON_LECHE: RecetaDetalle = {
+  id: 12,
+  nombre: 'Arroz con leche',
+  tiempoMinutos: 40,
+  porciones: 4,
+  pasos: ['Cocina el arroz en la leche.', 'Endulza al final.'],
+  ingredientes: [
+    { productoId: 4, cantidad: 200, opcional: false, restricciones: [] },
+    { productoId: 7, cantidad: 1000, opcional: false, restricciones: ['lactosa'] },
+    { productoId: 8, cantidad: 100, opcional: false, restricciones: ['diabetes'] },
+  ],
+  restricciones: ['diabetes', 'lactosa'],
+}
+
+/** Perfil con alergias por persona: Samuel no puede lactosa y Luisa tiene diabetes. */
+export const PERFIL_CON_ALERGIAS = {
+  diasSinTiempo: [3],
+  periodicidadIngreso: 'QUINCENAL',
+  personas: [
+    { id: 1, nombre: 'Luisa', edad: 34, restricciones: ['diabetes'] },
+    { id: 2, nombre: 'Samuel', edad: 9, restricciones: ['lactosa'] },
+  ],
+}
+
 const resumen = (r: RecetaDetalle) => ({
   id: r.id,
   nombre: r.nombre,
@@ -83,6 +110,8 @@ const resumen = (r: RecetaDetalle) => ({
   tiempoMinutos: r.tiempoMinutos,
   porciones: r.porciones,
 })
+
+export { resumen as resumenReceta }
 
 /** Rutas del backend falso que leen las pantallas del recetario y del plan. */
 export function rutasCocina() {

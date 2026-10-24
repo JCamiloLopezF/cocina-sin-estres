@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { backendFalso } from '../../prueba/backendFalso'
-import { rutasCocina } from '../../prueba/cocinaFalsa'
+import { ARROZ_CON_LECHE, ARROZ_CON_POLLO, PERFIL_CON_ALERGIAS, resumenReceta, rutasCocina, SOPA } from '../../prueba/cocinaFalsa'
 import { montarApp } from '../../prueba/montar'
 import { crearServicioFalso, LUISA, respuestaJson } from '../../prueba/servicioFalso'
 
@@ -120,5 +120,39 @@ describe('Recetario (pantallas 21 a 24)', () => {
       await screen.findByText('El martes ya tienes cena: Arroz con pollo. Si continúas, la cambiamos por esta receta.'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cambiar la receta' })).toBeInTheDocument()
+  })
+
+  describe('alergias por persona', () => {
+    function backendConAlergias() {
+      return backendFalso({
+        ...rutasCocina(),
+        'GET /recetas': () => respuestaJson([ARROZ_CON_POLLO, SOPA, ARROZ_CON_LECHE].map(resumenReceta)),
+        'GET /recetas/12': () => respuestaJson(ARROZ_CON_LECHE),
+        'GET /perfil/hogar': () => respuestaJson(PERFIL_CON_ALERGIAS),
+      })
+    }
+
+    it('oculta por defecto las recetas no aptas y deja verlas marcadas', async () => {
+      backendConAlergias()
+      montarApp(crearServicioFalso(LUISA).servicio, '/recetas')
+      const usuario = userEvent.setup()
+
+      expect(await screen.findByRole('link', { name: /Sopa de lentejas/ })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Arroz con leche/ })).not.toBeInTheDocument()
+      expect(screen.getByText(/Ocultamos 1 receta que no es apta/)).toBeInTheDocument()
+
+      await usuario.click(screen.getByRole('button', { name: 'Ver todas' }))
+      expect(within(screen.getByRole('link', { name: /Arroz con leche/ })).getByText('no apta para Samuel')).toBeInTheDocument()
+    })
+
+    it('el detalle avisa a quién no le sirve y a quién le pide precaución', async () => {
+      backendConAlergias()
+      montarApp(crearServicioFalso(LUISA).servicio, '/recetas/12')
+
+      expect(await screen.findByText('No apta para Samuel: lleva lactosa.')).toBeInTheDocument()
+      expect(screen.getByText(/Precaución para Luisa \(diabetes\)/)).toBeInTheDocument()
+      expect(screen.getByText('Leche · 1 kg')).toBeInTheDocument()
+      expect(screen.getByText('· lactosa')).toBeInTheDocument()
+    })
   })
 })
