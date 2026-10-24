@@ -13,6 +13,7 @@ import {
   type DatosProducto,
   type ProductoCurado,
 } from './apiCuraduria'
+import { ReemplazosProducto } from './ReemplazosProducto'
 import './curaduria.css'
 
 interface Formulario {
@@ -277,6 +278,7 @@ export function PantallaProductoCurado() {
             </Boton>
           ))}
       </form>
+      {!nuevo && <ReemplazosProducto productoId={Number(id)} nombre={formulario.nombre} />}
     </>
   )
 }

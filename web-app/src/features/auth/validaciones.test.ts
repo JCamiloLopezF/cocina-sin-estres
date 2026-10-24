@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mensajeDeErrorAuth } from './mensajesAuth'
 import { ErrorAuth } from './servicioAuth'
-import { validarContrasenaNueva, validarCorreo, validarNombre } from './validaciones'
+import { validarConfirmacion, validarContrasenaNueva, validarCorreo, validarNombre } from './validaciones'
 
 describe('validaciones de acceso', () => {
   it.each([
@@ -14,10 +14,21 @@ describe('validaciones de acceso', () => {
     expect(validarCorreo(correo)).toBe(esperado)
   })
 
-  it('pide al menos 8 caracteres en la contraseña nueva', () => {
+  it('la contraseña nueva exige 8 caracteres, mayúscula, minúscula, número y carácter especial', () => {
     expect(validarContrasenaNueva('')).toBe('Escribe una contraseña.')
-    expect(validarContrasenaNueva('1234567')).toMatch(/al menos 8/)
-    expect(validarContrasenaNueva('12345678')).toBeUndefined()
+    expect(validarContrasenaNueva('cocina2026')).toBe(
+      'A la contraseña le falta: una mayúscula, un carácter especial, como ! # $ % & * ?.',
+    )
+    expect(validarContrasenaNueva('Cocina#')).toMatch(/mínimo 8 caracteres, un número/)
+    expect(validarContrasenaNueva('Cocina#2026')).toBeUndefined()
+    // Las letras con tilde cuentan como letras, no como carácter especial.
+    expect(validarContrasenaNueva('Ñandú2026')).toMatch(/carácter especial/)
+    expect(validarContrasenaNueva('Ñandú-2026')).toBeUndefined()
+  })
+
+  it('la confirmación tiene que ser igual a la contraseña', () => {
+    expect(validarConfirmacion('Cocina#2026', 'Cocina#2025')).toBe('Las contraseñas no coinciden.')
+    expect(validarConfirmacion('Cocina#2026', 'Cocina#2026')).toBeUndefined()
   })
 
   it('pide el nombre', () => {

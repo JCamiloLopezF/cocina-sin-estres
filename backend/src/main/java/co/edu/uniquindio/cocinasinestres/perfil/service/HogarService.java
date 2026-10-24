@@ -19,8 +19,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
@@ -59,8 +62,12 @@ public class HogarService {
      * Crea o actualiza el perfil del hogar de la persona autenticada.
      */
     @Transactional
-    public PerfilHogarResponse guardar(PerfilHogarRequest request) {
-        Objects.requireNonNull(request, "La solicitud es obligatoria.");
+    public PerfilHogarResponse guardar(PerfilHogarRequest solicitud) {
+        Objects.requireNonNull(solicitud, "La solicitud es obligatoria.");
+
+        // Las alergias se registran por persona; el hogar guarda la unión de todas,
+        // que es lo que usan el recetario y el planificador para filtrar.
+        PerfilHogarRequest request = conRestriccionesDeLasPersonas(solicitud);
 
         validar(request);
 
@@ -97,11 +104,25 @@ public class HogarService {
 
         final Hogar hogarGuardado = hogar;
 
+        boolean guardarSalud = request.consentimientoDatos() && !request.sinRestricciones();
+
         List<Persona> personasNuevas = request.personas().stream()
-            .map(persona -> new Persona(
-                hogarGuardado,
-                limpiarNombre(persona.nombre()),
-                persona.edad()))
+            .map(persona -> {
+                Persona nueva = new Persona(
+                    hogarGuardado,
+                    limpiarNombre(persona.nombre()),
+                    persona.edad());
+                List<String> propias = limpiarCodigos(persona.restricciones());
+                List<String> graves = limpiarCodigos(persona.alergiasGraves());
+                // Sin consentimiento no se conserva ningún dato de salud (RNF-22).
+                nueva.setRestricciones(guardarSalud && !propias.isEmpty()
+                    ? cifrador.cifrar(serializar(propias))
+                    : null);
+                nueva.setAlergiasGraves(guardarSalud && !graves.isEmpty()
+                    ? cifrador.cifrar(serializar(graves))
+                    : null);
+                return nueva;
+            })
             .toList();
 
         List<Persona> personasGuardadas =
@@ -256,6 +277,14 @@ public class HogarService {
                     ERROR_DATOS_INVALIDOS,
                     "El nombre de cada persona admite máximo 60 caracteres.");
             }
+
+            validarCodigos(persona.restricciones());
+            validarCodigos(persona.alergiasGraves());
+            if (!limpiarCodigos(persona.restricciones()).containsAll(limpiarCodigos(persona.alergiasGraves()))) {
+                throw new DatosInvalidosException(
+                    ERROR_DATOS_INVALIDOS,
+                    "Una alergia grave debe estar marcada también como alergia de esa persona.");
+            }
         }
 
         List<Integer> dias = request.diasSinTiempo();
@@ -269,7 +298,10 @@ public class HogarService {
             }
         }
 
-        List<String> restricciones = request.restricciones();
+        validarCodigos(request.restricciones());
+    }
+
+    private void validarCodigos(List<String> restricciones) {
         if (restricciones != null) {
             if (restricciones.stream().anyMatch(
                 codigo -> codigo == null || codigo.isBlank()
@@ -280,6 +312,50 @@ public class HogarService {
                     "Los códigos de restricción deben ser válidos y no repetirse.");
             }
         }
+    }
+
+    /**
+     * Si alguna persona trae restricciones propias, las restricciones del hogar pasan a
+     * ser la unión de las de todas (más las que llegaron a nivel de hogar, para los
+     * clientes que todavía no las mandan por persona). Si nadie trae, no cambia nada.
+     */
+    private PerfilHogarRequest conRestriccionesDeLasPersonas(PerfilHogarRequest request) {
+        if (request.personas() == null) {
+            return request;
+        }
+        Set<String> union = new LinkedHashSet<>(limpiarCodigos(request.restricciones()));
+        boolean algunaPersonaTiene = false;
+        for (PersonaRequest persona : request.personas()) {
+            if (persona != null && persona.restricciones() != null && !persona.restricciones().isEmpty()) {
+                algunaPersonaTiene = true;
+                union.addAll(limpiarCodigos(persona.restricciones()));
+            }
+        }
+        if (!algunaPersonaTiene) {
+            return request;
+        }
+        return new PerfilHogarRequest(
+            request.presupuestoMonto(),
+            request.periodicidadIngreso(),
+            request.diaPago1(),
+            request.diaPago2(),
+            request.diasSinTiempo(),
+            List.copyOf(union),
+            request.sinRestricciones(),
+            request.otrasCondiciones(),
+            request.consentimientoDatos(),
+            request.personas());
+    }
+
+    private static List<String> limpiarCodigos(List<String> codigos) {
+        if (codigos == null) {
+            return List.of();
+        }
+        return codigos.stream()
+            .filter(codigo -> codigo != null && !codigo.isBlank())
+            .map(codigo -> codigo.trim().toLowerCase(Locale.ROOT))
+            .distinct()
+            .toList();
     }
 
     private void validarRango(Integer valor, int minimo, int maximo, String mensaje) {
@@ -327,7 +403,17 @@ public class HogarService {
             .map(persona -> new PersonaResponse(
                 persona.getId(),
                 persona.getNombre(),
-                persona.getEdad()))
+                persona.getEdad(),
+                persona.getRestricciones() == null
+                    ? List.of()
+                    : deserializar(
+                        cifrador.descifrar(persona.getRestricciones()),
+                        new TypeReference<List<String>>() {}),
+                persona.getAlergiasGraves() == null
+                    ? List.of()
+                    : deserializar(
+                        cifrador.descifrar(persona.getAlergiasGraves()),
+                        new TypeReference<List<String>>() {})))
             .toList();
 
         return new PerfilHogarResponse(

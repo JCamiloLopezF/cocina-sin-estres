@@ -43,6 +43,29 @@ export function desactivarProducto(id: number) {
   return pedir<void>(`/curaduria/productos/${id}`, { metodo: 'DELETE' })
 }
 
+/** Un reemplazo para adaptar recetas a una alergia (ADR-24). */
+export interface Reemplazo {
+  reemplazoId: number
+  nombre: string
+  categoria: string
+  /** SISTEMA: lo propuso la app. CURADOR: lo decidió un curador. */
+  origen: 'SISTEMA' | 'CURADOR'
+  /** Inactivo: el curador lo quitó y la app no lo vuelve a proponer. */
+  activo: boolean
+}
+
+export function listarReemplazos(productoId: number, senal?: AbortSignal) {
+  return pedir<Reemplazo[]>(`/curaduria/productos/${productoId}/reemplazos`, { senal })
+}
+
+export function usarReemplazo(productoId: number, reemplazoId: number) {
+  return pedir<Reemplazo[]>(`/curaduria/productos/${productoId}/reemplazos/${reemplazoId}`, { metodo: 'PUT' })
+}
+
+export function quitarReemplazo(productoId: number, reemplazoId: number) {
+  return pedir<Reemplazo[]>(`/curaduria/productos/${productoId}/reemplazos/${reemplazoId}`, { metodo: 'DELETE' })
+}
+
 /**
  * Los errores de validación del catálogo (`PRODUCTO_*`) ya traen en el detalle qué dato
  * falló, redactado para quien cura el catálogo; los demás usan el mensaje general.

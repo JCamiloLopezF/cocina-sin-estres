@@ -15,12 +15,26 @@ export function validarCorreo(correo: string): string | undefined {
   return undefined
 }
 
+/**
+ * Reglas de una contraseña nueva (ajuste del prototipo 2). Son las mismas que se
+ * configuran en la política de contraseñas de Firebase, para que también apliquen en la
+ * página de "olvidé mi contraseña", que no es nuestra.
+ */
+export const REGLAS_CONTRASENA: { texto: string; cumple: (contrasena: string) => boolean }[] = [
+  { texto: `Mínimo ${LARGO_MINIMO_CONTRASENA} caracteres`, cumple: (c) => c.length >= LARGO_MINIMO_CONTRASENA },
+  { texto: 'Una mayúscula', cumple: (c) => /\p{Lu}/u.test(c) },
+  { texto: 'Una minúscula', cumple: (c) => /\p{Ll}/u.test(c) },
+  { texto: 'Un número', cumple: (c) => /\d/.test(c) },
+  { texto: 'Un carácter especial, como ! # $ % & * ?', cumple: (c) => /[^\p{L}\d\s]/u.test(c) },
+]
+
 export function validarContrasenaNueva(contrasena: string): string | undefined {
   if (!contrasena) {
     return 'Escribe una contraseña.'
   }
-  if (contrasena.length < LARGO_MINIMO_CONTRASENA) {
-    return `La contraseña debe tener al menos ${LARGO_MINIMO_CONTRASENA} caracteres.`
+  const faltan = REGLAS_CONTRASENA.filter((regla) => !regla.cumple(contrasena))
+  if (faltan.length) {
+    return `A la contraseña le falta: ${faltan.map((r) => r.texto.toLowerCase()).join(', ')}.`
   }
   return undefined
 }

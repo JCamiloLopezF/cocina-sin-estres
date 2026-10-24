@@ -2,10 +2,14 @@ package co.edu.uniquindio.cocinasinestres.planificador.controller;
 
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.GenerarPlanRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.OtraOpcionRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanCostoResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanGeneradoResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanSemanalRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanSemanalResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.service.GeneradorPlanService;
 import co.edu.uniquindio.cocinasinestres.planificador.service.PlanificadorCostoService;
 import co.edu.uniquindio.cocinasinestres.planificador.service.PlanificadorService;
 import java.time.LocalDate;
@@ -24,12 +28,15 @@ public class PlanificadorController {
 
     private final PlanificadorService planificadorService;
     private final PlanificadorCostoService planificadorCostoService;
+    private final GeneradorPlanService generadorPlanService;
 
     public PlanificadorController(
         PlanificadorService planificadorService,
-        PlanificadorCostoService planificadorCostoService) {
+        PlanificadorCostoService planificadorCostoService,
+        GeneradorPlanService generadorPlanService) {
         this.planificadorService = planificadorService;
         this.planificadorCostoService = planificadorCostoService;
+        this.generadorPlanService = generadorPlanService;
     }
 
     @PostMapping
@@ -84,5 +91,32 @@ public class PlanificadorController {
     public ListaComprasResponse consultarListaCompras(
         @PathVariable("planId") Long planId) {
         return planificadorService.consultarListaCompras(planId);
+    }
+
+    /**
+     * "Armar mi semana" (ADR-24): llena los huecos vacíos del almuerzo y la cena con
+     * recetas aptas para el hogar, usando primero la despensa y cuidando el presupuesto.
+     * Lo que ya está en el plan no se toca.
+     */
+    @PostMapping("/{planId}/generar")
+    public PlanGeneradoResponse generar(
+        @PathVariable("planId") Long planId,
+        @RequestBody(required = false) GenerarPlanRequest request) {
+        return generadorPlanService.generar(planId, request);
+    }
+
+    /** Cambia la receta de una comida por la siguiente mejor opción. 409 si no quedan. */
+    @PostMapping("/{planId}/comidas/{comidaId}/otra-opcion")
+    public ComidaPlanResponse otraOpcion(
+        @PathVariable("planId") Long planId,
+        @PathVariable("comidaId") Long comidaId,
+        @RequestBody(required = false) OtraOpcionRequest request) {
+        return generadorPlanService.otraOpcion(planId, comidaId, request);
+    }
+
+    /** Cambia las comidas no preparadas más caras por otras más baratas hasta caber en el presupuesto. */
+    @PostMapping("/{planId}/ajustar-presupuesto")
+    public PlanGeneradoResponse ajustarAlPresupuesto(@PathVariable("planId") Long planId) {
+        return generadorPlanService.ajustarAlPresupuesto(planId);
     }
 }

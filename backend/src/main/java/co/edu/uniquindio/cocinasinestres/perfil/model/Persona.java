@@ -37,6 +37,14 @@ public class Persona {
     @Column(name = "edad", nullable = false)
     private Integer edad;
 
+    // Datos de salud: lista JSON de códigos de restriccion, cifrada con AES-GCM (ADR-20).
+    @Column(name = "restricciones", columnDefinition = "text")
+    private String restricciones;
+
+    // Alergias graves (subconjunto de restricciones), cifradas igual (ADR-20, ADR-24).
+    @Column(name = "alergias_graves", columnDefinition = "text")
+    private String alergiasGraves;
+
     /**
      * Constructor requerido por JPA.
      */
@@ -77,5 +85,23 @@ public class Persona {
     public void setEdad(Integer edad) {
         this.edad = Objects.requireNonNull(
             edad, "La edad es obligatoria");
+    }
+
+    /** Restricciones cifradas; {@code null} si la persona no tiene o no hay consentimiento. */
+    public String getRestricciones() {
+        return restricciones;
+    }
+
+    public void setRestricciones(String restricciones) {
+        this.restricciones = restricciones;
+    }
+
+    /** Alergias graves cifradas; {@code null} si no tiene o no hay consentimiento. */
+    public String getAlergiasGraves() {
+        return alergiasGraves;
+    }
+
+    public void setAlergiasGraves(String alergiasGraves) {
+        this.alergiasGraves = alergiasGraves;
     }
 }

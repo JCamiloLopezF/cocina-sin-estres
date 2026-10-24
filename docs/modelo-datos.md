@@ -31,6 +31,7 @@ erDiagram
     receta ||--|{ ingrediente_receta : "lleva"
     producto ||--o{ ingrediente_receta : "se usa en"
     producto ||--o{ equivalencia_hogar : "se reemplaza por"
+    producto ||--o{ reemplazo_producto : "se cambia por (alergias)"
     plan_semanal ||--o{ comida_plan : "contiene"
     receta ||--o{ comida_plan : "se asigna a"
     plan_semanal ||--o| lista_compras : "genera"
@@ -66,6 +67,8 @@ erDiagram
         bigint hogar_id FK
         varchar nombre
         tinyint edad
+        text restricciones "cifrado AES-GCM (V6)"
+        text alergias_graves "cifrado AES-GCM (V8)"
     }
     restriccion {
         bigint id PK
@@ -110,6 +113,8 @@ erDiagram
         text pasos
         text preparacion_previa
         boolean activa
+        boolean es_plato_fuerte "V7"
+        boolean gusta_a_ninos "V7"
         bigint modificado_por FK
     }
     ingrediente_receta {
@@ -118,6 +123,14 @@ erDiagram
         bigint producto_id FK
         decimal cantidad
         boolean opcional
+        boolean es_principal "V8"
+    }
+    reemplazo_producto {
+        bigint id PK
+        bigint producto_id FK
+        bigint reemplazo_id FK
+        varchar origen "SISTEMA | CURADOR (V8)"
+        boolean activo
     }
     equivalencia_hogar {
         bigint id PK
@@ -193,6 +206,7 @@ Además de llaves y tipos, el esquema rechaza estos datos inválidos con restric
 | Una sola receta por día y comida en el plan | `uk_comida_plan_plan_semanal_id_dia_tipo_comida` | — |
 | Un cambio reenviado por el navegador no se aplica dos veces | `uk_comida_plan_id_cambio_cliente` | ADR-21, RNF-17 |
 | Un aviso repetido no se inserta | `uk_aviso_clave_idempotencia` | ADR-17 |
+| Un producto no es reemplazo de sí mismo ni aparece dos veces como reemplazo del mismo; lo que decide un curador queda a su nombre | `ck_reemplazo_producto_distintos`, `uk_reemplazo_producto_producto_id_reemplazo_id`, `ck_reemplazo_producto_curador` | ADR-24 |
 | Todo cambio del catálogo tiene un curador identificable | `auditoria_catalogo.usuario_id NOT NULL` | ADR-23, RNF-24 |
 | Un curador con historia en el catálogo no se puede borrar, y un producto usado en una receta tampoco | Llaves foráneas sin cascada | ADR-23 |
 
