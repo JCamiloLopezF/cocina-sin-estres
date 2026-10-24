@@ -5,7 +5,7 @@ import { enPesos } from '../despensa/formato'
 import { asignarComida, marcarPreparada, otraOpcion, quitarComida } from './apiPlanificador'
 import { mensajePlan, planSinHogar } from './mensajesPlan'
 import { ErrorCarga, PrimeroElHogar } from './PantallaPlan'
-import { COMIDAS, esDia, NOMBRE_COMIDA, NOMBRE_DIA, tituloDia } from './semana'
+import { COMIDAS, conSemana, esDia, NOMBRE_COMIDA, NOMBRE_DIA, tituloDia } from './semana'
 import type { ComidaPlan, Dia, TipoComida } from './tipos'
 import { textoCambio } from '../recetario/adaptaciones'
 import { useSemana, type Semana } from './useSemana'
@@ -23,7 +23,7 @@ export function PantallaDia() {
   const dia = Number(parametros.dia)
   const ubicacion = useLocation()
   const navegar = useNavigate()
-  const { estado, recargar } = useSemana()
+  const { estado, recargar, proxima } = useSemana()
   const [aviso, setAviso] = useState<Aviso | undefined>(() => {
     const texto = (ubicacion.state as { aviso?: string } | null)?.aviso
     return texto ? { texto } : undefined
@@ -37,11 +37,13 @@ export function PantallaDia() {
   // El aviso se muestra una sola vez: se limpia del historial para que no vuelva al recargar.
   useEffect(() => {
     if ((ubicacion.state as { aviso?: string } | null)?.aviso) {
-      navegar(ubicacion.pathname, { replace: true, state: null })
+      navegar(`${ubicacion.pathname}${ubicacion.search}`, { replace: true, state: null })
     }
   }, [ubicacion, navegar])
 
-  const volver = { ruta: '/plan', etiqueta: 'Volver a mi semana' }
+  const volver = { ruta: conSemana('/plan', proxima), etiqueta: proxima ? 'Volver a la próxima semana' : 'Volver a mi semana' }
+  // Al elegir una receta desde aquí, el recetario la pone en esta misma semana.
+  const deLaSemana = proxima ? '&semana=proxima' : ''
   if (!esDia(dia)) {
     return (
       <>
@@ -150,6 +152,7 @@ export function PantallaDia() {
                 semana={semana}
                 comida={comida}
                 dia={dia}
+                deLaSemana={deLaSemana}
                 ocupado={ocupado === comida.id}
                 confirmando={confirmando === comida.id}
                 alPreguntar={() => setConfirmando(comida.id)}
@@ -172,7 +175,7 @@ export function PantallaDia() {
                 }
               />
             ) : (
-              <Link className="hueco__agregar" to={`/recetas?dia=${dia}&comida=${tipo}`}>
+              <Link className="hueco__agregar" to={`/recetas?dia=${dia}&comida=${tipo}${deLaSemana}`}>
                 + Agregar receta
               </Link>
             )}
@@ -184,7 +187,7 @@ export function PantallaDia() {
         <section className="sugerencia" aria-labelledby="titulo-sugerencia">
           <h2 id="titulo-sugerencia">Sugerencia para el {NOMBRE_DIA[dia].toLowerCase()}</h2>
           <p>Es un día sin tiempo: te proponemos recetas de 20 minutos o menos.</p>
-          <Link className="boton boton--primario boton--ancho" to={`/recetas?dia=${dia}&comida=${primeraLibre}&tiempo=20`}>
+          <Link className="boton boton--primario boton--ancho" to={`/recetas?dia=${dia}&comida=${primeraLibre}&tiempo=20${deLaSemana}`}>
             Ver opciones rápidas
           </Link>
         </section>
@@ -197,6 +200,8 @@ interface ComidaProps {
   semana: Semana
   comida: ComidaPlan
   dia: Dia
+  /** `&semana=proxima` si el día es de la semana siguiente. */
+  deLaSemana: string
   ocupado: boolean
   confirmando: boolean
   alPreguntar: () => void
@@ -206,7 +211,7 @@ interface ComidaProps {
   alQuitar: () => void
 }
 
-function Comida({ semana, comida, dia, ocupado, confirmando, alPreguntar, alOtraOpcion, alCancelar, alPreparar, alQuitar }: ComidaProps) {
+function Comida({ semana, comida, dia, deLaSemana, ocupado, confirmando, alPreguntar, alOtraOpcion, alCancelar, alPreparar, alQuitar }: ComidaProps) {
   const vista = semana.recetas.get(comida.recetaId)
   const nombre = semana.nombres.get(comida.recetaId) ?? 'Receta'
   const detalle = [
@@ -268,7 +273,7 @@ function Comida({ semana, comida, dia, ocupado, confirmando, alPreguntar, alOtra
               Otra opción
             </Boton>
           )}
-          <Link className="boton boton--secundario" to={`/recetas?dia=${dia}&comida=${comida.tipoComida}`}>
+          <Link className="boton boton--secundario" to={`/recetas?dia=${dia}&comida=${comida.tipoComida}${deLaSemana}`}>
             Elegir otra
           </Link>
           <Boton variante="secundario" cargando={ocupado} onClick={alQuitar}>

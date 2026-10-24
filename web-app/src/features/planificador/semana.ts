@@ -72,6 +72,24 @@ export function esComida(valor: unknown): valor is TipoComida {
   return valor === 'DESAYUNO' || valor === 'ALMUERZO' || valor === 'CENA'
 }
 
+/** `?semana=proxima`: la pantalla muestra la semana siguiente (por ejemplo, el borrador del motor de avisos). */
+export function esProxima(parametros: URLSearchParams): boolean {
+  return parametros.get('semana') === 'proxima'
+}
+
+/** El lunes (AAAA-MM-DD) de esta semana o de la siguiente. */
+export function lunesDeSemana(proxima: boolean, hoy = new Date()): string {
+  const lunes = lunesDe(hoy)
+  if (proxima) lunes.setDate(lunes.getDate() + 7)
+  return aIso(lunes)
+}
+
+/** Agrega `semana=proxima` a una ruta cuando la pantalla muestra la semana siguiente. */
+export function conSemana(ruta: string, proxima: boolean): string {
+  if (!proxima) return ruta
+  return `${ruta}${ruta.includes('?') ? '&' : '?'}semana=proxima`
+}
+
 /** Lee `?dia=2&comida=CENA` (cuando la usuaria llega al recetario desde un día del plan). */
 export function huecoDesde(parametros: URLSearchParams): { dia: Dia; comida: TipoComida } | undefined {
   const dia = Number(parametros.get('dia'))

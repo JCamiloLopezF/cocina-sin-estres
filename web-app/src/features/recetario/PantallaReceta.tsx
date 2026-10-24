@@ -70,6 +70,7 @@ export function PantallaReceta() {
   const hoy = new URLSearchParams(parametros)
   hoy.set('dia', String(hoyDia))
   hoy.delete('comida')
+  hoy.delete('semana')
 
   return (
     <>

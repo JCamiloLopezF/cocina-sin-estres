@@ -6,6 +6,7 @@ import { listaCompras, marcarComprado } from './apiPlanificador'
 import { mensajePlan, planSinHogar } from './mensajesPlan'
 import { ErrorCarga, PrimeroElHogar } from './PantallaPlan'
 import type { ItemListaCompras, ListaCompras } from './tipos'
+import { conSemana } from './semana'
 import { useSemana, type Semana } from './useSemana'
 import './planificador.css'
 
@@ -17,7 +18,7 @@ type EstadoLista = { tipo: 'cargando' } | { tipo: 'listo'; lista: ListaCompras }
  * marca como comprado pasa solo a la despensa, con su vencimiento (ADR-24).
  */
 export function PantallaListaCompras() {
-  const { estado, recargar } = useSemana()
+  const { estado, recargar, proxima } = useSemana()
   const [estadoLista, setEstadoLista] = useState<EstadoLista>({ tipo: 'cargando' })
   const [version, setVersion] = useState(0)
   const planId = estado.tipo === 'listo' ? estado.semana.plan?.id : undefined
@@ -40,7 +41,7 @@ export function PantallaListaCompras() {
     return () => control.abort()
   }, [planId, version])
 
-  const volver = { ruta: '/plan', etiqueta: 'Volver a mi semana' }
+  const volver = { ruta: conSemana('/plan', proxima), etiqueta: 'Volver a mi semana' }
   if (estado.tipo !== 'listo') {
     return (
       <>
@@ -65,7 +66,7 @@ export function PantallaListaCompras() {
           titulo="Primero, tu semana"
           texto="La lista sale de las recetas que elijas para la semana, descontando lo que ya tienes en la despensa."
           acciones={
-            <Link className="boton boton--primario boton--ancho" to="/plan">
+            <Link className="boton boton--primario boton--ancho" to={conSemana('/plan', proxima)}>
               Armar mi semana
             </Link>
           }
@@ -141,7 +142,7 @@ export function PantallaListaCompras() {
               : 'Con lo que tienes en la despensa alcanzas para todas las comidas del plan.'
           }
           acciones={
-            <Link className="boton boton--primario boton--ancho" to="/plan">
+            <Link className="boton boton--primario boton--ancho" to={conSemana('/plan', proxima)}>
               Ver mi semana
             </Link>
           }

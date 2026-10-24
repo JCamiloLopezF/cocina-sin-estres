@@ -1,0 +1,186 @@
+/* Avisos del motor (ADR-17): en el inicio y en el centro de avisos. Tono de apoyo, no de alarma. */
+.aviso {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-crema);
+}
+
+.aviso--leido {
+  border-color: var(--color-linea);
+  background: var(--color-superficie);
+}
+
+.aviso__icono {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--color-primario);
+  font-size: 1.25rem;
+}
+
+.aviso--leido .aviso__icono {
+  background: var(--color-beige);
+}
+
+.aviso__cuerpo {
+  display: grid;
+  gap: var(--espacio-1);
+  min-width: 0;
+}
+
+.aviso__titulo {
+  margin: 0;
+  font-size: var(--texto-m);
+  line-height: 1.3;
+}
+
+.aviso__mensaje {
+  margin: 0;
+  font-size: var(--texto-s);
+  line-height: 1.45;
+}
+
+.aviso__accion {
+  justify-self: start;
+  margin-top: var(--espacio-1);
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-tinta);
+  font-weight: 700;
+}
+
+.aviso__cerrar {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: calc(-1 * var(--espacio-2)) calc(-1 * var(--espacio-2)) 0 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-tenue);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.aviso__cerrar:hover {
+  background: var(--color-beige);
+  color: var(--color-tinta);
+}
+
+.avisos {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0 0 var(--espacio-6);
+  padding: 0;
+  list-style: none;
+}
+
+.avisos__fecha {
+  margin: var(--espacio-1) 0 0 var(--espacio-2);
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+}
+
+.avisos__barra {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--espacio-2);
+}
+
+.avisos-inicio {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.avisos-inicio__todos {
+  justify-self: end;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-tinta);
+  font-size: var(--texto-s);
+  font-weight: 700;
+}
+
+.preferencias-avisos {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.preferencias-avisos__lista {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preferencia-aviso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+  cursor: pointer;
+}
+
+.preferencia-aviso__texto {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+/* Interruptor accesible: un checkbox con role="switch". */
+.interruptor {
+  flex: none;
+  position: relative;
+  width: 3.25rem;
+  height: 1.9rem;
+  margin: 0;
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: 999px;
+  background: var(--color-beige);
+  appearance: none;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+
+.interruptor::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: var(--color-tinta);
+  transition: transform 150ms ease-out;
+}
+
+.interruptor:checked {
+  background: var(--color-primario);
+}
+
+.interruptor:checked::after {
+  transform: translateX(1.35rem);
+}
+
+.interruptor:focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.interruptor:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
