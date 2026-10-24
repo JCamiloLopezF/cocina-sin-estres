@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.ConflictoException;
 import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
+import co.edu.uniquindio.cocinasinestres.perfil.domain.PersonaResumen;
 import co.edu.uniquindio.cocinasinestres.perfil.domain.ResumenHogar;
 import co.edu.uniquindio.cocinasinestres.perfil.domain.UsuarioAutenticado;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
@@ -22,6 +23,7 @@ import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.CatalogoParaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.RecetaCandidata;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.StockEnDespensa;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.AdaptacionResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.OtraOpcionRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanGeneradoResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
@@ -168,5 +170,31 @@ class GeneradorPlanServiceTest {
 
         assertThat(respuesta.cambios()).isEmpty();
         verify(listaComprasService, never()).generarListaCompras(anyLong());
+    }
+
+    @Test
+    @DisplayName("las adaptaciones nombran a la persona, el ingrediente y su reemplazo")
+    void adaptaciones() {
+        when(resumenHogarService.resumir(hogar)).thenReturn(new ResumenHogar(
+            10L, Set.of("huevo"), Set.of(), BigDecimal.valueOf(195_000), true,
+            List.of(new PersonaResumen(2L, "Samuel", 9, Set.of("huevo"), Set.of()))));
+        when(catalogo.recetas()).thenReturn(Map.of(5L, new RecetaCandidata(
+            5L, 25, BigDecimal.valueOf(4000), Map.of(10L, BigDecimal.ONE, 1L, BigDecimal.TEN),
+            Set.of("huevo"), Set.of(), true, true, false, Set.of(1L))));
+        when(catalogo.alergenos()).thenReturn(Map.of(10L, Set.of("huevo")));
+        when(catalogo.reemplazos()).thenReturn(Map.of(10L, Set.of(11L)));
+        when(catalogo.nombresProducto()).thenReturn(Map.of(10L, "Huevos", 11L, "Pollo", 1L, "Arroz"));
+
+        List<AdaptacionResponse> respuesta = servicio.adaptaciones(List.of(5L, 999L));
+
+        assertThat(respuesta).singleElement().satisfies(a -> {
+            assertThat(a.estado()).isEqualTo("ADAPTADA");
+            assertThat(a.cambios()).singleElement().satisfies(c -> {
+                assertThat(c.tipo()).isEqualTo("REEMPLAZO");
+                assertThat(c.persona()).isEqualTo("Samuel");
+                assertThat(c.producto()).isEqualTo("Huevos");
+                assertThat(c.reemplazo()).isEqualTo("Pollo");
+            });
+        });
     }
 }

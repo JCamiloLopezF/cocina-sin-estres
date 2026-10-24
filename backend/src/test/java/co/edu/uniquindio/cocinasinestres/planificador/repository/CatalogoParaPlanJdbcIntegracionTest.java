@@ -69,6 +69,30 @@ class CatalogoParaPlanJdbcIntegracionTest {
         assertThat(recetas.get(recetaLlamada("Carne guisada con papa")).gustaANinos()).isFalse();
     }
 
+    private Long productoLlamado(String nombre) {
+        return jdbcTemplate.queryForObject(
+            "SELECT id FROM producto WHERE nombre = ? AND hogar_id IS NULL", Long.class, nombre);
+    }
+
+    @Test
+    @DisplayName("marca el ingrediente principal y propone reemplazos de la misma categoría sin el alérgeno")
+    void principalesYReemplazos() {
+        Map<Long, RecetaCandidata> recetas = catalogo.recetas();
+        Long huevos = productoLlamado("Huevos");
+        Long pollo = productoLlamado("Pollo");
+        Long arroz = productoLlamado("Arroz");
+
+        assertThat(recetas.get(recetaLlamada("Huevos pericos")).principales()).contains(huevos);
+        RecetaCandidata arrozConHuevo = recetas.get(recetaLlamada("Arroz con huevo y tomate"));
+        assertThat(arrozConHuevo.principales()).contains(arroz).doesNotContain(huevos);
+
+        // Los calcula la aplicación al arrancar (RecalculoReemplazosAlArrancar).
+        assertThat(catalogo.reemplazos().get(huevos)).contains(pollo);
+        assertThat(catalogo.reemplazos().getOrDefault(pollo, Set.of())).isEmpty();
+        assertThat(catalogo.alergenos().get(huevos)).containsExactly("huevo");
+        assertThat(catalogo.nombresProducto()).containsEntry(pollo, "Pollo");
+    }
+
     @Test
     @DisplayName("con alguien alérgico a la lactosa arma la semana sin leche ni queso")
     void semanaSinLactosa() {

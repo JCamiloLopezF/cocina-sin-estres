@@ -31,15 +31,24 @@ public class ProductoService {
     private final ProductoRepository productoRepository;
     private final AuditoriaCatalogoRepository auditoriaRepository;
     private final UsuarioActualService usuarioActualService;
+    private final ReemplazosService reemplazosService;
 
     public ProductoService(
         ProductoRepository productoRepository,
         AuditoriaCatalogoRepository auditoriaRepository,
-        UsuarioActualService usuarioActualService) {
+        UsuarioActualService usuarioActualService,
+        ReemplazosService reemplazosService) {
 
         this.productoRepository = productoRepository;
         this.auditoriaRepository = auditoriaRepository;
         this.usuarioActualService = usuarioActualService;
+        this.reemplazosService = reemplazosService;
+    }
+
+    /** Los reemplazos automáticos dependen de la categoría y de si está activo (ADR-24). */
+    private void actualizarReemplazos() {
+        productoRepository.flush();
+        reemplazosService.recalcularAutomaticos();
     }
 
     @Transactional(readOnly = true)
@@ -87,6 +96,7 @@ public class ProductoService {
             usuarioActual.id()
         );
 
+        actualizarReemplazos();
         return ProductoMapper.aResponse(guardado);
     }
 
@@ -126,6 +136,7 @@ public class ProductoService {
             usuarioActual.id()
         );
 
+        actualizarReemplazos();
         return ProductoMapper.aResponse(producto);
     }
 
@@ -155,6 +166,8 @@ public class ProductoService {
             ProductoMapper.aInstantanea(producto),
             usuarioActual.id()
         );
+
+        actualizarReemplazos();
     }
 
     private Producto buscarOExcepcion(Long id) {

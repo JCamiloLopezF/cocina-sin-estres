@@ -21,7 +21,9 @@ import java.util.TreeSet;
  *
  * <p>Reglas, en orden de peso:</p>
  * <ol>
- *   <li>Nunca propone una receta con un ingrediente al que alguien del hogar es alérgico.</li>
+ *   <li>Alergias por persona ({@link AdaptadorAlergias}): una alergia grave descarta la receta;
+ *       si no es grave, la receta entra adaptada (reemplazo, sin el ingrediente o plato aparte
+ *       para esa persona), pero las que todos comen igual van primero porque son menos trabajo.</li>
  *   <li>Los días sin tiempo solo llevan recetas de {@value #MINUTOS_DIA_SIN_TIEMPO} minutos
  *       o menos (si no hay ninguna apta, la más rápida).</li>
  *   <li>Usa primero lo que hay en la despensa y, sobre todo, lo que está por vencer.</li>
@@ -52,6 +54,12 @@ public final class GeneradorPlan {
     private static final int MAX_POR_VENCER = 2;
     private static final double PESO_CONDICION = 15;
     private static final double PESO_NINOS = 20;
+    /** Cada cambio en la porción de alguien (reemplazo o quitar un ingrediente). */
+    private static final double PESO_ADAPTADA = 8;
+    /** Cada persona que necesita otro plato: es cocinar dos veces. */
+    private static final double PESO_PLATO_APARTE = 30;
+
+    private final AdaptadorAlergias adaptador = new AdaptadorAlergias();
     private static final double PESO_COSTO = 30;
     private static final double PESO_REPETIDA = 50;
     private static final double PESO_DIA_VECINO = 20;
@@ -122,6 +130,12 @@ public final class GeneradorPlan {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    /** Cómo queda la receta frente a las alergias de cada persona. */
+    public AdaptacionReceta adaptar(ContextoPlan contexto, Long recetaId) {
+        RecetaCandidata receta = contexto.recetas().get(recetaId);
+        return receta == null ? AdaptacionReceta.APTA : adaptador.adaptar(contexto, receta);
+    }
+
     /** Cuántas de las recetas indicadas suelen gustarles a los niños. */
     public long paraNinos(ContextoPlan contexto, Collection<Long> recetas) {
         return recetas.stream()
@@ -189,7 +203,7 @@ public final class GeneradorPlan {
         List<RecetaCandidata> aptas = contexto.recetas().values().stream()
             .filter(RecetaCandidata::activa)
             .filter(RecetaCandidata::platoFuerte)
-            .filter(r -> Collections.disjoint(r.alergias(), contexto.restricciones()))
+            .filter(r -> adaptador.adaptar(contexto, r).estado() != AdaptacionReceta.Estado.NO_APTA)
             .filter(r -> !delMismoDia.contains(r.id()))
             .sorted(Comparator.comparing(RecetaCandidata::id))
             .toList();
@@ -238,6 +252,11 @@ public final class GeneradorPlan {
         if (!Collections.disjoint(receta.condiciones(), contexto.restricciones())) {
             puntaje -= PESO_CONDICION;
         }
+
+        AdaptacionReceta adaptacion = adaptador.adaptar(contexto, receta);
+        puntaje -= PESO_ADAPTADA * (adaptacion.contar(AdaptacionReceta.TipoCambio.REEMPLAZO)
+            + adaptacion.contar(AdaptacionReceta.TipoCambio.SIN));
+        puntaje -= PESO_PLATO_APARTE * adaptacion.contar(AdaptacionReceta.TipoCambio.PLATO_APARTE);
 
         if (contexto.hayNinos() && receta.gustaANinos()) {
             puntaje += PESO_NINOS;

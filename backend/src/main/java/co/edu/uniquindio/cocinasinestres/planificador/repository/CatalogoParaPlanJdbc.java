@@ -29,7 +29,7 @@ public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
 
     /** Solo ingredientes obligatorios: los opcionales no se compran (igual que el costo del plan). */
     private static final String SQL_INGREDIENTES = """
-        SELECT ir.receta_id, ir.producto_id, ir.cantidad,
+        SELECT ir.receta_id, ir.producto_id, ir.cantidad, ir.es_principal,
                p.cantidad_unidad_compra, p.precio_unidad_compra
         FROM ingrediente_receta ir
         JOIN producto p ON p.id = ir.producto_id
@@ -69,6 +69,9 @@ public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
                 if (fila != null) {
                     BigDecimal cantidad = rs.getBigDecimal("cantidad");
                     fila.ingredientes.merge(rs.getLong("producto_id"), cantidad, BigDecimal::add);
+                    if (rs.getBoolean("es_principal")) {
+                        fila.principales.add(rs.getLong("producto_id"));
+                    }
                     fila.costo = fila.costo.add(costo(
                         cantidad,
                         rs.getBigDecimal("cantidad_unidad_compra"),
@@ -91,8 +94,59 @@ public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
 
         Map<Long, RecetaCandidata> recetas = new LinkedHashMap<>();
         filas.values().forEach(f -> recetas.put(f.id, new RecetaCandidata(
-            f.id, f.tiempoMinutos, f.costo, f.ingredientes, f.alergias, f.condiciones, f.activa, f.platoFuerte, f.gustaANinos)));
+            f.id, f.tiempoMinutos, f.costo, f.ingredientes, f.alergias, f.condiciones, f.activa, f.platoFuerte, f.gustaANinos,
+            f.principales)));
         return recetas;
+    }
+
+    @Override
+    public Map<Long, Set<String>> alergenos() {
+        Map<Long, Set<String>> alergenos = new HashMap<>();
+        jdbc.sql("""
+                SELECT pr.producto_id, r.codigo
+                FROM producto_restriccion pr
+                JOIN restriccion r ON r.id = pr.restriccion_id
+                WHERE r.tipo = 'ALERGIA'
+                """)
+            .query(rs -> {
+                alergenos.computeIfAbsent(rs.getLong("producto_id"), k -> new HashSet<>()).add(rs.getString("codigo"));
+            });
+        return alergenos;
+    }
+
+    @Override
+    public Map<Long, Set<Long>> reemplazos() {
+        Map<Long, Set<Long>> reemplazos = new HashMap<>();
+        jdbc.sql("""
+                SELECT rp.producto_id, rp.reemplazo_id
+                FROM reemplazo_producto rp
+                JOIN producto p ON p.id = rp.reemplazo_id
+                WHERE rp.activo = TRUE AND p.activo = TRUE
+                """)
+            .query(rs -> {
+                reemplazos.computeIfAbsent(rs.getLong("producto_id"), k -> new HashSet<>()).add(rs.getLong("reemplazo_id"));
+            });
+        return reemplazos;
+    }
+
+    @Override
+    public Map<Long, String> nombresProducto() {
+        Map<Long, String> nombres = new HashMap<>();
+        jdbc.sql("SELECT id, nombre FROM producto WHERE hogar_id IS NULL")
+            .query(rs -> {
+                nombres.put(rs.getLong("id"), rs.getString("nombre"));
+            });
+        return nombres;
+    }
+
+    @Override
+    public Map<Long, String> nombresReceta() {
+        Map<Long, String> nombres = new HashMap<>();
+        jdbc.sql("SELECT id, nombre FROM receta")
+            .query(rs -> {
+                nombres.put(rs.getLong("id"), rs.getString("nombre"));
+            });
+        return nombres;
     }
 
     /** {@code cantidad / cantidadUnidadCompra * precioUnidadCompra}; sin precio de referencia no suma. */
@@ -112,6 +166,7 @@ public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
         private final Map<Long, BigDecimal> ingredientes = new HashMap<>();
         private final Set<String> alergias = new HashSet<>();
         private final Set<String> condiciones = new HashSet<>();
+        private final Set<Long> principales = new HashSet<>();
         private BigDecimal costo = BigDecimal.ZERO;
 
         private Fila(long id, int tiempoMinutos, boolean activa, boolean platoFuerte, boolean gustaANinos) {

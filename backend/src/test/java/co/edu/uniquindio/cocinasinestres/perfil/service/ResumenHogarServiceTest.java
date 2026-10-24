@@ -32,6 +32,15 @@ class ResumenHogarServiceTest {
         return persona;
     }
 
+    private Persona persona(String nombre, int edad, String restricciones, String graves) {
+        Persona persona = mock(Persona.class);
+        when(persona.getNombre()).thenReturn(nombre);
+        when(persona.getEdad()).thenReturn(edad);
+        when(persona.getRestricciones()).thenReturn(restricciones == null ? null : cifrador.cifrar(restricciones));
+        when(persona.getAlergiasGraves()).thenReturn(graves == null ? null : cifrador.cifrar(graves));
+        return persona;
+    }
+
     @Test
     @DisplayName("descifra las restricciones y prorratea el presupuesto a la semana")
     void resume() {
@@ -78,5 +87,26 @@ class ResumenHogarServiceTest {
         assertThat(resumen.restricciones()).isEmpty();
         assertThat(resumen.diasSinTiempo()).isEmpty();
         assertThat(resumen.presupuestoSemanal()).isPositive();
+    }
+
+    @Test
+    @DisplayName("entrega cada persona con sus alergias descifradas y un nombre para los avisos")
+    void personas() {
+        Hogar hogar = mock(Hogar.class);
+        when(hogar.getId()).thenReturn(7L);
+        when(hogar.getPresupuestoMonto()).thenReturn(new BigDecimal("300000"));
+        when(hogar.getPeriodicidadIngreso()).thenReturn("SEMANAL");
+        List<Persona> personas = List.of(
+            persona(null, 34, null, null),
+            persona("Samuel", 9, "[\"huevo\",\"mani\"]", "[\"mani\"]"),
+            persona(" ", 60, "[\"diabetes\"]", null));
+        when(personaRepository.findByHogar_IdOrderByIdAsc(7L)).thenReturn(personas);
+
+        var resumen = servicio.resumir(hogar).personas();
+
+        assertThat(resumen).extracting(p -> p.nombre()).containsExactly("ti", "Samuel", "la persona 3");
+        assertThat(resumen.get(1).restricciones()).containsExactlyInAnyOrder("huevo", "mani");
+        assertThat(resumen.get(1).alergiasGraves()).containsExactly("mani");
+        assertThat(resumen.get(2).alergiasGraves()).isEmpty();
     }
 }

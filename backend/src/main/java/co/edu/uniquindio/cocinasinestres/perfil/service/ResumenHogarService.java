@@ -2,9 +2,12 @@ package co.edu.uniquindio.cocinasinestres.perfil.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.seguridad.CifradorDatosSensibles;
 import co.edu.uniquindio.cocinasinestres.perfil.domain.CalculadoraPresupuesto;
+import co.edu.uniquindio.cocinasinestres.perfil.domain.PersonaResumen;
 import co.edu.uniquindio.cocinasinestres.perfil.domain.ResumenHogar;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
+import co.edu.uniquindio.cocinasinestres.perfil.model.Persona;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.PersonaRepository;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Service;
@@ -41,7 +44,23 @@ public class ResumenHogarService {
             ? List.of()
             : leer(cifrador.descifrar(hogar.getRestricciones()), LISTA_TEXTO);
         List<Integer> dias = leer(hogar.getDiasSinTiempo(), LISTA_NUMEROS);
-        boolean hayNinos = hogar.getId() != null && personaRepository.findByHogar_IdOrderByIdAsc(hogar.getId()).stream()
+        List<Persona> registradas = hogar.getId() == null
+            ? List.of()
+            : personaRepository.findByHogar_IdOrderByIdAsc(hogar.getId());
+        List<PersonaResumen> personas = new ArrayList<>();
+        for (int i = 0; i < registradas.size(); i++) {
+            Persona persona = registradas.get(i);
+            String nombre = persona.getNombre() == null || persona.getNombre().isBlank()
+                ? (i == 0 ? "ti" : "la persona " + (i + 1))
+                : persona.getNombre().trim();
+            personas.add(new PersonaResumen(
+                persona.getId(),
+                nombre,
+                persona.getEdad() == null ? 0 : persona.getEdad(),
+                Set.copyOf(descifrar(persona.getRestricciones())),
+                Set.copyOf(descifrar(persona.getAlergiasGraves()))));
+        }
+        boolean hayNinos = registradas.stream()
             .anyMatch(p -> p.getEdad() != null && p.getEdad() <= ResumenHogar.EDAD_MAXIMA_NINO);
         return new ResumenHogar(
             hogar.getId(),
@@ -49,7 +68,12 @@ public class ResumenHogarService {
             Set.copyOf(dias),
             CalculadoraPresupuesto.presupuestoSemanal(
                 hogar.getPresupuestoMonto(), hogar.getPeriodicidadIngreso()),
-            hayNinos);
+            hayNinos,
+            personas);
+    }
+
+    private List<String> descifrar(String cifrado) {
+        return cifrado == null ? List.of() : leer(cifrador.descifrar(cifrado), LISTA_TEXTO);
     }
 
     private <T> List<T> leer(String json, TypeReference<List<T>> tipo) {

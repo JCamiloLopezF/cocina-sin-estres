@@ -15,6 +15,8 @@ import java.util.List;
  * @param aprovecha          productos por vencer que el plan usa
  * @param paraNinos          comidas del plan que suelen gustarles a los niños; 0 si en el
  *                           hogar no hay niños
+ * @param conAdaptaciones    comidas del plan que llevan un cambio o un plato aparte para
+ *                           alguien con alergia (ADR-24)
  */
 public record PlanGeneradoResponse(
     PlanSemanalResponse plan,
@@ -23,5 +25,6 @@ public record PlanGeneradoResponse(
     BigDecimal presupuestoSemanal,
     boolean excedePresupuesto,
     List<String> aprovecha,
-    int paraNinos) {
+    int paraNinos,
+    int conAdaptaciones) {
 }

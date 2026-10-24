@@ -4,6 +4,10 @@ import co.edu.uniquindio.cocinasinestres.comun.error.ConflictoException;
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
 import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
 import co.edu.uniquindio.cocinasinestres.perfil.domain.ResumenHogar;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.AdaptacionReceta;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.Comensal;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.ReglasAlergia;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.AdaptacionResponse;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.service.ResumenHogarService;
@@ -169,14 +173,51 @@ public class GeneradorPlanService {
         return terminar(plan, contexto, cambios);
     }
 
+    /** Cómo adaptar cada receta a las alergias de las personas del hogar de la usuaria. */
+    @Transactional(readOnly = true)
+    public List<AdaptacionResponse> adaptaciones(List<Long> recetaIds) {
+        Hogar hogar = hogarDeLaUsuaria();
+        ContextoPlan contexto = contexto(hogar, List.of()).plan();
+        Map<Long, String> productos = catalogo.nombresProducto();
+        Map<Long, String> recetas = catalogo.nombresReceta();
+        return recetaIds.stream()
+            .filter(id -> contexto.recetas().containsKey(id))
+            .map(id -> aRespuesta(id, generador.adaptar(contexto, id), productos, recetas))
+            .toList();
+    }
+
     // ------------------------------------------------------------------
+
+    private static AdaptacionResponse aRespuesta(
+        Long recetaId, AdaptacionReceta adaptacion, Map<Long, String> nombres, Map<Long, String> recetas) {
+        return new AdaptacionResponse(
+            recetaId,
+            adaptacion.estado().name(),
+            adaptacion.cambios().stream()
+                .map(c -> new AdaptacionResponse.Cambio(
+                    c.tipo().name(),
+                    c.persona(),
+                    c.alergias().stream().sorted().toList(),
+                    c.productoId(),
+                    c.productoId() == null ? null : nombres.get(c.productoId()),
+                    c.reemplazoId(),
+                    c.reemplazoId() == null ? null : nombres.get(c.reemplazoId()),
+                    c.enDespensa(),
+                    c.recetaAparteId(),
+                    c.recetaAparteId() == null ? null : recetas.get(c.recetaAparteId())))
+                .toList());
+    }
 
     /** El contexto del generador y los nombres de lo que está por vencer. */
     private record Contexto(ContextoPlan plan, Map<Long, String> porVencer) {
     }
 
     private Contexto contexto(PlanSemanal plan, List<ComidaPlan> actuales) {
-        ResumenHogar hogar = resumenHogarService.resumir(plan.getHogar());
+        return contexto(plan.getHogar(), actuales);
+    }
+
+    private Contexto contexto(Hogar entidad, List<ComidaPlan> actuales) {
+        ResumenHogar hogar = resumenHogarService.resumir(entidad);
         LocalDate hoy = LocalDate.now(reloj);
         Map<Long, String> porVencer = stockEnDespensa.porVencer(
             hogar.hogarId(), hoy, hoy.plusDays(GeneradorPlan.DIAS_POR_VENCER));
@@ -192,7 +233,13 @@ public class GeneradorPlanService {
             stockEnDespensa.disponibles(hogar.hogarId(), hoy),
             porVencer.keySet(),
             fijas,
-            hogar.hayNinos());
+            hogar.hayNinos(),
+            new ReglasAlergia(
+                hogar.personas().stream()
+                    .map(p -> new Comensal(p.nombre(), p.restricciones(), p.alergiasGraves()))
+                    .toList(),
+                catalogo.alergenos(),
+                catalogo.reemplazos()));
         return new Contexto(contexto, porVencer);
     }
 
@@ -221,14 +268,22 @@ public class GeneradorPlanService {
             presupuesto,
             presupuesto.signum() > 0 && costo.compareTo(presupuesto) > 0,
             List.copyOf(aprovecha),
-            contexto.plan().hayNinos() ? (int) generador.paraNinos(contexto.plan(), comoQuedo.values()) : 0);
+            contexto.plan().hayNinos() ? (int) generador.paraNinos(contexto.plan(), comoQuedo.values()) : 0,
+            (int) comoQuedo.values().stream()
+                .map(id -> generador.adaptar(contexto.plan(), id).estado())
+                .filter(e -> e == AdaptacionReceta.Estado.ADAPTADA || e == AdaptacionReceta.Estado.PLATO_APARTE)
+                .count());
+    }
+
+    private Hogar hogarDeLaUsuaria() {
+        Long usuarioId = usuarioActualService.obtener().id();
+        return hogarRepository.findByUsuario_Id(usuarioId)
+            .orElseThrow(() -> new ConflictoException(
+                "PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
     }
 
     private PlanSemanal planDeLaUsuaria(Long planId) {
-        Long usuarioId = usuarioActualService.obtener().id();
-        Hogar hogar = hogarRepository.findByUsuario_Id(usuarioId)
-            .orElseThrow(() -> new ConflictoException(
-                "PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
+        Hogar hogar = hogarDeLaUsuaria();
         PlanSemanal plan = planSemanalRepository.findById(planId)
             .orElseThrow(() -> new RecursoNoEncontradoException(NO_ENCONTRADO, "Plan semanal no encontrado."));
         if (!plan.getHogar().getId().equals(hogar.getId())) {
