@@ -48,3 +48,24 @@ export interface ListaCompras {
   items: ItemListaCompras[]
   costoTotal: number
 }
+
+/** Un hueco que el generador llenó o cambió. `recetaAnteriorId` falta si estaba vacío. */
+export interface CambioPlan {
+  dia: number
+  tipoComida: TipoComida
+  recetaId: number
+  recetaAnteriorId?: number | null
+}
+
+/** Respuesta de `/generar` y `/ajustar-presupuesto` (ADR-24). */
+export interface PlanGenerado {
+  plan: PlanSemanal
+  cambios: CambioPlan[]
+  costoEstimado: number
+  presupuestoSemanal: number
+  excedePresupuesto: boolean
+  /** Productos por vencer que el plan aprovecha. */
+  aprovecha: string[]
+  /** Comidas del plan que suelen gustarles a los niños; 0 si en el hogar no hay niños. */
+  paraNinos?: number
+}

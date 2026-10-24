@@ -180,7 +180,7 @@
 
 .hueco__acciones {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--espacio-2);
   margin-top: var(--espacio-2);
 }
@@ -274,4 +274,28 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--espacio-3);
   margin-top: var(--espacio-5);
+}
+
+/* ADR-24: lo que el sistema armó por la usuaria. */
+.plan__resultado {
+  margin-bottom: var(--espacio-4);
+}
+
+.completar-plan {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-4);
+  padding: var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-crema);
+}
+
+.completar-plan h2,
+.completar-plan p {
+  margin: 0;
+}
+
+.completar-plan h2 {
+  font-size: var(--texto-m);
 }

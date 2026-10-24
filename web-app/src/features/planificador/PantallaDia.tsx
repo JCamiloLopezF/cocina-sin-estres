@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina } from '../../shared/componentes'
 import { enPesos } from '../despensa/formato'
-import { asignarComida, marcarPreparada, quitarComida } from './apiPlanificador'
+import { asignarComida, marcarPreparada, otraOpcion, quitarComida } from './apiPlanificador'
 import { mensajePlan, planSinHogar } from './mensajesPlan'
 import { ErrorCarga, PrimeroElHogar } from './PantallaPlan'
 import { COMIDAS, esDia, NOMBRE_COMIDA, NOMBRE_DIA, tituloDia } from './semana'
@@ -30,6 +30,8 @@ export function PantallaDia() {
   const [confirmando, setConfirmando] = useState<number>()
   const [ocupado, setOcupado] = useState<number | 'deshacer'>()
   const [error, setError] = useState<unknown>()
+  // Recetas que la usuaria ya descartó con "Otra opción", por comida, para no volver a proponerlas.
+  const [descartadas, setDescartadas] = useState<Record<number, number[]>>({})
 
   // El aviso se muestra una sola vez: se limpia del historial para que no vuelva al recargar.
   useEffect(() => {
@@ -72,6 +74,25 @@ export function PantallaDia() {
       await hacer()
       setAviso({ texto, quitada })
       setConfirmando(undefined)
+      recargar()
+    } catch (causa) {
+      setError(causa)
+    } finally {
+      setOcupado(undefined)
+    }
+  }
+
+  async function cambiarPorOtra(comida: ComidaPlan) {
+    setOcupado(comida.id)
+    setError(undefined)
+    const excluir = [...new Set([...(descartadas[comida.id] ?? []), comida.recetaId])]
+    try {
+      const nueva = await otraOpcion(comida.planSemanalId, comida.id, excluir)
+      setDescartadas((previas) => ({ ...previas, [comida.id]: excluir }))
+      setAviso({
+        texto: `Cambiamos ${nombreDe(comida)} por ${semana.nombres.get(nueva.recetaId) ?? 'otra receta'}.`,
+        quitada: comida,
+      })
       recargar()
     } catch (causa) {
       setError(causa)
@@ -131,6 +152,7 @@ export function PantallaDia() {
                 ocupado={ocupado === comida.id}
                 confirmando={confirmando === comida.id}
                 alPreguntar={() => setConfirmando(comida.id)}
+                alOtraOpcion={() => void cambiarPorOtra(comida)}
                 alCancelar={() => setConfirmando(undefined)}
                 alPreparar={() =>
                   void accion(
@@ -177,12 +199,13 @@ interface ComidaProps {
   ocupado: boolean
   confirmando: boolean
   alPreguntar: () => void
+  alOtraOpcion: () => void
   alCancelar: () => void
   alPreparar: () => void
   alQuitar: () => void
 }
 
-function Comida({ semana, comida, dia, ocupado, confirmando, alPreguntar, alCancelar, alPreparar, alQuitar }: ComidaProps) {
+function Comida({ semana, comida, dia, ocupado, confirmando, alPreguntar, alOtraOpcion, alCancelar, alPreparar, alQuitar }: ComidaProps) {
   const vista = semana.recetas.get(comida.recetaId)
   const nombre = semana.nombres.get(comida.recetaId) ?? 'Receta'
   const detalle = [
@@ -220,8 +243,13 @@ function Comida({ semana, comida, dia, ocupado, confirmando, alPreguntar, alCanc
         </div>
       ) : (
         <div className="hueco__acciones">
+          {!comida.preparada && (
+            <Boton variante="secundario" cargando={ocupado} onClick={alOtraOpcion}>
+              Otra opción
+            </Boton>
+          )}
           <Link className="boton boton--secundario" to={`/recetas?dia=${dia}&comida=${comida.tipoComida}`}>
-            Cambiar
+            Elegir otra
           </Link>
           <Boton variante="secundario" cargando={ocupado} onClick={alQuitar}>
             Quitar
