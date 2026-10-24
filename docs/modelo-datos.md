@@ -146,6 +146,7 @@ erDiagram
         bigint id PK
         bigint hogar_id FK
         date semana_inicio
+        boolean borrador "V11"
     }
     comida_plan {
         bigint id PK
@@ -176,7 +177,10 @@ erDiagram
         bigint id PK
         bigint hogar_id FK
         varchar tipo
+        varchar titulo "V11"
         varchar mensaje
+        varchar enlace "V11"
+        varchar accion "V11"
         varchar clave_idempotencia UK
         boolean leido
     }

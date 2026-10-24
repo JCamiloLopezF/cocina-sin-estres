@@ -296,6 +296,23 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
         return count != null && count > 0;
     }
 
+    @Override
+    @Transactional
+    public PlanSemanalResponse confirmarBorrador(Long planId) {
+        UsuarioAutenticado usuario = usuarioActualService.obtener();
+        Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
+        PlanSemanal plan = planSemanalRepository.findById(planId)
+            .filter(p -> p.getHogar().getId().equals(hogar.getId()))
+            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado."));
+        if (plan.isBorrador()) {
+            plan.setBorrador(false);
+            planSemanalRepository.save(plan);
+            log.info("Borrador confirmado: planId={}", planId);
+        }
+        return construirRespuesta(plan);
+    }
+
     private PlanSemanalResponse construirRespuesta(PlanSemanal plan) {
         List<ComidaPlanResponse> comidas = comidaPlanRepository
             .findByPlanSemanal_IdOrderByDiaAscTipoComidaAsc(plan.getId())
@@ -306,7 +323,8 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             plan.getId(),
             plan.getSemanaInicio(),
             plan.getCreadoEn(),
-            comidas);
+            comidas,
+            plan.isBorrador());
     }
 
     private ComidaPlanResponse aComidaPlanResponse(ComidaPlan c) {

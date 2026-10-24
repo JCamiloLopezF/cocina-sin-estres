@@ -134,4 +134,10 @@ public class PlanificadorController {
     public PlanGeneradoResponse ajustarAlPresupuesto(@PathVariable("planId") Long planId) {
         return generadorPlanService.ajustarAlPresupuesto(planId);
     }
+
+    /** La usuaria se queda con la semana que la app armó sola (ADR-24): deja de ser borrador. */
+    @PutMapping("/{planId}/confirmar")
+    public PlanSemanalResponse confirmarBorrador(@PathVariable("planId") Long planId) {
+        return planificadorService.confirmarBorrador(planId);
+    }
 }

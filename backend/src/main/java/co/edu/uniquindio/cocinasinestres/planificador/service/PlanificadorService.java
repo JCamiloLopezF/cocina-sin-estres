@@ -35,4 +35,10 @@ public interface PlanificadorService {
      * (ADR-24). 404 si el plan o el ítem no son del hogar de la usuaria.
      */
     CompraResponse marcarComprado(Long planId, Long itemId, boolean comprado);
+
+    /**
+     * La usuaria revisó la semana que la app armó sola y se queda con ella: deja de ser
+     * borrador (ADR-24). Idempotente. 404 si el plan no es de su hogar.
+     */
+    PlanSemanalResponse confirmarBorrador(Long planId);
 }

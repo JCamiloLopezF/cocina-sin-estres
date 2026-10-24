@@ -28,6 +28,16 @@ El ADR-10 ubicaba el motor en el backend; el Proceso 4 y el RNF-07, en el client
 - Se muestran como máximo 5 avisos por sesión, en el orden de la tabla. Varios productos en el mismo caso se agrupan en un solo aviso ("2 productos están por vencer").
 - Los umbrales (3 días, viernes) son constantes configurables.
 
+### Cómo quedó implementado (KAN-27, octubre de 2026)
+
+- Como los productos se agrupan, la clave de idempotencia es una por tipo y día: `TIPO:hogar:fecha` (`SEMANA_SIN_PLANIFICAR` usa el lunes de la semana; `PREPARACION_PREVIA`, la fecha de mañana). Si la situación cambia en el día y el aviso no se ha leído, se actualiza su texto; si ya se leyó, no vuelve a salir.
+- Solo se muestran los avisos de la evaluación actual: si el producto ya se gastó, el aviso de ayer no reaparece.
+- V11 agrega a `aviso` un `titulo`, el `enlace` a la pantalla donde se resuelve y el texto del botón (`accion`).
+- `SEMANA_SIN_PLANIFICAR` además deja un borrador de la semana (ADR-24). `APROVECHAR_PRODUCTO` sale del modo rescate (KAN-25).
+- Tono (RNF-14): dicen qué pasa y qué hacer, sin admiraciones ni palabras de alarma; hay una prueba que lo revisa.
+- RNF-07: cada evaluación deja en el log `Avisos evaluados: hogarId=… vigentes=… mostrados=… ms=…`, que sirve para medir el tiempo del motor y los avisos por sesión.
+- El centro de avisos (`/avisos`) lista los últimos 30 días y permite encender o apagar cada tipo.
+
 ## Alternativas
 
 Motor en el cliente; tareas programadas en el servidor; notificaciones push.
