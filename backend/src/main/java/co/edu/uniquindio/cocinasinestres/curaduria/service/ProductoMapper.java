@@ -24,7 +24,8 @@ final class ProductoMapper {
             producto.getPrecioUnidadCompra(),
             producto.getCapacidadReferencia(),
             producto.isEsBasico(),
-            producto.isActivo()
+            producto.isActivo(),
+            producto.getVidaUtilDias()
         );
     }
 
@@ -39,7 +40,8 @@ final class ProductoMapper {
             producto.getPrecioUnidadCompra(),
             producto.getCapacidadReferencia(),
             producto.isEsBasico(),
-            producto.isActivo()
+            producto.isActivo(),
+            producto.getVidaUtilDias()
         );
     }
 }

@@ -1,5 +1,8 @@
 package co.edu.uniquindio.cocinasinestres.planificador.service;
 
+import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.model.PlanSemanal;
+
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 
 /**
@@ -23,4 +26,14 @@ public interface ListaComprasService {
      * @param planSemanalId identificador del plan semanal
      */
     ListaComprasResponse consultar(Long planSemanalId);
+
+    /**
+     * Marca un producto de la lista como comprado: entra a la despensa en presentaciones
+     * completas y con su vencimiento estimado. Con {@code comprado = false} lo deshace.
+     * Es idempotente. El plan ya debe estar verificado como del hogar de la usuaria.
+     *
+     * @throws co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException
+     *         si el ítem no es de la lista de ese plan
+     */
+    CompraResponse marcarComprado(PlanSemanal plan, Long itemId, boolean comprado);
 }

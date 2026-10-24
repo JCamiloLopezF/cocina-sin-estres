@@ -140,6 +140,27 @@ public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
     }
 
     @Override
+    public Map<Long, Integer> porciones() {
+        Map<Long, Integer> porciones = new HashMap<>();
+        jdbc.sql("SELECT id, porciones FROM receta")
+            .query(rs -> {
+                porciones.put(rs.getLong("id"), rs.getInt("porciones"));
+            });
+        return porciones;
+    }
+
+    @Override
+    public Map<Long, ProductoPlan> productos() {
+        Map<Long, ProductoPlan> productos = new HashMap<>();
+        jdbc.sql("SELECT id, unidad_base, cantidad_unidad_compra FROM producto WHERE hogar_id IS NULL")
+            .query(rs -> {
+                productos.put(rs.getLong("id"),
+                    new ProductoPlan(rs.getString("unidad_base"), rs.getBigDecimal("cantidad_unidad_compra")));
+            });
+        return productos;
+    }
+
+    @Override
     public Map<Long, String> nombresReceta() {
         Map<Long, String> nombres = new HashMap<>();
         jdbc.sql("SELECT id, nombre FROM receta")

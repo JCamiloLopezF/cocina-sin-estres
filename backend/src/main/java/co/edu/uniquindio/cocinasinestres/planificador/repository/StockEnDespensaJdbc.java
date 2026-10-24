@@ -58,6 +58,23 @@ public class StockEnDespensaJdbc implements StockEnDespensa {
     }
 
     @Override
+    public Map<Long, BigDecimal> bajoMinimo(Long hogarId) {
+        Map<Long, BigDecimal> faltan = new HashMap<>();
+        jdbc.sql("""
+                SELECT producto_id, cantidad_minima - cantidad AS falta
+                FROM item_despensa
+                WHERE hogar_id = :hogarId
+                  AND cantidad_minima IS NOT NULL
+                  AND cantidad < cantidad_minima
+                """)
+            .param("hogarId", hogarId)
+            .query(rs -> {
+                faltan.put(rs.getLong("producto_id"), rs.getBigDecimal("falta"));
+            });
+        return faltan;
+    }
+
+    @Override
     public Map<Long, String> porVencer(Long hogarId, LocalDate hoy, LocalDate hasta) {
         Map<Long, String> productos = new LinkedHashMap<>();
         jdbc.sql(SQL_POR_VENCER)

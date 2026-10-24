@@ -30,4 +30,14 @@ public interface StockEnDespensa {
      * @return nombre por producto
      */
     Map<Long, String> porVencer(Long hogarId, LocalDate hoy, LocalDate hasta);
+
+    /**
+     * Productos que quedaron por debajo de su cantidad mínima: van solos a la lista de
+     * compras para reponer (ADR-24).
+     *
+     * @return cuánto falta para llegar al mínimo, por producto
+     */
+    default Map<Long, BigDecimal> bajoMinimo(Long hogarId) {
+        return Map.of();
+    }
 }

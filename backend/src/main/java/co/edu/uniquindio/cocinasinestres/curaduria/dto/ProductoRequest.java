@@ -17,6 +17,8 @@ import java.math.BigDecimal;
  * @param precioUnidadCompra   precio de referencia de la unidad de compra, en pesos
  * @param capacidadReferencia  cantidad que equivale a "Lleno"; solo para granel
  * @param esBasico             si es un producto básico de la despensa
+ * @param vidaUtilDias         cuántos días dura desde que se compra (1 a 3650); opcional. Con
+ *                             esto lo comprado entra a la despensa con su vencimiento (ADR-24)
  */
 public record ProductoRequest(
     String nombre,
@@ -27,6 +29,7 @@ public record ProductoRequest(
     BigDecimal cantidadUnidadCompra,
     BigDecimal precioUnidadCompra,
     BigDecimal capacidadReferencia,
-    boolean esBasico
+    boolean esBasico,
+    Integer vidaUtilDias
 ) {
 }

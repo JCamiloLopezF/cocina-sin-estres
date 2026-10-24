@@ -1,5 +1,6 @@
 package co.edu.uniquindio.cocinasinestres.planificador.domain;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,6 +27,24 @@ public interface CatalogoParaPlan {
 
     /** Nombre de cada producto, para los avisos ("cambia el huevo por pollo"). */
     default Map<Long, String> nombresProducto() {
+        return Map.of();
+    }
+
+    /** Porciones de cada receta, para comprar una sola porción de un reemplazo o un plato aparte. */
+    default Map<Long, Integer> porciones() {
+        return Map.of();
+    }
+
+    /**
+     * Unidad base y presentación de compra de cada producto del catálogo.
+     *
+     * @param unidadBase   g, ml o unidad
+     * @param presentacion cuánto trae la unidad de compra, en unidad base
+     */
+    record ProductoPlan(String unidadBase, BigDecimal presentacion) {
+    }
+
+    default Map<Long, ProductoPlan> productos() {
         return Map.of();
     }
 

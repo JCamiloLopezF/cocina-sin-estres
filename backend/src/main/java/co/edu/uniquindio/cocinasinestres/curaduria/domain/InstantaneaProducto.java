@@ -17,6 +17,7 @@ public record InstantaneaProducto(
     BigDecimal precioUnidadCompra,
     BigDecimal capacidadReferencia,
     boolean esBasico,
-    boolean activo
+    boolean activo,
+    Integer vidaUtilDias
 ) {
 }

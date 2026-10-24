@@ -45,6 +45,14 @@ public class ItemListaCompras {
     @Column(name = "comprado", nullable = false)
     private boolean comprado = false;
 
+    /** PLAN, REPONER o ALERGIA (V9, ADR-24). */
+    @Column(name = "motivo", nullable = false, length = 10)
+    private String motivo = "PLAN";
+
+    /** Cuánto entró a la despensa al marcarlo como comprado; sirve para deshacerlo. */
+    @Column(name = "cantidad_agregada", precision = 12, scale = 3)
+    private BigDecimal cantidadAgregada;
+
     protected ItemListaCompras() {
         // JPA
     }
@@ -56,6 +64,12 @@ public class ItemListaCompras {
         this.cantidad = Objects.requireNonNull(cantidad, "cantidad");
         this.costoEstimado = Objects.requireNonNull(costoEstimado, "costoEstimado");
         this.prioridad = Objects.requireNonNull(prioridad, "prioridad");
+    }
+
+    public ItemListaCompras(ListaCompras listaCompras, Long productoId, BigDecimal cantidad,
+                            BigDecimal costoEstimado, Integer prioridad, String motivo) {
+        this(listaCompras, productoId, cantidad, costoEstimado, prioridad);
+        this.motivo = Objects.requireNonNull(motivo, "motivo");
     }
 
     public Long getId() {
@@ -88,5 +102,17 @@ public class ItemListaCompras {
 
     public void setComprado(boolean comprado) {
         this.comprado = comprado;
+    }
+
+    public String getMotivo() {
+        return motivo;
+    }
+
+    public BigDecimal getCantidadAgregada() {
+        return cantidadAgregada;
+    }
+
+    public void setCantidadAgregada(BigDecimal cantidadAgregada) {
+        this.cantidadAgregada = cantidadAgregada;
     }
 }
