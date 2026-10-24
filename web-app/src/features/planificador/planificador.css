@@ -189,6 +189,11 @@
   padding-inline: var(--espacio-2);
 }
 
+/* "Cocinar ahora" ocupa toda la fila: es lo que más se usa ese día. */
+.hueco__cocinar {
+  grid-column: 1 / -1;
+}
+
 .hueco__confirmar {
   margin-top: var(--espacio-2);
 }

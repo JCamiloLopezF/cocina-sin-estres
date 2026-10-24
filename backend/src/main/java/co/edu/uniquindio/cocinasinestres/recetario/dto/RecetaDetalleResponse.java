@@ -15,6 +15,7 @@ import java.util.List;
  * @param ingredientes      productos del catálogo que pide la receta
  * @param restricciones     alergias y condiciones de los ingredientes obligatorios; los
  *                          opcionales se pueden omitir, así que no cuentan
+ * @param video             cómo se hace, en video; {@code null} si todavía no tiene
  */
 public record RecetaDetalleResponse(
     Long id,
@@ -25,6 +26,7 @@ public record RecetaDetalleResponse(
     String preparacionPrevia,
     List<String> pasos,
     List<IngredienteRecetaResponse> ingredientes,
-    List<String> restricciones
+    List<String> restricciones,
+    VideoRecetaResponse video
 ) {
 }

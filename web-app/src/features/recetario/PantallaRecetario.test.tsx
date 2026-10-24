@@ -202,4 +202,28 @@ describe('Recetario (pantallas 21 a 24)', () => {
       expect(await screen.findByText('No apta para Samuel: lleva lactosa.')).toBeInTheDocument()
     })
   })
+
+  it('el detalle ofrece cocinar paso a paso y el video solo carga YouTube al tocarlo', async () => {
+    backendFalso({
+      ...rutasCocina(),
+      'GET /recetas/10': () => respuestaJson({ ...SOPA, video: { youtubeId: 'dQw4w9WgXcQ', inicioSeg: 30, finSeg: 90 } }),
+    })
+    montarApp(crearServicioFalso(LUISA).servicio, '/recetas/10')
+    const usuario = userEvent.setup()
+
+    const portada = await screen.findByRole('button', { name: 'Ver el video de Sopa de lentejas (01:00)' })
+    expect(document.querySelector('iframe')).toBeNull()
+    await usuario.click(screen.getByRole('button', { name: 'Una porción más' }))
+    expect(screen.getByRole('link', { name: /Cocinar ahora, paso a paso/ })).toHaveAttribute(
+      'href',
+      '/recetas/10/cocinar?porciones=5',
+    )
+    expect(screen.getByRole('link', { name: 'Ponerla hoy en el plan' })).toBeInTheDocument()
+
+    await usuario.click(portada)
+    const video = screen.getByTitle('Video de Sopa de lentejas')
+    expect(video.getAttribute('src')).toMatch(
+      /^https:\/\/www\.youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?start=30&end=90&autoplay=1/,
+    )
+  })
 })
