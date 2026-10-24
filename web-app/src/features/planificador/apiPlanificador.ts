@@ -1,5 +1,5 @@
 import { ErrorApi, pedir } from '../../api/cliente'
-import type { ComidaPlan, CostoPlan, ListaCompras, PlanGenerado, PlanSemanal, TipoComida } from './tipos'
+import type { ComidaPlan, CompraRegistrada, CostoPlan, ListaCompras, PlanGenerado, PlanSemanal, TipoComida } from './tipos'
 
 /** Llamadas a `/api/planes-semanales`. Todas actúan sobre el hogar de la usuaria que entra. */
 
@@ -38,6 +38,14 @@ export function marcarPreparada(planId: number, comidaId: number) {
 
 export function costoPlan(planId: number, senal?: AbortSignal) {
   return pedir<CostoPlan>(`/planes-semanales/${planId}/costo`, { senal })
+}
+
+/** Marca un producto como comprado (entra a la despensa) o lo deshace (sale de la despensa). */
+export function marcarComprado(planId: number, itemId: number, comprado: boolean) {
+  return pedir<CompraRegistrada>(`/planes-semanales/${planId}/lista-compras/items/${itemId}`, {
+    metodo: 'PUT',
+    cuerpo: { comprado },
+  })
 }
 
 export function listaCompras(planId: number, senal?: AbortSignal) {

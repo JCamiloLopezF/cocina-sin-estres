@@ -3,20 +3,15 @@ package co.edu.uniquindio.cocinasinestres.planificador.service;
 import co.edu.uniquindio.cocinasinestres.comun.error.ConflictoException;
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
 import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
-import co.edu.uniquindio.cocinasinestres.perfil.domain.ResumenHogar;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.AdaptacionReceta;
-import co.edu.uniquindio.cocinasinestres.planificador.domain.Comensal;
-import co.edu.uniquindio.cocinasinestres.planificador.domain.ReglasAlergia;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.AdaptacionResponse;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
-import co.edu.uniquindio.cocinasinestres.perfil.service.ResumenHogarService;
 import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.CatalogoParaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.ContextoPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.GeneradorPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.Hueco;
-import co.edu.uniquindio.cocinasinestres.planificador.domain.StockEnDespensa;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.CambioPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.GenerarPlanRequest;
@@ -25,12 +20,11 @@ import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanGeneradoResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanSemanalResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.model.PlanSemanal;
+import co.edu.uniquindio.cocinasinestres.planificador.service.ContextoPlanFactory.Contexto;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.ComidaPlanRepository;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.PlanSemanalRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Clock;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,11 +55,9 @@ public class GeneradorPlanService {
     private final ComidaPlanRepository comidaPlanRepository;
     private final HogarRepository hogarRepository;
     private final UsuarioActualService usuarioActualService;
-    private final ResumenHogarService resumenHogarService;
+    private final ContextoPlanFactory contextos;
     private final CatalogoParaPlan catalogo;
-    private final StockEnDespensa stockEnDespensa;
     private final ListaComprasService listaComprasService;
-    private final Clock reloj;
     private final GeneradorPlan generador = new GeneradorPlan();
 
     public GeneradorPlanService(
@@ -73,20 +65,16 @@ public class GeneradorPlanService {
         ComidaPlanRepository comidaPlanRepository,
         HogarRepository hogarRepository,
         UsuarioActualService usuarioActualService,
-        ResumenHogarService resumenHogarService,
+        ContextoPlanFactory contextos,
         CatalogoParaPlan catalogo,
-        StockEnDespensa stockEnDespensa,
-        ListaComprasService listaComprasService,
-        Clock reloj) {
+        ListaComprasService listaComprasService) {
         this.planSemanalRepository = planSemanalRepository;
         this.comidaPlanRepository = comidaPlanRepository;
         this.hogarRepository = hogarRepository;
         this.usuarioActualService = usuarioActualService;
-        this.resumenHogarService = resumenHogarService;
+        this.contextos = contextos;
         this.catalogo = catalogo;
-        this.stockEnDespensa = stockEnDespensa;
         this.listaComprasService = listaComprasService;
-        this.reloj = reloj;
     }
 
     /** Llena los huecos vacíos del almuerzo y la cena (o las comidas pedidas). */
@@ -208,39 +196,12 @@ public class GeneradorPlanService {
                 .toList());
     }
 
-    /** El contexto del generador y los nombres de lo que está por vencer. */
-    private record Contexto(ContextoPlan plan, Map<Long, String> porVencer) {
-    }
-
     private Contexto contexto(PlanSemanal plan, List<ComidaPlan> actuales) {
-        return contexto(plan.getHogar(), actuales);
+        return contextos.construir(plan.getHogar(), actuales);
     }
 
-    private Contexto contexto(Hogar entidad, List<ComidaPlan> actuales) {
-        ResumenHogar hogar = resumenHogarService.resumir(entidad);
-        LocalDate hoy = LocalDate.now(reloj);
-        Map<Long, String> porVencer = stockEnDespensa.porVencer(
-            hogar.hogarId(), hoy, hoy.plusDays(GeneradorPlan.DIAS_POR_VENCER));
-
-        Map<Hueco, Long> fijas = new HashMap<>();
-        actuales.forEach(c -> fijas.put(new Hueco(c.getDia(), c.getTipoComida()), c.getRecetaId()));
-
-        ContextoPlan contexto = new ContextoPlan(
-            catalogo.recetas(),
-            hogar.restricciones(),
-            hogar.diasSinTiempo(),
-            hogar.presupuestoSemanal(),
-            stockEnDespensa.disponibles(hogar.hogarId(), hoy),
-            porVencer.keySet(),
-            fijas,
-            hogar.hayNinos(),
-            new ReglasAlergia(
-                hogar.personas().stream()
-                    .map(p -> new Comensal(p.nombre(), p.restricciones(), p.alergiasGraves()))
-                    .toList(),
-                catalogo.alergenos(),
-                catalogo.reemplazos()));
-        return new Contexto(contexto, porVencer);
+    private Contexto contexto(Hogar hogar, List<ComidaPlan> actuales) {
+        return contextos.construir(hogar, actuales);
     }
 
     private PlanGeneradoResponse terminar(PlanSemanal plan, Contexto contexto, List<CambioPlanResponse> cambios) {

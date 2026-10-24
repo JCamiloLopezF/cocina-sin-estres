@@ -2,6 +2,8 @@ package co.edu.uniquindio.cocinasinestres.planificador.controller;
 
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraRequest;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.GenerarPlanRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.OtraOpcionRequest;
@@ -91,6 +93,19 @@ public class PlanificadorController {
     public ListaComprasResponse consultarListaCompras(
         @PathVariable("planId") Long planId) {
         return planificadorService.consultarListaCompras(planId);
+    }
+
+    /**
+     * Marca un producto de la lista como comprado: entra a la despensa en presentaciones
+     * completas y con su vencimiento estimado (ADR-24). Con {@code comprado: false} se
+     * deshace. Idempotente.
+     */
+    @PutMapping("/{planId}/lista-compras/items/{itemId}")
+    public CompraResponse marcarComprado(
+        @PathVariable("planId") Long planId,
+        @PathVariable("itemId") Long itemId,
+        @RequestBody CompraRequest request) {
+        return planificadorService.marcarComprado(planId, itemId, request != null && request.comprado());
     }
 
     /**

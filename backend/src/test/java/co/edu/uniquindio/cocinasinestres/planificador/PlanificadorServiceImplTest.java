@@ -7,6 +7,7 @@ import co.edu.uniquindio.cocinasinestres.perfil.domain.UsuarioAutenticado;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.MovimientosDespensa;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
@@ -52,6 +53,9 @@ class PlanificadorServiceImplTest {
 
     @Mock
     private ListaComprasService listaComprasService;
+
+    @Mock
+    private MovimientosDespensa movimientosDespensa;
 
     @InjectMocks
     private PlanificadorServiceImpl service;
@@ -208,5 +212,21 @@ class PlanificadorServiceImplTest {
 
         assertEquals(esperada, respuesta);
         verify(listaComprasService, times(1)).consultar(200L);
+    }
+
+    @Test
+    void marcarPreparada_descuentaLaDespensaUnaSolaVez() {
+        when(hogarRepository.findByUsuario_Id(usuarioMock.id())).thenReturn(Optional.of(hogarMock));
+        PlanSemanal plan = planConId(1L);
+        ComidaPlan comida = new ComidaPlan(plan, 1, "ALMUERZO", 4L, null);
+        ReflectionTestUtils.setField(comida, "id", 70L);
+        when(comidaPlanRepository.findById(70L)).thenReturn(Optional.of(comida));
+        when(comidaPlanRepository.save(any(ComidaPlan.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.marcarPreparada(1L, 70L);
+        service.marcarPreparada(1L, 70L);
+
+        verify(movimientosDespensa, times(1)).descontarReceta(10L, 4L);
+        assertTrue(comida.isPreparada());
     }
 }

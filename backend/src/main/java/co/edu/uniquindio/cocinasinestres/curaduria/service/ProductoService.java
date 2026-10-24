@@ -86,6 +86,7 @@ public class ProductoService {
             usuarioActual.id()
         );
 
+        producto.setVidaUtilDias(request.vidaUtilDias());
         Producto guardado = productoRepository.save(producto);
 
         registrarAuditoria(
@@ -117,6 +118,7 @@ public class ProductoService {
         producto.setPrecioUnidadCompra(request.precioUnidadCompra());
         producto.setCapacidadReferencia(request.capacidadReferencia());
         producto.setEsBasico(request.esBasico());
+        producto.setVidaUtilDias(request.vidaUtilDias());
 
         InstantaneaProducto despues = ProductoMapper.aInstantanea(producto);
 
@@ -189,6 +191,7 @@ public class ProductoService {
             request.precioUnidadCompra(),
             request.capacidadReferencia()
         );
+        ValidadorProducto.validarVidaUtil(request.vidaUtilDias());
     }
 
     private void registrarAuditoria(

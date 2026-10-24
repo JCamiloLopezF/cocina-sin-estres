@@ -83,6 +83,7 @@ erDiagram
         varchar categoria
         varchar tipo_cantidad "CONTABLE, GRANEL"
         varchar unidad_base "g, ml, unidad"
+        smallint vida_util_dias "V9"
         varchar unidad_compra
         decimal cantidad_unidad_compra
         decimal precio_unidad_compra
@@ -165,6 +166,8 @@ erDiagram
         decimal costo_estimado
         smallint prioridad
         boolean comprado
+        varchar motivo "PLAN, REPONER, ALERGIA (V9)"
+        decimal cantidad_agregada "V9"
     }
     aviso {
         bigint id PK

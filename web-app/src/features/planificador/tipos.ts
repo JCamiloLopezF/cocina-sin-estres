@@ -39,6 +39,17 @@ export interface ItemListaCompras {
   /** 1 = indispensable; mayor = se puede posponer. */
   prioridad: number
   comprado: boolean
+  /** PLAN (lo piden las recetas), REPONER (quedó bajo el mínimo) o ALERGIA (porción de quien tiene alergia). */
+  motivo?: 'PLAN' | 'REPONER' | 'ALERGIA'
+  /** Cuánto entró a la despensa al comprarlo, en presentaciones completas. */
+  cantidadAgregada?: number | null
+}
+
+/** `PUT /api/planes-semanales/{id}/lista-compras/items/{itemId}` (ADR-24). */
+export interface CompraRegistrada {
+  item: ItemListaCompras
+  /** Vencimiento con que quedó en la despensa, AAAA-MM-DD. */
+  venceEn?: string | null
 }
 
 /** `GET /api/planes-semanales/{id}/lista-compras`: ya descuenta lo que hay en la despensa. */

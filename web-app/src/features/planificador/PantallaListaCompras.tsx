@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina, EstadoVacio } from '../../shared/componentes'
-import { cantidadConUnidad, enPesos } from '../despensa/formato'
-import { listaCompras } from './apiPlanificador'
-import { planSinHogar } from './mensajesPlan'
+import { cantidadConUnidad, enPesos, fechaCorta } from '../despensa/formato'
+import { listaCompras, marcarComprado } from './apiPlanificador'
+import { mensajePlan, planSinHogar } from './mensajesPlan'
 import { ErrorCarga, PrimeroElHogar } from './PantallaPlan'
 import type { ItemListaCompras, ListaCompras } from './tipos'
 import { useSemana, type Semana } from './useSemana'
@@ -14,17 +14,16 @@ type EstadoLista = { tipo: 'cargando' } | { tipo: 'listo'; lista: ListaCompras }
 /**
  * Pantalla 31: lista de compras del plan, priorizada. El backend ya descuenta lo que
  * hay en la despensa y deja por fuera los ingredientes opcionales. Lo que la usuaria
- * marca como comprado se recuerda en este teléfono.
+ * marca como comprado pasa solo a la despensa, con su vencimiento (ADR-24).
  */
 export function PantallaListaCompras() {
   const { estado, recargar } = useSemana()
   const [estadoLista, setEstadoLista] = useState<EstadoLista>({ tipo: 'cargando' })
   const [version, setVersion] = useState(0)
   const planId = estado.tipo === 'listo' ? estado.semana.plan?.id : undefined
-  // Marcas de comprado de este plan; se leen del teléfono la primera vez.
-  const [marcas, setMarcas] = useState<{ planId: number; ids: number[] }>()
-  const comprados = planId === undefined ? [] : marcas?.planId === planId ? marcas.ids : leerComprados(planId)
   const [compartido, setCompartido] = useState(false)
+  const [ocupado, setOcupado] = useState<number>()
+  const [aviso, setAviso] = useState<{ tono: 'exito' | 'error'; texto: string }>()
 
   useEffect(() => {
     if (planId === undefined) {
@@ -89,12 +88,30 @@ export function PantallaListaCompras() {
 
   const { lista } = estadoLista
   const items = lista.items
-  const marcados = items.filter((i) => comprados.includes(i.productoId)).length
+  const marcados = items.filter((i) => i.comprado).length
 
-  function alternar(productoId: number) {
-    const nuevos = comprados.includes(productoId) ? comprados.filter((p) => p !== productoId) : [...comprados, productoId]
-    setMarcas({ planId: planId!, ids: nuevos })
-    guardarComprados(planId!, nuevos)
+  /** Comprado → entra a la despensa; desmarcado → sale. Lo hace el backend (ADR-24). */
+  async function alternar(item: ItemListaCompras) {
+    setOcupado(item.id)
+    setAviso(undefined)
+    try {
+      const { item: actualizado, venceEn } = await marcarComprado(planId!, item.id, !item.comprado)
+      setEstadoLista({
+        tipo: 'listo',
+        lista: { ...lista, items: lista.items.map((i) => (i.id === actualizado.id ? actualizado : i)) },
+      })
+      const nombre = semana.cocina.productos.get(item.productoId)?.nombre ?? 'El producto'
+      setAviso({
+        tono: 'exito',
+        texto: actualizado.comprado
+          ? `${nombre} pasó a tu despensa${venceEn ? `; vence el ${fechaCorta(venceEn)}` : ''}.`
+          : `Quitamos ${nombre.toLowerCase()} de tu despensa.`,
+      })
+    } catch (error) {
+      setAviso({ tono: 'error', texto: mensajePlan(error) })
+    } finally {
+      setOcupado(undefined)
+    }
   }
 
   async function compartir() {
@@ -149,12 +166,29 @@ export function PantallaListaCompras() {
           <strong>{enPesos(lista.costoTotal)}</strong>
         </p>
         <p className="total-lista__nota">
-          {marcados} de {items.length} marcados como comprados
+          {marcados} de {items.length} comprados · lo que marques pasa solo a tu despensa
         </p>
       </section>
+      {aviso && (
+        <div className="lista__aviso">
+          <Alerta tono={aviso.tono}>{aviso.texto}</Alerta>
+        </div>
+      )}
 
-      <Grupo titulo="Indispensable" items={indispensables} semana={semana} comprados={comprados} alternar={alternar} />
-      <Grupo titulo="Postergable" items={postergables} semana={semana} comprados={comprados} alternar={alternar} />
+      <Grupo
+        titulo="Indispensable"
+        items={indispensables}
+        semana={semana}
+        ocupado={ocupado}
+        alternar={(i) => void alternar(i)}
+      />
+      <Grupo
+        titulo="Para reponer"
+        items={postergables}
+        semana={semana}
+        ocupado={ocupado}
+        alternar={(i) => void alternar(i)}
+      />
 
       {compartido && <Alerta tono="exito">Copiamos la lista. Pégala donde quieras enviarla.</Alerta>}
       <div className="lista__acciones">
@@ -173,11 +207,11 @@ interface GrupoProps {
   titulo: string
   items: ItemListaCompras[]
   semana: Semana
-  comprados: number[]
-  alternar: (productoId: number) => void
+  ocupado?: number
+  alternar: (item: ItemListaCompras) => void
 }
 
-function Grupo({ titulo, items, semana, comprados, alternar }: GrupoProps) {
+function Grupo({ titulo, items, semana, ocupado, alternar }: GrupoProps) {
   if (items.length === 0) {
     return null
   }
@@ -186,14 +220,19 @@ function Grupo({ titulo, items, semana, comprados, alternar }: GrupoProps) {
       <h2 className="rotulo lista__titulo">{titulo}</h2>
       <ul className="filas">
         {items.map((item) => {
-          const comprado = comprados.includes(item.productoId)
+          const comprado = item.comprado
           return (
             <li key={item.productoId}>
               <label className={comprado ? 'compra compra--hecha' : 'compra'}>
-                <input type="checkbox" checked={comprado} onChange={() => alternar(item.productoId)} />
+                <input
+                  type="checkbox"
+                  checked={comprado}
+                  disabled={ocupado === item.id}
+                  onChange={() => alternar(item)}
+                />
                 <span className="fila__texto">
                   <span className="fila__nombre compra__nombre">{nombreItem(semana, item)}</span>
-                  <span className="fila__detalle">{recetasQueLoUsan(semana, item.productoId)}</span>
+                  <span className="fila__detalle">{motivo(semana, item)}</span>
                 </span>
                 <span className="compra__costo">{enPesos(item.costoEstimado)}</span>
               </label>
@@ -213,6 +252,13 @@ function nombreItem(semana: Semana, item: ItemListaCompras): string {
   return `${producto?.nombre ?? `Producto ${item.productoId}`} · ${cantidadConUnidad(cantidad, unidad)}`
 }
 
+/** Por qué está en la lista: las recetas que lo piden, reponer el mínimo o una alergia. */
+function motivo(semana: Semana, item: ItemListaCompras): string {
+  if (item.motivo === 'REPONER') return 'Quedó por debajo del mínimo de tu despensa'
+  if (item.motivo === 'ALERGIA') return 'Para la porción de quien tiene alergia'
+  return recetasQueLoUsan(semana, item.productoId)
+}
+
 /** "Sopa de lentejas · Arroz con pollo": las recetas del plan que piden el producto. */
 function recetasQueLoUsan(semana: Semana, productoId: number): string {
   const nombres = [...semana.recetas.values()]
@@ -223,25 +269,4 @@ function recetasQueLoUsan(semana: Semana, productoId: number): string {
 
 function textoLista(semana: Semana, items: ItemListaCompras[]): string {
   return ['Lista de compras · Cocina sin estrés', ...items.map((i) => `- ${nombreItem(semana, i)}`)].join('\n')
-}
-
-function clave(planId: number) {
-  return `cocina-sin-estres:comprados:${planId}`
-}
-
-function leerComprados(planId: number): number[] {
-  try {
-    const guardado = JSON.parse(localStorage.getItem(clave(planId)) ?? '[]') as unknown
-    return Array.isArray(guardado) ? guardado.filter((v): v is number => typeof v === 'number') : []
-  } catch {
-    return []
-  }
-}
-
-function guardarComprados(planId: number, comprados: number[]) {
-  try {
-    localStorage.setItem(clave(planId), JSON.stringify(comprados))
-  } catch {
-    // Sin almacenamiento (modo privado): las marcas duran mientras la pantalla esté abierta.
-  }
 }

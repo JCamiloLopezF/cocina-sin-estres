@@ -16,7 +16,7 @@ La aplicación deja de esperar a que la usuaria llene todo a mano cada semana. E
 3. **Motor de avisos** (ADR-17), que además deja un borrador de la semana siguiente cuando esta llega sin plan.
 4. **Modo rescate** (KAN-25). Ante un imprevisto, propone qué cocinar hoy solo con lo que hay.
 
-Este ADR detalla la pieza 1. Las piezas 2 a 4 se precisan en su propia tarea, sin cambiar las reglas de aquí.
+Este ADR detalla las piezas 1 y 2. Las piezas 3 y 4 se precisan en su propia tarea, sin cambiar las reglas de aquí.
 
 ## Contexto
 
@@ -68,6 +68,20 @@ En la revisión del 23 de octubre el profesor señaló que una alergia no impide
 
 Las rutas del plan regeneran la lista de compras una sola vez, al final.
 
+## Detalle de la despensa automática (pieza 2, KAN-16)
+
+| Evento | Qué hace la aplicación sola |
+| --- | --- |
+| La usuaria marca un producto de la lista como **comprado** | Entra a la despensa en **presentaciones completas** (si faltan 300 g de arroz, entra la bolsa de 1 kg) con vencimiento = hoy + `producto.vida_util_dias` (V9). Si ya había del mismo producto, suma y conserva el vencimiento más próximo: se gasta primero lo más viejo. Desmarcarlo lo deshace. |
+| Marca una comida como **preparada** | Descuenta de la despensa los ingredientes obligatorios de la receta, sin bajar de cero y solo la primera vez. |
+| Un producto queda **por debajo de su mínimo** | Aparece solo en la lista de compras como "Para reponer" (prioridad 2), si el plan no lo pide ya. |
+| Alguien tiene **alergia** | La lista suma una porción del reemplazo (si no está en la despensa) o los ingredientes de su plato aparte, marcados como "Para la porción de quien tiene alergia". |
+
+- La lista ya no cuenta las comidas preparadas, porque sus ingredientes ya salieron de la despensa.
+- Lo comprado queda en la lista aunque el plan cambie, para poder deshacerlo. Antes se guardaba en el teléfono; ahora se guarda en el servidor.
+- **Puertos:** el planificador mueve la despensa con su propio puerto `MovimientosDespensa` (SQL directo sobre `item_despensa`), sin las entidades del módulo de despensa (RNF-26).
+- **Vida útil:** la vida útil del catálogo inicial es una referencia para una casa colombiana (granos 1 año, pollo y carne 3 días en la nevera, leche 7 días…). El curador la corrige en la ficha del producto.
+
 ## Alternativas
 
 - **Recomendación con aprendizaje** (historial y gustos). Se descartó: no hay datos de uso y el resultado no se puede explicar en la sustentación.
@@ -85,6 +99,7 @@ Las rutas del plan regeneran la lista de compras una sola vez, al final.
 - La migración V7 agrega `receta.es_plato_fuerte` (por defecto sí) y `receta.gusta_a_ninos` (por defecto no). Falta exponer los dos campos en la pantalla de curaduría para que el curador los marque en recetas nuevas.
 - El generador lee el catálogo completo en cada llamada. Si el catálogo crece a cientos de recetas, habrá que ponerle caché.
 - No escala las cantidades por número de personas: usa las porciones de la receta, igual que el costo y la lista de compras actuales. Cambiarlo afecta las tres cosas a la vez.
-- La lista de compras y el costo del plan todavía no suman el reemplazo ni el plato aparte de quien tiene alergia. Como el reemplazo se elige primero entre lo que hay en la despensa, casi siempre no hace falta comprarlo. Sumarlo queda para la fase 4 (despensa automática).
+- La lista de compras ya suma el reemplazo y el plato aparte de quien tiene alergia (pieza 2). El **costo del plan** (`/costo`) todavía no los suma: sigue siendo el costo de las recetas, igual que la barra de presupuesto.
+- El vencimiento de lo comprado es una estimación: si el empaque dice otra fecha, la usuaria la corrige en la despensa.
 - Qué alérgeno tiene cada producto (`producto_restriccion`) solo se carga por migración: la pantalla del curador todavía no lo edita. Tampoco hay editor de recetas, así que `es_principal` solo se cambia por migración.
 - La Definición y el C4 deben mencionar la automatización y retirar "recomendación automática" de lo que está fuera de alcance.

@@ -72,7 +72,8 @@ class GeneradorPlanServiceTest {
         Clock reloj = Clock.fixed(Instant.parse("2026-10-19T15:00:00Z"), ZoneId.of("America/Bogota"));
         servicio = new GeneradorPlanService(
             planSemanalRepository, comidaPlanRepository, hogarRepository, usuarioActualService,
-            resumenHogarService, catalogo, stockEnDespensa, listaComprasService, reloj);
+            new ContextoPlanFactory(resumenHogarService, catalogo, stockEnDespensa, reloj),
+            catalogo, listaComprasService);
 
         UsuarioAutenticado usuario = mock(UsuarioAutenticado.class);
         lenient().when(usuario.id()).thenReturn(1L);
