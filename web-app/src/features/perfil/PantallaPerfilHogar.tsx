@@ -22,7 +22,7 @@ interface PerfilHogar {
   otrasCondiciones?: string | null
   consentimientoDatos?: boolean
   consentimientoDatosEn?: string | null
-  personas: { nombre: string | null; edad: number | null; restricciones?: string[] }[]
+  personas: { nombre: string | null; edad: number | null; restricciones?: string[]; alergiasGraves?: string[] }[]
 }
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -36,6 +36,8 @@ interface Persona {
   edad: string
   /** Alergias y condiciones de esta persona. */
   restricciones: string[]
+  /** Las alergias que son graves: la receta no se propone ni adaptada (ADR-24). */
+  alergiasGraves: string[]
 }
 
 /** "Tú" para la primera persona; después su nombre o "Persona N". */
@@ -71,7 +73,7 @@ export function PantallaPerfilHogar() {
   const titulo = useRef<HTMLHeadingElement>(null)
   const [paso, setPaso] = useState(0)
   const [cargando, setCargando] = useState(true)
-  const [personas, setPersonas] = useState<Persona[]>([{ nombre: '', edad: '', restricciones: [] }])
+  const [personas, setPersonas] = useState<Persona[]>([{ nombre: '', edad: '', restricciones: [], alergiasGraves: [] }])
   const [presupuesto, setPresupuesto] = useState('')
   const [periodicidad, setPeriodicidad] = useState<Periodicidad>('MENSUAL')
   const [diaPago1, setDiaPago1] = useState('')
@@ -94,8 +96,9 @@ export function PantallaPerfilHogar() {
               nombre: p.nombre ?? '',
               edad: p.edad?.toString() ?? '',
               restricciones: p.restricciones ?? [],
+              alergiasGraves: p.alergiasGraves ?? [],
             }))
-          : [{ nombre: '', edad: '', restricciones: [] }]
+          : [{ nombre: '', edad: '', restricciones: [], alergiasGraves: [] }]
         // Perfiles guardados antes de las alergias por persona: lo del hogar queda en la primera.
         if (cargadas.every((p) => p.restricciones.length === 0) && perfil.restricciones?.length) {
           cargadas[0] = { ...cargadas[0], restricciones: perfil.restricciones }
@@ -224,6 +227,7 @@ export function PantallaPerfilHogar() {
         nombre: p.nombre.trim() || null,
         edad: edades[i],
         restricciones: sinRestricciones ? [] : p.restricciones,
+        alergiasGraves: sinRestricciones ? [] : p.alergiasGraves.filter((c) => p.restricciones.includes(c)),
       })),
     }
 
@@ -302,7 +306,7 @@ export function PantallaPerfilHogar() {
           <button
             type="button"
             className="agregar-punteado"
-            onClick={() => setPersonas((p) => [...p, { nombre: '', edad: '', restricciones: [] }])}
+            onClick={() => setPersonas((p) => [...p, { nombre: '', edad: '', restricciones: [], alergiasGraves: [] }])}
           >
             + Agregar persona
           </button>
@@ -343,7 +347,18 @@ export function PantallaPerfilHogar() {
                     leyenda="Alergias e intolerancias"
                     opciones={ALERGIAS}
                     marcadas={persona.restricciones}
-                    alternar={(codigo) => cambiarPersona(i, { restricciones: alternar(persona.restricciones, codigo) })}
+                    alternar={(codigo) =>
+                      cambiarPersona(i, {
+                        restricciones: alternar(persona.restricciones, codigo),
+                        alergiasGraves: persona.alergiasGraves.filter((g) => g !== codigo),
+                      })
+                    }
+                  />
+                  <AlergiasGraves
+                    persona={nombrePersona(persona, i)}
+                    alergias={ALERGIAS.filter((a) => persona.restricciones.includes(a.codigo))}
+                    graves={persona.alergiasGraves}
+                    alternar={(codigo) => cambiarPersona(i, { alergiasGraves: alternar(persona.alergiasGraves, codigo) })}
                   />
                   <Chips
                     leyenda="Condiciones de salud"
@@ -465,6 +480,36 @@ export function PantallaPerfilHogar() {
         </Boton>
       </div>
     </form>
+  )
+}
+
+interface AlergiasGravesProps {
+  persona: string
+  alergias: { codigo: string; texto: string }[]
+  graves: string[]
+  alternar: (codigo: string) => void
+}
+
+/**
+ * Una alergia normal se adapta (a esa persona se le cambia el ingrediente o se le hace
+ * otro plato). Una grave saca la receta de la casa: "no puede ni tocarlo" (ADR-24).
+ */
+function AlergiasGraves({ persona, alergias, graves, alternar }: AlergiasGravesProps) {
+  if (alergias.length === 0) return null
+  return (
+    <fieldset className="alergias-graves">
+      <legend className="campo__etiqueta">¿Alguna es grave?</legend>
+      <p className="campo__ayuda">
+        Si no es grave, a {persona === 'Tú' ? 'ti' : persona} le cambiamos el ingrediente o le proponemos otro plato. Si es
+        grave, no proponemos recetas que lo lleven.
+      </p>
+      {alergias.map((a) => (
+        <label key={a.codigo} className="alergias-graves__opcion">
+          <input type="checkbox" checked={graves.includes(a.codigo)} onChange={() => alternar(a.codigo)} />
+          <span>{a.texto} es grave: no puede ni tocarlo</span>
+        </label>
+      ))}
+    </fieldset>
   )
 }
 

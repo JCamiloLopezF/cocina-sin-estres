@@ -4,6 +4,7 @@ import { Alerta, Boton, Cargando, EncabezadoPagina } from '../../shared/componen
 import { cantidadConUnidad, enPesos } from '../despensa/formato'
 import { mensajePlan } from '../planificador/mensajesPlan'
 import { diaDe } from '../planificador/semana'
+import { obtenerAdaptaciones, textoCambio, type Adaptacion } from './adaptaciones'
 import { obtenerReceta } from './apiRecetario'
 import { analizarReceta, cargarCocina, type Cocina } from './cocina'
 import type { RecetaDetalle } from './tipos'
@@ -11,7 +12,7 @@ import './recetario.css'
 
 type Estado =
   | { tipo: 'cargando' }
-  | { tipo: 'listo'; receta: RecetaDetalle; cocina: Cocina }
+  | { tipo: 'listo'; receta: RecetaDetalle; cocina: Cocina; adaptacion?: Adaptacion }
   | { tipo: 'error'; error: unknown }
 
 /** Pantalla 23: detalle de la receta, con lo que hay y lo que falta en la despensa. */
@@ -25,8 +26,14 @@ export function PantallaReceta() {
 
   useEffect(() => {
     const control = new AbortController()
-    Promise.all([obtenerReceta(Number(id), control.signal), cargarCocina(control.signal)])
-      .then(([receta, cocina]) => setEstado({ tipo: 'listo', receta, cocina }))
+    Promise.all([
+      obtenerReceta(Number(id), control.signal),
+      cargarCocina(control.signal),
+      obtenerAdaptaciones([Number(id)], control.signal),
+    ])
+      .then(([receta, cocina, adaptaciones]) =>
+        setEstado({ tipo: 'listo', receta, cocina, adaptacion: adaptaciones.get(Number(id)) }),
+      )
       .catch((error: unknown) => {
         if (!control.signal.aborted) {
           setEstado({ tipo: 'error', error })
@@ -56,7 +63,7 @@ export function PantallaReceta() {
     )
   }
 
-  const { receta, cocina } = estado
+  const { receta, cocina, adaptacion } = estado
   const elegidas = porciones ?? receta.porciones
   const vista = analizarReceta(receta, cocina, elegidas)
   const hoy = new URLSearchParams(parametros)
@@ -76,13 +83,40 @@ export function PantallaReceta() {
         )}
       </ul>
 
-      {vista.noAptaPara.map((choque) => (
-        <div key={`a-${choque.persona}`} className="receta__aviso">
-          <Alerta tono="error">
-            No apta para {choque.persona}: lleva {choque.restricciones.join(', ').toLowerCase()}.
-          </Alerta>
-        </div>
-      ))}
+      {adaptacion ? (
+        adaptacion.cambios.length > 0 && (
+          <section className="receta__adaptaciones" aria-label="Ajustes por alergias">
+            {adaptacion.cambios.map((cambio, i) => (
+              <div key={i} className="receta__aviso">
+                <Alerta tono={cambio.tipo === 'NO_APTA' ? 'error' : 'info'}>
+                  {textoCambio(cambio)}{' '}
+                  {cambio.recetaAparteId && (
+                    <Link to={`/recetas/${cambio.recetaAparteId}${consulta}`}>Ver {cambio.recetaAparte}</Link>
+                  )}
+                </Alerta>
+              </div>
+            ))}
+          </section>
+        )
+      ) : (
+        <>
+          {vista.noAptaPara.map((choque) => (
+            <div key={`a-${choque.persona}`} className="receta__aviso">
+              <Alerta tono="error">
+                No apta para {choque.persona}: lleva {choque.restricciones.join(', ').toLowerCase()}.
+              </Alerta>
+            </div>
+          ))}
+          {vista.ajustePara.map((choque) => (
+            <div key={`j-${choque.persona}`} className="receta__aviso">
+              <Alerta tono="info">
+                Para {choque.persona}: lleva {choque.restricciones.join(', ').toLowerCase()}; cámbiale ese ingrediente o
+                prepárale otro plato.
+              </Alerta>
+            </div>
+          ))}
+        </>
+      )}
       {vista.precaucionPara.map((choque) => (
         <div key={`p-${choque.persona}`} className="receta__aviso">
           <Alerta tono="info">

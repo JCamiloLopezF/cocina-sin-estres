@@ -129,4 +129,27 @@ class HogarServiceTest {
         assertThat(respuesta.personas().get(0).restricciones()).isEmpty();
         verify(usuarioActualService).actualizarPerfilCompleto(USUARIA, true);
     }
+
+    @Test
+    void lasAlergiasGravesSeGuardanCifradasPorPersona() {
+        PerfilHogarResponse respuesta = servicio.guardar(perfil(false, true,
+            new PersonaRequest("Luisa", 34, List.of()),
+            new PersonaRequest("Samuel", 9, List.of("huevo", "mani"), List.of("mani"))));
+
+        assertThat(respuesta.personas().get(1).alergiasGraves()).containsExactly("mani");
+        assertThat(respuesta.personas().get(0).alergiasGraves()).isEmpty();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Persona>> guardadas = ArgumentCaptor.forClass(List.class);
+        verify(personaRepository).saveAll(guardadas.capture());
+        assertThat(guardadas.getValue().get(1).getAlergiasGraves()).isNotBlank().doesNotContain("mani");
+    }
+
+    @Test
+    void unaAlergiaGraveTieneQueSerAlergiaDeEsaPersona() {
+        assertThatThrownBy(() -> servicio.guardar(perfil(false, true,
+            new PersonaRequest("Samuel", 9, List.of("huevo"), List.of("mani")))))
+            .isInstanceOf(DatosInvalidosException.class)
+            .hasMessageContaining("alergia grave");
+    }
 }

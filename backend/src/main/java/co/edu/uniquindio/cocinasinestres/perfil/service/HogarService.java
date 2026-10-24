@@ -113,9 +113,13 @@ public class HogarService {
                     limpiarNombre(persona.nombre()),
                     persona.edad());
                 List<String> propias = limpiarCodigos(persona.restricciones());
+                List<String> graves = limpiarCodigos(persona.alergiasGraves());
                 // Sin consentimiento no se conserva ningún dato de salud (RNF-22).
                 nueva.setRestricciones(guardarSalud && !propias.isEmpty()
                     ? cifrador.cifrar(serializar(propias))
+                    : null);
+                nueva.setAlergiasGraves(guardarSalud && !graves.isEmpty()
+                    ? cifrador.cifrar(serializar(graves))
                     : null);
                 return nueva;
             })
@@ -275,6 +279,12 @@ public class HogarService {
             }
 
             validarCodigos(persona.restricciones());
+            validarCodigos(persona.alergiasGraves());
+            if (!limpiarCodigos(persona.restricciones()).containsAll(limpiarCodigos(persona.alergiasGraves()))) {
+                throw new DatosInvalidosException(
+                    ERROR_DATOS_INVALIDOS,
+                    "Una alergia grave debe estar marcada también como alergia de esa persona.");
+            }
         }
 
         List<Integer> dias = request.diasSinTiempo();
@@ -398,6 +408,11 @@ public class HogarService {
                     ? List.of()
                     : deserializar(
                         cifrador.descifrar(persona.getRestricciones()),
+                        new TypeReference<List<String>>() {}),
+                persona.getAlergiasGraves() == null
+                    ? List.of()
+                    : deserializar(
+                        cifrador.descifrar(persona.getAlergiasGraves()),
                         new TypeReference<List<String>>() {})))
             .toList();
 

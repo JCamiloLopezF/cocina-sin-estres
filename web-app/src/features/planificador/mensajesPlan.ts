@@ -8,6 +8,8 @@ const MENSAJES: Record<string, string> = {
   PLAN_DATOS_INVALIDOS: 'Elige el día y la comida para esta receta.',
   RECETA_NO_DISPONIBLE: 'Esta receta ya no está disponible. Elige otra.',
   CONFLICTO_ASIGNACION: 'Ese cambio ya se había guardado. Recarga el plan.',
+  PLAN_SIN_ALTERNATIVAS: 'Ya viste todas las recetas que encajan en esta comida. Puedes elegir una en el recetario.',
+  PLAN_COMIDA_PREPARADA: 'Esta comida ya está preparada; no se puede cambiar.',
   RECURSO_NO_ENCONTRADO: 'No encontramos lo que buscabas. Puede que ya no esté en tu plan.',
 }
 

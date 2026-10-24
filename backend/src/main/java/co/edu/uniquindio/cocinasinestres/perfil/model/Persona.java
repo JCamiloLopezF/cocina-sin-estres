@@ -41,6 +41,10 @@ public class Persona {
     @Column(name = "restricciones", columnDefinition = "text")
     private String restricciones;
 
+    // Alergias graves (subconjunto de restricciones), cifradas igual (ADR-20, ADR-24).
+    @Column(name = "alergias_graves", columnDefinition = "text")
+    private String alergiasGraves;
+
     /**
      * Constructor requerido por JPA.
      */
@@ -90,5 +94,14 @@ public class Persona {
 
     public void setRestricciones(String restricciones) {
         this.restricciones = restricciones;
+    }
+
+    /** Alergias graves cifradas; {@code null} si no tiene o no hay consentimiento. */
+    public String getAlergiasGraves() {
+        return alergiasGraves;
+    }
+
+    public void setAlergiasGraves(String alergiasGraves) {
+        this.alergiasGraves = alergiasGraves;
     }
 }

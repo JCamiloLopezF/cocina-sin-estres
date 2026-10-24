@@ -130,4 +130,20 @@ class StockEnDespensaJdbcIntegracionTest {
         jdbcTemplate.update("DELETE FROM hogar WHERE id = ?", otroHogarId);
         jdbcTemplate.update("DELETE FROM usuario WHERE firebase_uid = 'uid-otro-hogar'");
     }
+
+    @Test
+    @DisplayName("por vencer: lo que vence entre hoy y el tope, con cantidad, en orden de vencimiento")
+    void productosPorVencer() {
+        Long manana = agregarADespensa("Arroz", "300.000", HOY.plusDays(1));
+        Long hoy = agregarADespensa("Lentejas", "150.000", HOY);
+        agregarADespensa("Frijol", "100.000", HOY.plusDays(5));
+        agregarADespensa("Leche", "200.000", HOY.minusDays(1));
+        agregarADespensa("Pasta", "0.000", HOY.plusDays(1));
+        agregarADespensa("Sal", "50.000", null);
+
+        var porVencer = stockEnDespensa.porVencer(hogarId, HOY, HOY.plusDays(3));
+
+        assertThat(porVencer.keySet()).containsExactly(hoy, manana);
+        assertThat(porVencer).containsEntry(manana, "Arroz");
+    }
 }

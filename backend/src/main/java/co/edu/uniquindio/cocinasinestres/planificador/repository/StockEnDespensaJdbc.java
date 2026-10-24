@@ -4,6 +4,7 @@ import co.edu.uniquindio.cocinasinestres.planificador.domain.StockEnDespensa;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -26,6 +27,16 @@ public class StockEnDespensaJdbc implements StockEnDespensa {
         GROUP BY producto_id
         """;
 
+    private static final String SQL_POR_VENCER = """
+        SELECT i.producto_id, p.nombre
+        FROM item_despensa i
+        JOIN producto p ON p.id = i.producto_id
+        WHERE i.hogar_id = :hogarId
+          AND i.cantidad > 0
+          AND i.vence_en BETWEEN :hoy AND :hasta
+        ORDER BY i.vence_en, p.nombre
+        """;
+
     private final JdbcClient jdbc;
 
     public StockEnDespensaJdbc(JdbcClient jdbc) {
@@ -44,5 +55,18 @@ public class StockEnDespensaJdbc implements StockEnDespensa {
             .list()
             .forEach(fila -> stock.put(fila.getKey(), fila.getValue()));
         return stock;
+    }
+
+    @Override
+    public Map<Long, String> porVencer(Long hogarId, LocalDate hoy, LocalDate hasta) {
+        Map<Long, String> productos = new LinkedHashMap<>();
+        jdbc.sql(SQL_POR_VENCER)
+            .param("hogarId", hogarId)
+            .param("hoy", hoy)
+            .param("hasta", hasta)
+            .query((rs, rowNum) -> Map.entry(rs.getLong("producto_id"), rs.getString("nombre")))
+            .list()
+            .forEach(fila -> productos.putIfAbsent(fila.getKey(), fila.getValue()));
+        return productos;
     }
 }

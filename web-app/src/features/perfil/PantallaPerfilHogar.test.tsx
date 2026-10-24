@@ -42,6 +42,9 @@ describe('Perfil del hogar (asistente de 4 pasos)', () => {
     const saludSamuel = within(screen.getByRole('region', { name: 'Salud de Samuel' }))
     await usuario.click(saludSamuel.getByRole('checkbox', { name: 'Lactosa' }))
     await usuario.click(saludLuisa.getByRole('checkbox', { name: 'Hipertensión' }))
+    // Solo quien tiene alergias ve si alguna es grave (ADR-24).
+    expect(saludLuisa.queryByRole('group', { name: '¿Alguna es grave?' })).not.toBeInTheDocument()
+    await usuario.click(saludSamuel.getByRole('checkbox', { name: 'Lactosa es grave: no puede ni tocarlo' }))
     await continuar()
     expect(screen.getByText('Para guardar datos de salud necesitamos tu autorización.')).toBeInTheDocument()
     await usuario.click(screen.getByRole('checkbox', { name: /Autorizo guardar estos datos de salud/ }))
@@ -80,8 +83,8 @@ describe('Perfil del hogar (asistente de 4 pasos)', () => {
       otrasCondiciones: null,
       consentimientoDatos: true,
       personas: [
-        { nombre: 'Luisa', edad: 34, restricciones: ['hipertension'] },
-        { nombre: 'Samuel', edad: 9, restricciones: ['lactosa'] },
+        { nombre: 'Luisa', edad: 34, restricciones: ['hipertension'], alergiasGraves: [] },
+        { nombre: 'Samuel', edad: 9, restricciones: ['lactosa'], alergiasGraves: ['lactosa'] },
       ],
     })
   })
