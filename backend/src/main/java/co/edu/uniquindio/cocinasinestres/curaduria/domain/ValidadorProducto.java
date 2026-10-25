@@ -31,6 +31,15 @@ public final class ValidadorProducto {
     private ValidadorProducto() {
     }
 
+    /** Vida útil opcional: si viene, entre 1 día y 10 años. */
+    public static void validarVidaUtil(Integer vidaUtilDias) {
+        if (vidaUtilDias != null && (vidaUtilDias < 1 || vidaUtilDias > 3650)) {
+            throw new DatosInvalidosException(
+                "PRODUCTO_VIDA_UTIL_INVALIDA",
+                "La vida útil debe estar entre 1 y 3650 días.");
+        }
+    }
+
     public static void validar(
         String nombre,
         String categoria,

@@ -64,6 +64,17 @@ public class Receta {
     @Column(name = "activa", nullable = false)
     private boolean activa;
 
+    // Video de la receta (V10): id de YouTube y el fragmento que se muestra. Lo edita el
+    // curador por SQL desde su módulo; aquí solo se lee.
+    @Column(name = "video_youtube_id", length = 11)
+    private String videoYoutubeId;
+
+    @Column(name = "video_inicio_seg")
+    private Integer videoInicioSeg;
+
+    @Column(name = "video_fin_seg")
+    private Integer videoFinSeg;
+
     @Column(name = "modificado_por", nullable = false)
     private Long modificadoPor;
 
@@ -143,6 +154,19 @@ public class Receta {
 
     public String getPreparacionPrevia() {
         return preparacionPrevia;
+    }
+
+    /** Id del video de YouTube; {@code null} si la receta no tiene video. */
+    public String getVideoYoutubeId() {
+        return videoYoutubeId;
+    }
+
+    public Integer getVideoInicioSeg() {
+        return videoInicioSeg;
+    }
+
+    public Integer getVideoFinSeg() {
+        return videoFinSeg;
     }
 
     public boolean isActiva() {

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { backendFalso } from '../../prueba/backendFalso'
@@ -38,6 +38,7 @@ function backend(extra = {}) {
     'GET /yo': () => respuestaJson({ id: 2, correo: CURADORA.correo, rol: 'CURADOR', perfilCompleto: false }),
     'GET /curaduria/productos': () => respuestaJson([LENTEJA, HUEVOS]),
     'GET /curaduria/productos/3': () => respuestaJson(LENTEJA),
+    'GET /curaduria/productos/3/reemplazos': () => respuestaJson([]),
     ...extra,
   })
 }
@@ -72,6 +73,7 @@ describe('Catálogo del curador (pantallas 43 y 44)', () => {
     await usuario.type(screen.getByLabelText('Presentación de compra'), 'Libra')
     await usuario.type(screen.getByLabelText('Cuánto trae'), '500')
     await usuario.type(screen.getByLabelText('Precio'), '6500')
+    await usuario.type(screen.getByLabelText('Vida útil (opcional)'), '14')
     await usuario.click(screen.getByRole('button', { name: 'Guardar producto' }))
 
     expect(await screen.findByText('Queso campesino quedó guardado en el catálogo.')).toBeInTheDocument()
@@ -85,6 +87,7 @@ describe('Catálogo del curador (pantallas 43 y 44)', () => {
       cantidadUnidadCompra: 500,
       precioUnidadCompra: 6500,
       esBasico: false,
+      vidaUtilDias: 14,
     })
   })
 
@@ -125,5 +128,46 @@ describe('Catálogo del curador (pantallas 43 y 44)', () => {
     montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/productos/3')
     await usuario.click(await screen.findByRole('button', { name: 'Guardar producto' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('El precio de referencia no puede ser negativo.')
+  })
+
+  it('corrige los reemplazos que propone la app para las alergias', async () => {
+    const POLLO = { ...LENTEJA, id: 11, nombre: 'Pollo', categoria: 'PROTEINAS' }
+    const ATUN = { ...LENTEJA, id: 13, nombre: 'Atún', categoria: 'PROTEINAS' }
+    const CARNE = { ...LENTEJA, id: 12, nombre: 'Carne de res', categoria: 'PROTEINAS' }
+    let reemplazos = [
+      { reemplazoId: 11, nombre: 'Pollo', categoria: 'PROTEINAS', origen: 'SISTEMA', activo: true },
+      { reemplazoId: 13, nombre: 'Atún', categoria: 'PROTEINAS', origen: 'SISTEMA', activo: true },
+    ]
+    const { llamadas } = backend({
+      'GET /curaduria/productos': () => respuestaJson([HUEVOS, POLLO, ATUN, CARNE]),
+      'GET /curaduria/productos/4': () => respuestaJson(HUEVOS),
+      'GET /curaduria/productos/4/reemplazos': () => respuestaJson(reemplazos),
+      'DELETE /curaduria/productos/4/reemplazos/13': () => {
+        reemplazos = reemplazos.map((r) => (r.reemplazoId === 13 ? { ...r, origen: 'CURADOR', activo: false } : r))
+        return respuestaJson(reemplazos)
+      },
+      'PUT /curaduria/productos/4/reemplazos/12': () => {
+        reemplazos = [...reemplazos, { reemplazoId: 12, nombre: 'Carne de res', categoria: 'PROTEINAS', origen: 'CURADOR', activo: true }]
+        return respuestaJson(reemplazos)
+      },
+    })
+    const usuario = userEvent.setup()
+    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/productos/4')
+
+    const seccion = within(await screen.findByRole('region', { name: 'Reemplazos para alergias' }))
+    const enUso = await seccion.findByRole('list', { name: 'En uso' })
+    expect(enUso).toHaveTextContent('Pollo automático')
+
+    await usuario.click(seccion.getByRole('button', { name: 'Quitar Atún' }))
+    expect(await seccion.findByRole('list', { name: 'Quitados' })).toHaveTextContent('Atún')
+    expect(seccion.getByRole('button', { name: 'Volver a usar Atún' })).toBeInTheDocument()
+
+    await usuario.selectOptions(seccion.getByLabelText('Agregar un reemplazo'), 'Carne de res')
+    await usuario.click(seccion.getByRole('button', { name: 'Agregar' }))
+    expect(await seccion.findByText('agregado por curador')).toBeInTheDocument()
+    expect(llamadas.filter((l) => l.ruta.includes('/reemplazos/')).map((l) => `${l.metodo} ${l.ruta}`)).toEqual([
+      'DELETE /curaduria/productos/4/reemplazos/13',
+      'PUT /curaduria/productos/4/reemplazos/12',
+    ])
   })
 })

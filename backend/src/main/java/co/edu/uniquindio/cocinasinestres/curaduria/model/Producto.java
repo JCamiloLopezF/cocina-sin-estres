@@ -11,6 +11,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.hibernate.generator.EventType;
 
 import java.math.BigDecimal;
@@ -65,6 +67,11 @@ public class Producto {
 
     @Column(name = "activo", nullable = false)
     private boolean activo;
+
+    // Columna SMALLINT UNSIGNED (V9): sin esto, la validación de Hibernate espera INTEGER.
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+    @Column(name = "vida_util_dias")
+    private Integer vidaUtilDias;
 
     @Column(name = "modificado_por")
     private Long modificadoPor;
@@ -174,6 +181,15 @@ public class Producto {
 
     public void setCapacidadReferencia(BigDecimal capacidadReferencia) {
         this.capacidadReferencia = capacidadReferencia;
+    }
+
+    /** Días que dura desde que se compra; {@code null} si no se conoce (V9, ADR-24). */
+    public Integer getVidaUtilDias() {
+        return vidaUtilDias;
+    }
+
+    public void setVidaUtilDias(Integer vidaUtilDias) {
+        this.vidaUtilDias = vidaUtilDias;
     }
 
     public boolean isEsBasico() {

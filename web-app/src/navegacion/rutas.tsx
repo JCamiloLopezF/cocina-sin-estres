@@ -1,11 +1,14 @@
 import type { RouteObject } from 'react-router'
 import { PantallaAdmin } from '../features/admin/PantallaAdmin'
 import { PantallaBienvenida } from '../features/auth/PantallaBienvenida'
+import { PantallaAvisos } from '../features/avisos/PantallaAvisos'
 import { PantallaEntrar } from '../features/auth/PantallaEntrar'
 import { PantallaRecuperar } from '../features/auth/PantallaRecuperar'
 import { PantallaRegistro } from '../features/auth/PantallaRegistro'
+import { PantallaCocinar } from '../features/cocinar/PantallaCocinar'
 import { PantallaCuraduria } from '../features/curaduria/PantallaCuraduria'
 import { PantallaProductoCurado } from '../features/curaduria/PantallaProductoCurado'
+import { PantallaVideosRecetas } from '../features/curaduria/PantallaVideosRecetas'
 import { PantallaAgregarProducto } from '../features/despensa/PantallaAgregarProducto'
 import { PantallaCargaRapida } from '../features/despensa/PantallaCargaRapida'
 import { PantallaProductoAdicional } from '../features/despensa/PantallaProductoAdicional'
@@ -21,6 +24,7 @@ import { PantallaPlan } from '../features/planificador/PantallaPlan'
 import { PantallaAgregarAlPlan } from '../features/recetario/PantallaAgregarAlPlan'
 import { PantallaReceta } from '../features/recetario/PantallaReceta'
 import { PantallaRecetario } from '../features/recetario/PantallaRecetario'
+import { PantallaRescate } from '../features/rescate/PantallaRescate'
 import { DisenoOperativo } from './DisenoOperativo'
 import { DisenoUsuaria } from './DisenoUsuaria'
 import { RequiereRol, RutaPrivada, RutaPublica } from './guardas'
@@ -63,11 +67,15 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
                 { path: '/recetas', element: <PantallaRecetario /> },
                 { path: '/recetas/:id', element: <PantallaReceta /> },
                 { path: '/recetas/:id/agregar', element: <PantallaAgregarAlPlan /> },
+                { path: '/avisos', element: <PantallaAvisos /> },
+                { path: '/rescate', element: <PantallaRescate /> },
                 { path: '/perfil', element: <PantallaPerfil /> },
                 { path: '/perfil/hogar', element: <PantallaPerfilHogar /> },
                 { path: '/listo', element: <PantallaTodoListo /> },
               ],
             },
+            // Modo cocinar: pantalla completa, sin la barra inferior.
+            { path: '/recetas/:id/cocinar', element: <PantallaCocinar /> },
           ],
         },
         {
@@ -79,6 +87,7 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
                 { path: '/curaduria', element: <PantallaCuraduria /> },
                 { path: '/curaduria/productos/nuevo', element: <PantallaProductoCurado /> },
                 { path: '/curaduria/productos/:id', element: <PantallaProductoCurado /> },
+                { path: '/curaduria/recetas', element: <PantallaVideosRecetas /> },
               ],
             },
           ],

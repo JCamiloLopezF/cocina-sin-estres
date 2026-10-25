@@ -21,6 +21,8 @@ export interface PlanSemanal {
   /** Lunes de la semana, AAAA-MM-DD. */
   semanaInicio: string
   comidas: ComidaPlan[]
+  /** La armó la app sola (motor de avisos, ADR-24) y la usuaria todavía no la confirma. */
+  borrador?: boolean
 }
 
 /** `GET /api/planes-semanales/{id}/costo` (PlanCostoResponse, ADR-14). */
@@ -39,6 +41,17 @@ export interface ItemListaCompras {
   /** 1 = indispensable; mayor = se puede posponer. */
   prioridad: number
   comprado: boolean
+  /** PLAN (lo piden las recetas), REPONER (quedó bajo el mínimo) o ALERGIA (porción de quien tiene alergia). */
+  motivo?: 'PLAN' | 'REPONER' | 'ALERGIA'
+  /** Cuánto entró a la despensa al comprarlo, en presentaciones completas. */
+  cantidadAgregada?: number | null
+}
+
+/** `PUT /api/planes-semanales/{id}/lista-compras/items/{itemId}` (ADR-24). */
+export interface CompraRegistrada {
+  item: ItemListaCompras
+  /** Vencimiento con que quedó en la despensa, AAAA-MM-DD. */
+  venceEn?: string | null
 }
 
 /** `GET /api/planes-semanales/{id}/lista-compras`: ya descuenta lo que hay en la despensa. */
@@ -47,4 +60,27 @@ export interface ListaCompras {
   planSemanalId: number
   items: ItemListaCompras[]
   costoTotal: number
+}
+
+/** Un hueco que el generador llenó o cambió. `recetaAnteriorId` falta si estaba vacío. */
+export interface CambioPlan {
+  dia: number
+  tipoComida: TipoComida
+  recetaId: number
+  recetaAnteriorId?: number | null
+}
+
+/** Respuesta de `/generar` y `/ajustar-presupuesto` (ADR-24). */
+export interface PlanGenerado {
+  plan: PlanSemanal
+  cambios: CambioPlan[]
+  costoEstimado: number
+  presupuestoSemanal: number
+  excedePresupuesto: boolean
+  /** Productos por vencer que el plan aprovecha. */
+  aprovecha: string[]
+  /** Comidas del plan que suelen gustarles a los niños; 0 si en el hogar no hay niños. */
+  paraNinos?: number
+  /** Comidas que llevan un cambio o un plato aparte para alguien con alergia (ADR-24). */
+  conAdaptaciones?: number
 }

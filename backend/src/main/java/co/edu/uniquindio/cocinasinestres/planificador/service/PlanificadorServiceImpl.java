@@ -8,7 +8,9 @@ import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.MovimientosDespensa;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanSemanalResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
@@ -44,6 +46,7 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
     private final HogarRepository hogarRepository;
     private final JdbcTemplate jdbcTemplate;
     private final ListaComprasService listaComprasService;
+    private final MovimientosDespensa movimientosDespensa;
 
     public PlanificadorServiceImpl(
         PlanSemanalRepository planSemanalRepository,
@@ -51,13 +54,15 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
         UsuarioActualService usuarioActualService,
         HogarRepository hogarRepository,
         JdbcTemplate jdbcTemplate,
-        ListaComprasService listaComprasService) {
+        ListaComprasService listaComprasService,
+        MovimientosDespensa movimientosDespensa) {
         this.planSemanalRepository = planSemanalRepository;
         this.comidaPlanRepository = comidaPlanRepository;
         this.usuarioActualService = usuarioActualService;
         this.hogarRepository = hogarRepository;
         this.jdbcTemplate = jdbcTemplate;
         this.listaComprasService = listaComprasService;
+        this.movimientosDespensa = movimientosDespensa;
     }
 
     @Override
@@ -217,6 +222,12 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             throw new RecursoNoEncontradoException("Comida no encontrada.");
         }
 
+        if (!comida.isPreparada()) {
+            // Lo que se cocinó sale de la despensa (KAN-16, ADR-24). Solo la primera vez:
+            // marcarla otra vez no descuenta de nuevo.
+            int descontados = movimientosDespensa.descontarReceta(hogar.getId(), comida.getRecetaId());
+            log.info("Comida preparada: planId={} comidaId={} productosDescontados={}", planId, comidaId, descontados);
+        }
         comida.setPreparada(true);
         comida.setPreparadaEn(LocalDateTime.now(ZoneOffset.UTC));
         ComidaPlan guardada = comidaPlanRepository.save(comida);
@@ -241,6 +252,21 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
         }
 
         return listaComprasService.consultar(planId);
+    }
+
+    @Override
+    @Transactional
+    public CompraResponse marcarComprado(Long planId, Long itemId, boolean comprado) {
+        UsuarioAutenticado usuario = usuarioActualService.obtener();
+        Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
+        PlanSemanal plan = planSemanalRepository.findById(planId)
+            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado."));
+        if (!plan.getHogar().getId().equals(hogar.getId())) {
+            // Plan de otro hogar: mismo 404 que "no existe" (RNF-22)
+            throw new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado.");
+        }
+        return listaComprasService.marcarComprado(plan, itemId, comprado);
     }
 
     private void validarRequestAsignacion(ComidaPlanAssignRequest r) {
@@ -270,6 +296,23 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
         return count != null && count > 0;
     }
 
+    @Override
+    @Transactional
+    public PlanSemanalResponse confirmarBorrador(Long planId) {
+        UsuarioAutenticado usuario = usuarioActualService.obtener();
+        Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
+        PlanSemanal plan = planSemanalRepository.findById(planId)
+            .filter(p -> p.getHogar().getId().equals(hogar.getId()))
+            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado."));
+        if (plan.isBorrador()) {
+            plan.setBorrador(false);
+            planSemanalRepository.save(plan);
+            log.info("Borrador confirmado: planId={}", planId);
+        }
+        return construirRespuesta(plan);
+    }
+
     private PlanSemanalResponse construirRespuesta(PlanSemanal plan) {
         List<ComidaPlanResponse> comidas = comidaPlanRepository
             .findByPlanSemanal_IdOrderByDiaAscTipoComidaAsc(plan.getId())
@@ -280,7 +323,8 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             plan.getId(),
             plan.getSemanaInicio(),
             plan.getCreadoEn(),
-            comidas);
+            comidas,
+            plan.isBorrador());
     }
 
     private ComidaPlanResponse aComidaPlanResponse(ComidaPlan c) {

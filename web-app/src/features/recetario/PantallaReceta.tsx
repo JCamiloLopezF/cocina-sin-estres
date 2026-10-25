@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina } from '../../shared/componentes'
+import { VideoReceta } from '../cocinar/VideoReceta'
 import { cantidadConUnidad, enPesos } from '../despensa/formato'
 import { mensajePlan } from '../planificador/mensajesPlan'
 import { diaDe } from '../planificador/semana'
+import { obtenerAdaptaciones, textoCambio, type Adaptacion } from './adaptaciones'
 import { obtenerReceta } from './apiRecetario'
 import { analizarReceta, cargarCocina, type Cocina } from './cocina'
 import type { RecetaDetalle } from './tipos'
@@ -11,7 +13,7 @@ import './recetario.css'
 
 type Estado =
   | { tipo: 'cargando' }
-  | { tipo: 'listo'; receta: RecetaDetalle; cocina: Cocina }
+  | { tipo: 'listo'; receta: RecetaDetalle; cocina: Cocina; adaptacion?: Adaptacion }
   | { tipo: 'error'; error: unknown }
 
 /** Pantalla 23: detalle de la receta, con lo que hay y lo que falta en la despensa. */
@@ -25,8 +27,14 @@ export function PantallaReceta() {
 
   useEffect(() => {
     const control = new AbortController()
-    Promise.all([obtenerReceta(Number(id), control.signal), cargarCocina(control.signal)])
-      .then(([receta, cocina]) => setEstado({ tipo: 'listo', receta, cocina }))
+    Promise.all([
+      obtenerReceta(Number(id), control.signal),
+      cargarCocina(control.signal),
+      obtenerAdaptaciones([Number(id)], control.signal),
+    ])
+      .then(([receta, cocina, adaptaciones]) =>
+        setEstado({ tipo: 'listo', receta, cocina, adaptacion: adaptaciones.get(Number(id)) }),
+      )
       .catch((error: unknown) => {
         if (!control.signal.aborted) {
           setEstado({ tipo: 'error', error })
@@ -56,12 +64,13 @@ export function PantallaReceta() {
     )
   }
 
-  const { receta, cocina } = estado
+  const { receta, cocina, adaptacion } = estado
   const elegidas = porciones ?? receta.porciones
   const vista = analizarReceta(receta, cocina, elegidas)
   const hoy = new URLSearchParams(parametros)
   hoy.set('dia', String(hoyDia))
   hoy.delete('comida')
+  hoy.delete('semana')
 
   return (
     <>
@@ -75,6 +84,48 @@ export function PantallaReceta() {
           <li className="pildora pildora--llena">{enPesos(vista.costoPorcion)} / porción</li>
         )}
       </ul>
+
+      {adaptacion ? (
+        adaptacion.cambios.length > 0 && (
+          <section className="receta__adaptaciones" aria-label="Ajustes por alergias">
+            {adaptacion.cambios.map((cambio, i) => (
+              <div key={i} className="receta__aviso">
+                <Alerta tono={cambio.tipo === 'NO_APTA' ? 'error' : 'info'}>
+                  {textoCambio(cambio)}{' '}
+                  {cambio.recetaAparteId && (
+                    <Link to={`/recetas/${cambio.recetaAparteId}${consulta}`}>Ver {cambio.recetaAparte}</Link>
+                  )}
+                </Alerta>
+              </div>
+            ))}
+          </section>
+        )
+      ) : (
+        <>
+          {vista.noAptaPara.map((choque) => (
+            <div key={`a-${choque.persona}`} className="receta__aviso">
+              <Alerta tono="error">
+                No apta para {choque.persona}: lleva {choque.restricciones.join(', ').toLowerCase()}.
+              </Alerta>
+            </div>
+          ))}
+          {vista.ajustePara.map((choque) => (
+            <div key={`j-${choque.persona}`} className="receta__aviso">
+              <Alerta tono="info">
+                Para {choque.persona}: lleva {choque.restricciones.join(', ').toLowerCase()}; cámbiale ese ingrediente o
+                prepárale otro plato.
+              </Alerta>
+            </div>
+          ))}
+        </>
+      )}
+      {vista.precaucionPara.map((choque) => (
+        <div key={`p-${choque.persona}`} className="receta__aviso">
+          <Alerta tono="info">
+            Precaución para {choque.persona} ({choque.restricciones.join(', ').toLowerCase()}): revisa los ingredientes marcados.
+          </Alerta>
+        </div>
+      ))}
 
       <div className="receta__porciones">
         <span id="etiqueta-porciones">Porciones</span>
@@ -102,6 +153,9 @@ export function PantallaReceta() {
           <li key={ing.productoId} className={ing.enDespensa || ing.opcional ? undefined : 'receta__falta'}>
             <span>
               {ing.nombre} · {cantidadConUnidad(redondear(ing.cantidad), ing.unidad)}
+              {ing.restricciones.length > 0 && (
+                <span className="receta__restriccion"> · {ing.restricciones.join(', ').toLowerCase()}</span>
+              )}
             </span>
             <span className="receta__estado">
               {ing.enDespensa ? 'en despensa' : ing.opcional ? 'opcional' : 'falta'}
@@ -123,17 +177,22 @@ export function PantallaReceta() {
       )}
 
       <h2 className="rotulo receta__seccion">Preparación</h2>
+      {receta.video && <VideoReceta video={receta.video} receta={receta.nombre} />}
       <ol className="receta__pasos">
         {receta.pasos.map((paso, i) => (
           <li key={i}>{paso}</li>
         ))}
       </ol>
 
+      <Link className="boton boton--primario boton--ancho receta__cocinar" to={`/recetas/${receta.id}/cocinar?porciones=${elegidas}`}>
+        👩‍🍳 Cocinar ahora, paso a paso
+      </Link>
+
       <div className="receta__acciones">
         <Link className="boton boton--secundario" to={`/recetas/${receta.id}/agregar?${hoy.toString()}`}>
-          Cocinar hoy
+          Ponerla hoy en el plan
         </Link>
-        <Link className="boton boton--primario" to={`/recetas/${receta.id}/agregar${consulta}`}>
+        <Link className="boton boton--secundario" to={`/recetas/${receta.id}/agregar${consulta}`}>
           Agregar al plan
         </Link>
       </div>

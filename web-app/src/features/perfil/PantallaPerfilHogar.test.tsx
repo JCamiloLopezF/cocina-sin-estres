@@ -37,8 +37,14 @@ describe('Perfil del hogar (asistente de 4 pasos)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Tu hogar · paso 2 de 4' })).toBeInTheDocument()
     await continuar()
     expect(screen.getByText('Marca las restricciones del hogar o indica que nadie tiene.')).toBeInTheDocument()
-    await usuario.click(screen.getByRole('checkbox', { name: 'Lactosa' }))
-    await usuario.click(screen.getByRole('checkbox', { name: 'Hipertensión' }))
+    // Cada persona tiene sus propias alergias y condiciones.
+    const saludLuisa = within(screen.getByRole('region', { name: 'Salud de Luisa' }))
+    const saludSamuel = within(screen.getByRole('region', { name: 'Salud de Samuel' }))
+    await usuario.click(saludSamuel.getByRole('checkbox', { name: 'Lactosa' }))
+    await usuario.click(saludLuisa.getByRole('checkbox', { name: 'Hipertensión' }))
+    // Solo quien tiene alergias ve si alguna es grave (ADR-24).
+    expect(saludLuisa.queryByRole('group', { name: '¿Alguna es grave?' })).not.toBeInTheDocument()
+    await usuario.click(saludSamuel.getByRole('checkbox', { name: 'Lactosa es grave: no puede ni tocarlo' }))
     await continuar()
     expect(screen.getByText('Para guardar datos de salud necesitamos tu autorización.')).toBeInTheDocument()
     await usuario.click(screen.getByRole('checkbox', { name: /Autorizo guardar estos datos de salud/ }))
@@ -72,13 +78,13 @@ describe('Perfil del hogar (asistente de 4 pasos)', () => {
       diaPago1: 15,
       diaPago2: 30,
       diasSinTiempo: [1, 3],
-      restricciones: ['lactosa', 'hipertension'],
+      restricciones: ['hipertension', 'lactosa'],
       sinRestricciones: false,
       otrasCondiciones: null,
       consentimientoDatos: true,
       personas: [
-        { nombre: 'Luisa', edad: 34 },
-        { nombre: 'Samuel', edad: 9 },
+        { nombre: 'Luisa', edad: 34, restricciones: ['hipertension'], alergiasGraves: [] },
+        { nombre: 'Samuel', edad: 9, restricciones: ['lactosa'], alergiasGraves: ['lactosa'] },
       ],
     })
   })
@@ -128,5 +134,33 @@ describe('Perfil del hogar (asistente de 4 pasos)', () => {
     await usuario.click(screen.getByRole('button', { name: 'Continuar' }))
     expect(screen.getByDisplayValue('800000')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Mensual' })).toBeChecked()
+  })
+
+  it('un perfil guardado antes de las alergias por persona las deja en la primera persona', async () => {
+    backendFalso({
+      'GET /yo': () => respuestaJson(CUENTA_USUARIA),
+      'GET /perfil/hogar': () =>
+        respuestaJson({
+          id: 1,
+          presupuestoMonto: 800000,
+          periodicidadIngreso: 'MENSUAL',
+          diaPago1: 30,
+          diasSinTiempo: [],
+          restricciones: ['gluten'],
+          sinRestricciones: false,
+          consentimientoDatosEn: '2026-10-01T10:00:00',
+          personas: [
+            { id: 1, nombre: 'Luisa', edad: 34, restricciones: [] },
+            { id: 2, nombre: 'Samuel', edad: 9, restricciones: [] },
+          ],
+        }),
+    })
+    const { servicio } = crearServicioFalso(LUISA)
+    montarApp(servicio, '/perfil/hogar')
+    const usuario = userEvent.setup()
+
+    await usuario.click(await screen.findByRole('button', { name: 'Continuar' }))
+    expect(within(screen.getByRole('region', { name: 'Salud de Luisa' })).getByRole('checkbox', { name: 'Gluten' })).toBeChecked()
+    expect(within(screen.getByRole('region', { name: 'Salud de Samuel' })).getByRole('checkbox', { name: 'Gluten' })).not.toBeChecked()
   })
 })

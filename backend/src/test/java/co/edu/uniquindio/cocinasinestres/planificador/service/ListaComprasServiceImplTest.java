@@ -2,7 +2,9 @@ package co.edu.uniquindio.cocinasinestres.planificador.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.config.ConfiguracionReloj;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.MovimientosDespensa;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.StockEnDespensa;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ItemListaCompras;
@@ -61,6 +63,12 @@ class ListaComprasServiceImplTest {
     @Mock
     private StockEnDespensa stockEnDespensa;
 
+    @Mock
+    private MovimientosDespensa movimientosDespensa;
+
+    @Mock
+    private ComprasPorAlergias comprasPorAlergias;
+
     @Captor
     private ArgumentCaptor<List<ItemListaCompras>> itemsCaptor;
 
@@ -75,7 +83,8 @@ class ListaComprasServiceImplTest {
             ConfiguracionReloj.ZONA_COLOMBIA);
         service = new ListaComprasServiceImpl(
             planSemanalRepository, comidaPlanRepository, listaComprasRepository,
-            itemListaComprasRepository, jdbcTemplate, stockEnDespensa, relojFijo);
+            itemListaComprasRepository, jdbcTemplate, stockEnDespensa, movimientosDespensa,
+            comprasPorAlergias, relojFijo);
 
         // El plan solo se usa como dueño de la lista; en este servicio no se consulta.
         lista = new ListaCompras(mock(PlanSemanal.class));
@@ -210,6 +219,135 @@ class ListaComprasServiceImplTest {
         ItemListaCompras item = itemsCaptor.getValue().get(0);
         assertEquals(new BigDecimal("500.000"), item.getCantidad());
         assertEquals(new BigDecimal("2000.00"), item.getCostoEstimado());
+    }
+
+    // ---------------------------------------------------------------------
+    // Despensa automática (ADR-24)
+    // ---------------------------------------------------------------------
+
+    @Test
+    void generar_loYaPreparadoNoSeVuelveAComprar() {
+        PlanSemanal plan = planGeneracion();
+        when(planSemanalRepository.findById(500L)).thenReturn(Optional.of(plan));
+        ComidaPlan preparada = new ComidaPlan(plan, 1, "ALMUERZO", 4L, null);
+        preparada.setPreparada(true);
+        when(comidaPlanRepository.findByPlanSemanal_IdOrderByDiaAscTipoComidaAsc(500L)).thenReturn(List.of(preparada));
+        when(stockEnDespensa.disponibles(10L, HOY)).thenReturn(Map.of());
+        when(listaComprasRepository.findByPlanSemanal_Id(500L)).thenReturn(Optional.empty());
+
+        service.generarListaCompras(500L);
+
+        verify(jdbcTemplate, never()).queryForList(anyString(), eq(500L));
+        verify(itemListaComprasRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void generar_loQueQuedoBajoElMinimoSeRepone_yLaPorcionDeAlergiaSeMarca() {
+        planQuePide(1L, "500.000");
+        when(stockEnDespensa.disponibles(10L, HOY)).thenReturn(Map.of());
+        when(stockEnDespensa.bajoMinimo(10L)).thenReturn(Map.of(2L, new BigDecimal("300.000"), 1L, new BigDecimal("50.000")));
+        when(comprasPorAlergias.extras(any(), any())).thenReturn(Map.of(5L, new BigDecimal("125.000")));
+        when(listaComprasRepository.findByPlanSemanal_Id(500L)).thenReturn(Optional.empty());
+        when(listaComprasRepository.save(any(ListaCompras.class))).thenAnswer(i -> i.getArgument(0));
+        when(jdbcTemplate.queryForMap(anyString(), any(Long.class))).thenReturn(Map.of(
+            "cantidad_unidad_compra", new BigDecimal("1000.000"),
+            "precio_unidad_compra", new BigDecimal("4000.00")));
+
+        service.generarListaCompras(500L);
+
+        verify(itemListaComprasRepository).saveAll(itemsCaptor.capture());
+        Map<Long, ItemListaCompras> porProducto = new java.util.HashMap<>();
+        itemsCaptor.getValue().forEach(i -> porProducto.put(i.getProductoId(), i));
+        assertEquals("PLAN", porProducto.get(1L).getMotivo());
+        assertEquals(1, porProducto.get(1L).getPrioridad());
+        // El producto 1 ya lo pide el plan: no se repite como reposición.
+        assertEquals(new BigDecimal("500.000"), porProducto.get(1L).getCantidad());
+        assertEquals("REPONER", porProducto.get(2L).getMotivo());
+        assertEquals(2, porProducto.get(2L).getPrioridad());
+        assertEquals("ALERGIA", porProducto.get(5L).getMotivo());
+        assertEquals(new BigDecimal("125.000"), porProducto.get(5L).getCantidad());
+    }
+
+    @Test
+    void generar_loYaCompradoSeConservaEnLaLista() {
+        planQuePide(1L, "500.000");
+        when(stockEnDespensa.disponibles(10L, HOY)).thenReturn(Map.of());
+        when(listaComprasRepository.findByPlanSemanal_Id(500L)).thenReturn(Optional.of(lista));
+        ItemListaCompras comprado = item(9L, "4500.00", 1);
+        comprado.setComprado(true);
+        ItemListaCompras pendiente = item(1L, "2000.00", 1);
+        when(itemListaComprasRepository.findByListaCompras_Id(7L)).thenReturn(List.of(comprado, pendiente));
+        productoA4000(1L);
+
+        service.generarListaCompras(500L);
+
+        verify(itemListaComprasRepository).deleteAll(List.of(pendiente));
+        verify(itemListaComprasRepository).saveAll(itemsCaptor.capture());
+        assertEquals(1, itemsCaptor.getValue().size());
+    }
+
+    private PlanSemanal planConItem(ItemListaCompras item) {
+        PlanSemanal plan = planGeneracion();
+        ListaCompras deEstePlan = new ListaCompras(plan);
+        ReflectionTestUtils.setField(item, "listaCompras", deEstePlan);
+        when(itemListaComprasRepository.findById(70L)).thenReturn(Optional.of(item));
+        when(itemListaComprasRepository.save(any(ItemListaCompras.class))).thenAnswer(i -> i.getArgument(0));
+        return plan;
+    }
+
+    @Test
+    void marcarComprado_entraALaDespensaEnPresentacionesCompletasConSuVencimiento() {
+        ItemListaCompras arroz = new ItemListaCompras(lista, 1L, new BigDecimal("300.000"), new BigDecimal("1350.00"), 1);
+        PlanSemanal plan = planConItem(arroz);
+        when(movimientosDespensa.datosCompra(1L)).thenReturn(new MovimientosDespensa.DatosCompra(new BigDecimal("1000.000"), 365));
+        when(movimientosDespensa.agregar(10L, 1L, new BigDecimal("1000.000"), HOY.plusDays(365), HOY)).thenReturn(HOY.plusDays(365));
+
+        CompraResponse respuesta = service.marcarComprado(plan, 70L, true);
+
+        assertTrue(respuesta.item().comprado());
+        assertEquals(new BigDecimal("1000.000"), respuesta.item().cantidadAgregada());
+        assertEquals(HOY.plusDays(365), respuesta.venceEn());
+
+        // Marcarlo otra vez no lo suma dos veces.
+        service.marcarComprado(plan, 70L, true);
+        verify(movimientosDespensa, org.mockito.Mockito.times(1)).agregar(anyLong(), anyLong(), any(), any(), any());
+    }
+
+    @Test
+    void marcarComprado_deshacerloLoSacaDeLaDespensa() {
+        ItemListaCompras arroz = new ItemListaCompras(lista, 1L, new BigDecimal("300.000"), new BigDecimal("1350.00"), 1);
+        arroz.setComprado(true);
+        arroz.setCantidadAgregada(new BigDecimal("1000.000"));
+        PlanSemanal plan = planConItem(arroz);
+
+        CompraResponse respuesta = service.marcarComprado(plan, 70L, false);
+
+        verify(movimientosDespensa).quitar(10L, 1L, new BigDecimal("1000.000"));
+        assertFalse(respuesta.item().comprado());
+        assertNull(respuesta.item().cantidadAgregada());
+    }
+
+    @Test
+    void marcarComprado_unItemDeOtroPlanNoExiste() {
+        ItemListaCompras ajeno = new ItemListaCompras(lista, 1L, BigDecimal.ONE, BigDecimal.ONE, 1);
+        PlanSemanal otro = mock(PlanSemanal.class);
+        when(otro.getId()).thenReturn(999L);
+        ReflectionTestUtils.setField(ajeno, "listaCompras", new ListaCompras(otro));
+        when(itemListaComprasRepository.findById(70L)).thenReturn(Optional.of(ajeno));
+
+        PlanSemanal miPlan = new PlanSemanal(mock(Hogar.class), LocalDate.of(2026, 10, 12));
+        ReflectionTestUtils.setField(miPlan, "id", 500L);
+
+        assertThrows(co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException.class,
+            () -> service.marcarComprado(miPlan, 70L, true));
+    }
+
+    @Test
+    void enPresentaciones_redondeaHaciaArribaYSinPresentacionDejaLaCantidad() {
+        assertEquals(new BigDecimal("1000.000"), ListaComprasServiceImpl.enPresentaciones(new BigDecimal("300"), new BigDecimal("1000")));
+        assertEquals(new BigDecimal("1000.000"), ListaComprasServiceImpl.enPresentaciones(new BigDecimal("1000"), new BigDecimal("1000")));
+        assertEquals(new BigDecimal("2000.000"), ListaComprasServiceImpl.enPresentaciones(new BigDecimal("1001"), new BigDecimal("1000")));
+        assertEquals(new BigDecimal("2.000"), ListaComprasServiceImpl.enPresentaciones(new BigDecimal("2"), null));
     }
 
     private ItemListaCompras item(Long productoId, String costo, int prioridad) {

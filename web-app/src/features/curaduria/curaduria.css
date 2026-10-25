@@ -4,6 +4,7 @@
 .curaduria__barra {
   display: flex;
   justify-content: flex-end;
+  gap: var(--espacio-2);
   margin: var(--espacio-3) 0;
 }
 
@@ -38,4 +39,103 @@
   padding: var(--espacio-4);
   border: var(--borde) solid var(--color-linea);
   border-radius: var(--radio-control);
+}
+
+/* ADR-24: reemplazos para adaptar recetas a una alergia. */
+.reemplazos {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-6);
+  padding: var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-tarjeta);
+}
+
+.reemplazos h2,
+.reemplazos p {
+  margin: 0;
+}
+
+.reemplazos h2 {
+  font-size: var(--texto-m);
+}
+
+.reemplazos__lista {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reemplazos__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-2) 0;
+  border-bottom: 1px solid var(--color-linea);
+}
+
+.reemplazos__fila--quitado > span {
+  color: var(--color-tenue);
+}
+
+.reemplazos__origen {
+  display: block;
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+}
+
+.reemplazos__vacio {
+  color: var(--color-tenue);
+}
+
+.reemplazos__agregar {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.reemplazos__agregar-fila {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--espacio-2);
+}
+
+/* Videos de las recetas (pedido del profesor: máximo la mitad del tiempo de la receta). */
+.videos-recetas {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.videos-recetas__item {
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-superficie);
+}
+
+.videos-recetas__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.videos-recetas__formulario {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-3);
+  padding-top: var(--espacio-3);
+  border-top: var(--borde) solid var(--color-linea);
+}
+
+.videos-recetas__tiempos {
+  display: grid;
+  align-items: start;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-3);
 }

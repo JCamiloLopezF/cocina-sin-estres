@@ -57,6 +57,7 @@ public final class ComparadorProducto {
         valores.put("capacidadReferencia", p == null ? null : p.capacidadReferencia());
         valores.put("esBasico", p == null ? null : p.esBasico());
         valores.put("activo", p == null ? null : p.activo());
+        valores.put("vidaUtilDias", p == null ? null : p.vidaUtilDias());
 
         return valores;
     }

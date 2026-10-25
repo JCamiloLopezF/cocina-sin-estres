@@ -2,7 +2,15 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { backendFalso } from '../../prueba/backendFalso'
-import { rutasCocina } from '../../prueba/cocinaFalsa'
+import {
+  ARROZ_CON_LECHE,
+  ARROZ_CON_POLLO,
+  PERFIL_CON_ALERGIA_GRAVE,
+  PERFIL_CON_ALERGIAS,
+  resumenReceta,
+  rutasCocina,
+  SOPA,
+} from '../../prueba/cocinaFalsa'
 import { montarApp } from '../../prueba/montar'
 import { crearServicioFalso, LUISA, respuestaJson } from '../../prueba/servicioFalso'
 
@@ -120,5 +128,102 @@ describe('Recetario (pantallas 21 a 24)', () => {
       await screen.findByText('El martes ya tienes cena: Arroz con pollo. Si continúas, la cambiamos por esta receta.'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cambiar la receta' })).toBeInTheDocument()
+  })
+
+  describe('alergias por persona', () => {
+    function backendConAlergias(perfil: object = PERFIL_CON_ALERGIAS, extra: Record<string, () => Response> = {}) {
+      return backendFalso({
+        ...rutasCocina(),
+        'GET /recetas': () => respuestaJson([ARROZ_CON_POLLO, SOPA, ARROZ_CON_LECHE].map(resumenReceta)),
+        'GET /recetas/12': () => respuestaJson(ARROZ_CON_LECHE),
+        'GET /perfil/hogar': () => respuestaJson(perfil),
+        ...extra,
+      })
+    }
+
+    it('una alergia que no es grave no oculta la receta: la marca "con ajuste"', async () => {
+      backendConAlergias()
+      montarApp(crearServicioFalso(LUISA).servicio, '/recetas')
+
+      const tarjeta = await screen.findByRole('link', { name: /Arroz con leche/ })
+      expect(within(tarjeta).getByText('con ajuste para Samuel')).toBeInTheDocument()
+      expect(screen.queryByText(/Ocultamos/)).not.toBeInTheDocument()
+    })
+
+    it('una alergia grave oculta la receta por defecto y deja verla marcada', async () => {
+      backendConAlergias(PERFIL_CON_ALERGIA_GRAVE)
+      montarApp(crearServicioFalso(LUISA).servicio, '/recetas')
+      const usuario = userEvent.setup()
+
+      expect(await screen.findByRole('link', { name: /Sopa de lentejas/ })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Arroz con leche/ })).not.toBeInTheDocument()
+      expect(screen.getByText(/Ocultamos 1 receta que no es apta por una alergia grave/)).toBeInTheDocument()
+
+      await usuario.click(screen.getByRole('button', { name: 'Ver todas' }))
+      expect(within(screen.getByRole('link', { name: /Arroz con leche/ })).getByText('no apta para Samuel')).toBeInTheDocument()
+    })
+
+    it('el detalle dice cómo adaptarla para cada persona y a quién pide precaución', async () => {
+      backendConAlergias(PERFIL_CON_ALERGIAS, {
+        'GET /adaptaciones': () =>
+          respuestaJson([
+            {
+              recetaId: 12,
+              estado: 'PLATO_APARTE',
+              cambios: [
+                {
+                  tipo: 'PLATO_APARTE',
+                  persona: 'Samuel',
+                  alergias: ['lactosa'],
+                  enDespensa: false,
+                  recetaAparteId: 10,
+                  recetaAparte: 'Sopa de lentejas',
+                },
+              ],
+            },
+          ]),
+      })
+      montarApp(crearServicioFalso(LUISA).servicio, '/recetas/12')
+
+      const ajustes = await screen.findByRole('region', { name: 'Ajustes por alergias' })
+      expect(ajustes).toHaveTextContent(
+        'Para Samuel (lactosa): no se puede cambiar lo principal del plato; prepárale aparte Sopa de lentejas.',
+      )
+      expect(within(ajustes).getByRole('link', { name: 'Ver Sopa de lentejas' })).toHaveAttribute('href', '/recetas/10')
+      expect(screen.getByText(/Precaución para Luisa \(diabetes\)/)).toBeInTheDocument()
+      expect(screen.getByText('Leche · 1 kg')).toBeInTheDocument()
+      expect(screen.getByText('· lactosa')).toBeInTheDocument()
+    })
+
+    it('si no se pueden consultar los ajustes, igual avisa con lo que sabe del perfil', async () => {
+      backendConAlergias(PERFIL_CON_ALERGIA_GRAVE)
+      montarApp(crearServicioFalso(LUISA).servicio, '/recetas/12')
+
+      expect(await screen.findByText('No apta para Samuel: lleva lactosa.')).toBeInTheDocument()
+    })
+  })
+
+  it('el detalle ofrece cocinar paso a paso y el video solo carga YouTube al tocarlo', async () => {
+    backendFalso({
+      ...rutasCocina(),
+      'GET /recetas/10': () => respuestaJson({ ...SOPA, video: { youtubeId: 'dQw4w9WgXcQ', inicioSeg: 30, finSeg: 90 } }),
+    })
+    montarApp(crearServicioFalso(LUISA).servicio, '/recetas/10')
+    const usuario = userEvent.setup()
+
+    const portada = await screen.findByRole('button', { name: 'Ver el video de Sopa de lentejas (01:00)' })
+    expect(document.querySelector('iframe')).toBeNull()
+    await usuario.click(screen.getByRole('button', { name: 'Una porción más' }))
+    expect(screen.getByRole('link', { name: /Cocinar ahora, paso a paso/ })).toHaveAttribute(
+      'href',
+      '/recetas/10/cocinar?porciones=5',
+    )
+    expect(screen.getByRole('link', { name: 'Ponerla hoy en el plan' })).toBeInTheDocument()
+
+    await usuario.click(portada)
+    const video = screen.getByTitle('Video de Sopa de lentejas')
+    expect(video.getAttribute('src')).toMatch(
+      /^https:\/\/www\.youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?start=30&end=90&autoplay=1/,
+    )
   })
 })

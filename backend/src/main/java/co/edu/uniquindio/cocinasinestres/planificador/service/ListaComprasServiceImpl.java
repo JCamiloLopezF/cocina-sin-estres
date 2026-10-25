@@ -1,7 +1,10 @@
 package co.edu.uniquindio.cocinasinestres.planificador.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
+import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.MovimientosDespensa;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.StockEnDespensa;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ItemListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
@@ -18,8 +21,12 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -28,10 +35,17 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Genera la lista de compras agregando las cantidades de ingredientes por producto
  * y descontando lo que el hogar ya tiene en su despensa: solo se compra lo que falta.
+ *
+ * <p>Con la despensa automática (ADR-24) además: no cuenta lo ya preparado, suma la
+ * porción de quien tiene alergia, repone lo que quedó por debajo del mínimo y, al marcar
+ * un producto como comprado, lo pasa a la despensa con su vencimiento estimado.</p>
  */
 @Service
 public class ListaComprasServiceImpl implements ListaComprasService {
     private static final String ERROR_RECURSO_NO_ENCONTRADO = "RECURSO_NO_ENCONTRADO";
+    private static final String MOTIVO_PLAN = "PLAN";
+    private static final String MOTIVO_REPONER = "REPONER";
+    private static final String MOTIVO_ALERGIA = "ALERGIA";
 
     private final PlanSemanalRepository planSemanalRepository;
     private final ComidaPlanRepository comidaPlanRepository;
@@ -39,6 +53,8 @@ public class ListaComprasServiceImpl implements ListaComprasService {
     private final ItemListaComprasRepository itemListaComprasRepository;
     private final JdbcTemplate jdbcTemplate;
     private final StockEnDespensa stockEnDespensa;
+    private final MovimientosDespensa movimientosDespensa;
+    private final ComprasPorAlergias comprasPorAlergias;
     private final Clock reloj;
 
     public ListaComprasServiceImpl(
@@ -48,6 +64,8 @@ public class ListaComprasServiceImpl implements ListaComprasService {
         ItemListaComprasRepository itemListaComprasRepository,
         JdbcTemplate jdbcTemplate,
         StockEnDespensa stockEnDespensa,
+        MovimientosDespensa movimientosDespensa,
+        ComprasPorAlergias comprasPorAlergias,
         Clock reloj) {
         this.planSemanalRepository = planSemanalRepository;
         this.comidaPlanRepository = comidaPlanRepository;
@@ -55,7 +73,13 @@ public class ListaComprasServiceImpl implements ListaComprasService {
         this.itemListaComprasRepository = itemListaComprasRepository;
         this.jdbcTemplate = jdbcTemplate;
         this.stockEnDespensa = stockEnDespensa;
+        this.movimientosDespensa = movimientosDespensa;
+        this.comprasPorAlergias = comprasPorAlergias;
         this.reloj = reloj;
+    }
+
+    /** Un producto que falta, por qué y con qué prioridad (1 = indispensable). */
+    private record Faltante(BigDecimal cantidad, String motivo, int prioridad) {
     }
 
     @Override
@@ -63,127 +87,170 @@ public class ListaComprasServiceImpl implements ListaComprasService {
     public void generarListaCompras(Long planSemanalId) {
         PlanSemanal plan = planSemanalRepository.findById(planSemanalId)
             .orElseThrow(() -> new DatosInvalidosException(ERROR_RECURSO_NO_ENCONTRADO, "Plan no encontrado"));
+        Long hogarId = plan.getHogar().getId();
 
-        // Obtener conteo de recetas en el plan (receta_id -> ocurrencias)
-        Map<Long, Integer> recetaCounts = comidaPlanRepository.findByPlanSemanal_IdOrderByDiaAscTipoComidaAsc(planSemanalId)
+        // Lo que ya se preparó no se vuelve a comprar: sus ingredientes ya salieron de la
+        // despensa (KAN-16).
+        List<ComidaPlan> pendientes = comidaPlanRepository.findByPlanSemanal_IdOrderByDiaAscTipoComidaAsc(planSemanalId)
             .stream()
-            .map(ComidaPlan::getRecetaId)
-            .collect(Collectors.toMap(r -> r, r -> 1, Integer::sum));
+            .filter(c -> !c.isPreparada())
+            .toList();
 
-        if (recetaCounts.isEmpty()) {
-            // Si no hay recetas, borramos lista existente si la hubiera
-            borrarListaSiExiste(planSemanalId);
-            return;
+        Map<Long, BigDecimal> requeridos = new HashMap<>();
+        if (!pendientes.isEmpty()) {
+            // Ingredientes multiplicados por las veces que está la receta. Los opcionales
+            // no se compran (igual que en el costo del plan, KAN-24).
+            String sql = """
+                SELECT ir.producto_id AS producto_id,
+                       SUM(ir.cantidad * occ.cnt) AS cantidad_total
+                FROM ingrediente_receta ir
+                JOIN (
+                    SELECT receta_id, COUNT(*) AS cnt
+                    FROM comida_plan
+                    WHERE plan_semanal_id = ? AND preparada = FALSE
+                    GROUP BY receta_id
+                ) occ ON ir.receta_id = occ.receta_id
+                WHERE ir.opcional = FALSE
+                GROUP BY ir.producto_id
+                """;
+            for (Map<String, Object> row : jdbcTemplate.queryForList(sql, planSemanalId)) {
+                Number prodIdNum = (Number) row.get("producto_id");
+                Number cantNum = (Number) row.get("cantidad_total");
+                if (prodIdNum != null && cantNum != null) {
+                    requeridos.put(prodIdNum.longValue(), new BigDecimal(cantNum.toString()));
+                }
+            }
         }
 
-        // SQL: agregamos ingredientes multiplicados por ocurrencias. Los opcionales
-        // no se compran (igual que en el costo del plan, KAN-24).
-        // Esta query retorna producto_id y cantidad_total (DECIMAL)
-        String sql = """
-            SELECT ir.producto_id AS producto_id,
-                   SUM(ir.cantidad * occ.cnt) AS cantidad_total
-            FROM ingrediente_receta ir
-            JOIN (
-                SELECT receta_id, COUNT(*) AS cnt
-                FROM comida_plan
-                WHERE plan_semanal_id = ?
-                GROUP BY receta_id
-            ) occ ON ir.receta_id = occ.receta_id
-            WHERE ir.opcional = FALSE
-            GROUP BY ir.producto_id
-            """;
-
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, planSemanalId);
-
-        // Map producto_id -> cantidad_total (BigDecimal)
-        Map<Long, BigDecimal> cantidades = new HashMap<>();
-        for (Map<String, Object> row : rows) {
-            Number prodIdNum = (Number) row.get("producto_id");
-            Number cantNum = (Number) row.get("cantidad_total");
-            if (prodIdNum == null || cantNum == null) continue;
-            Long productoId = prodIdNum.longValue();
-            BigDecimal cantidad = new BigDecimal(cantNum.toString());
-            cantidades.put(productoId, cantidad);
-        }
-
-        if (cantidades.isEmpty()) {
-            // Sin ingredientes relevantes: eliminar lista existente y salir.
-            borrarListaSiExiste(planSemanalId);
-            return;
-        }
+        // La porción de reemplazo o el plato aparte de quien tiene alergia (ADR-24).
+        Set<Long> soloPorAlergia = new HashSet<>();
+        comprasPorAlergias.extras(plan.getHogar(), pendientes).forEach((productoId, cantidad) -> {
+            if (!requeridos.containsKey(productoId)) {
+                soloPorAlergia.add(productoId);
+            }
+            requeridos.merge(productoId, cantidad, BigDecimal::add);
+        });
 
         // Cruce con la despensa: lo que el hogar ya tiene (y no está vencido) no se
         // compra. La regla de vencimiento la aplica el puerto StockEnDespensa.
-        Map<Long, BigDecimal> stock =
-            stockEnDespensa.disponibles(plan.getHogar().getId(), LocalDate.now(reloj));
+        Map<Long, BigDecimal> stock = stockEnDespensa.disponibles(hogarId, LocalDate.now(reloj));
 
-        Map<Long, BigDecimal> faltantes = new HashMap<>();
-        cantidades.forEach((productoId, requerido) -> {
-            BigDecimal disponible = stock.getOrDefault(productoId, BigDecimal.ZERO);
-            BigDecimal faltante = requerido.subtract(disponible);
+        Map<Long, Faltante> faltantes = new LinkedHashMap<>();
+        requeridos.forEach((productoId, requerido) -> {
+            BigDecimal faltante = requerido.subtract(stock.getOrDefault(productoId, BigDecimal.ZERO));
             if (faltante.compareTo(BigDecimal.ZERO) > 0) {
-                faltantes.put(productoId, faltante);
+                faltantes.put(productoId, new Faltante(
+                    faltante, soloPorAlergia.contains(productoId) ? MOTIVO_ALERGIA : MOTIVO_PLAN, 1));
+            }
+        });
+        // Lo que quedó por debajo de su mínimo se repone solo, con menos prioridad (ADR-24).
+        stockEnDespensa.bajoMinimo(hogarId).forEach((productoId, falta) -> {
+            if (!faltantes.containsKey(productoId) && falta != null && falta.compareTo(BigDecimal.ZERO) > 0) {
+                faltantes.put(productoId, new Faltante(falta, MOTIVO_REPONER, 2));
             }
         });
 
-        if (faltantes.isEmpty()) {
+        Optional<ListaCompras> existente = listaComprasRepository.findByPlanSemanal_Id(planSemanalId);
+        List<ItemListaCompras> anteriores = existente
+            .map(l -> itemListaComprasRepository.findByListaCompras_Id(l.getId()))
+            .orElse(List.of());
+        boolean hayComprados = anteriores.stream().anyMatch(ItemListaCompras::isComprado);
+
+        if (faltantes.isEmpty() && !hayComprados) {
             // El hogar ya tiene todo: no hay nada que comprar.
             borrarListaSiExiste(planSemanalId);
             return;
         }
 
-        // Crear o reusar la lista de compras
-        ListaCompras lista = listaComprasRepository.findByPlanSemanal_Id(planSemanalId)
-            .orElseGet(() -> listaComprasRepository.save(new ListaCompras(plan)));
+        ListaCompras lista = existente.orElseGet(() -> listaComprasRepository.save(new ListaCompras(plan)));
 
-        // Borrar items previos (forzar flush para evitar violaciones de unique key)
-        itemListaComprasRepository.deleteByListaCompras_Id(lista.getId());
-        itemListaComprasRepository.flush();
+        // Lo ya comprado se conserva (está en la despensa y se puede deshacer). Si de ese
+        // producto vuelve a faltar, la fila se reemplaza por la nueva.
+        List<ItemListaCompras> aBorrar = anteriores.stream()
+            .filter(i -> !i.isComprado() || faltantes.containsKey(i.getProductoId()))
+            .toList();
+        if (!aBorrar.isEmpty()) {
+            itemListaComprasRepository.deleteAll(aBorrar);
+            // forzar el delete antes de insertar, para no chocar con la llave única
+            itemListaComprasRepository.flush();
+        }
+        if (faltantes.isEmpty()) {
+            return;
+        }
 
-        // Para calcular costo estimado consultamos producto por producto
-        String sqlProducto = "SELECT cantidad_unidad_compra, precio_unidad_compra FROM producto WHERE id = ?";
-
-        List<ItemListaCompras> items = faltantes.entrySet().stream().map(entry -> {
-            Long productoId = entry.getKey();
-            BigDecimal cantidadTotal = entry.getValue();
-
-            // Default costo = 0
-            BigDecimal costoEstimado = BigDecimal.ZERO;
-
-            Map<String, Object> prod = null;
-            try {
-                prod = jdbcTemplate.queryForMap(sqlProducto, productoId);
-            } catch (Exception e) {
-                // si no existe el producto o hay error, dejamos costo en 0
-                prod = null;
-            }
-
-            if (prod != null) {
-                Number cantidadUnidadNum = (Number) prod.get("cantidad_unidad_compra");
-                Number precioNum = (Number) prod.get("precio_unidad_compra");
-                if (cantidadUnidadNum != null && precioNum != null) {
-                    try {
-                        BigDecimal cantidadUnidad = new BigDecimal(cantidadUnidadNum.toString());
-                        BigDecimal precioUnidad = new BigDecimal(precioNum.toString());
-                        if (cantidadUnidad.compareTo(BigDecimal.ZERO) > 0 && precioUnidad.compareTo(BigDecimal.ZERO) >= 0) {
-                            // cantidadTotal puede tener 3 decimales; costo = (cantidadTotal / cantidadUnidad) * precioUnidad
-                            costoEstimado = cantidadTotal.divide(cantidadUnidad, 6, RoundingMode.HALF_UP)
-                                .multiply(precioUnidad)
-                                .setScale(2, RoundingMode.HALF_UP);
-                        }
-                    } catch (Exception e) {
-                        // cualquier excepción dejamos costo 0
-                        costoEstimado = BigDecimal.ZERO;
-                    }
-                }
-            }
-
-            // prioridad por defecto = 1
-            return new ItemListaCompras(lista, productoId, cantidadTotal.setScale(3, RoundingMode.HALF_UP), costoEstimado, 1);
-        }).collect(Collectors.toList());
-
-        // Guardar items
+        List<ItemListaCompras> items = faltantes.entrySet().stream()
+            .map(e -> new ItemListaCompras(
+                lista,
+                e.getKey(),
+                e.getValue().cantidad().setScale(3, RoundingMode.HALF_UP),
+                costoEstimado(e.getKey(), e.getValue().cantidad()),
+                e.getValue().prioridad(),
+                e.getValue().motivo()))
+            .collect(Collectors.toList());
         itemListaComprasRepository.saveAll(items);
+    }
+
+    @Override
+    @Transactional
+    public CompraResponse marcarComprado(PlanSemanal plan, Long itemId, boolean comprado) {
+        ItemListaCompras item = itemListaComprasRepository.findById(itemId)
+            .filter(i -> i.getListaCompras().getPlanSemanal().getId().equals(plan.getId()))
+            .orElseThrow(() -> new RecursoNoEncontradoException(
+                ERROR_RECURSO_NO_ENCONTRADO, "Ese producto no está en la lista de compras."));
+        Long hogarId = plan.getHogar().getId();
+        LocalDate hoy = LocalDate.now(reloj);
+        LocalDate venceEn = null;
+
+        if (comprado && !item.isComprado()) {
+            // Se compra en presentaciones completas: si faltan 300 g de arroz, entra la bolsa de 1 kg.
+            MovimientosDespensa.DatosCompra datos = movimientosDespensa.datosCompra(item.getProductoId());
+            BigDecimal cantidad = enPresentaciones(item.getCantidad(), datos.presentacion());
+            LocalDate venceNuevo = datos.vidaUtilDias() == null ? null : hoy.plusDays(datos.vidaUtilDias());
+            venceEn = movimientosDespensa.agregar(hogarId, item.getProductoId(), cantidad, venceNuevo, hoy);
+            item.setComprado(true);
+            item.setCantidadAgregada(cantidad);
+        } else if (!comprado && item.isComprado()) {
+            if (item.getCantidadAgregada() != null) {
+                movimientosDespensa.quitar(hogarId, item.getProductoId(), item.getCantidadAgregada());
+            }
+            item.setComprado(false);
+            item.setCantidadAgregada(null);
+        }
+        return new CompraResponse(aItem(itemListaComprasRepository.save(item)), venceEn);
+    }
+
+    /** Redondea hacia arriba a presentaciones completas; sin presentación, la cantidad tal cual. */
+    static BigDecimal enPresentaciones(BigDecimal cantidad, BigDecimal presentacion) {
+        if (presentacion == null || presentacion.signum() <= 0) {
+            return cantidad.setScale(3, RoundingMode.HALF_UP);
+        }
+        BigDecimal unidades = cantidad.divide(presentacion, 0, RoundingMode.CEILING);
+        return presentacion.multiply(unidades.max(BigDecimal.ONE)).setScale(3, RoundingMode.HALF_UP);
+    }
+
+    /** Costo de una cantidad con el precio de referencia: {@code cantidad / presentación * precio}. */
+    private BigDecimal costoEstimado(Long productoId, BigDecimal cantidad) {
+        Map<String, Object> prod;
+        try {
+            prod = jdbcTemplate.queryForMap(
+                "SELECT cantidad_unidad_compra, precio_unidad_compra FROM producto WHERE id = ?", productoId);
+        } catch (Exception e) {
+            // si no existe el producto o hay error, dejamos costo en 0
+            return BigDecimal.ZERO;
+        }
+        Number cantidadUnidadNum = (Number) prod.get("cantidad_unidad_compra");
+        Number precioNum = (Number) prod.get("precio_unidad_compra");
+        if (cantidadUnidadNum == null || precioNum == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal cantidadUnidad = new BigDecimal(cantidadUnidadNum.toString());
+        BigDecimal precioUnidad = new BigDecimal(precioNum.toString());
+        if (cantidadUnidad.compareTo(BigDecimal.ZERO) <= 0 || precioUnidad.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return cantidad.divide(cantidadUnidad, 6, RoundingMode.HALF_UP)
+            .multiply(precioUnidad)
+            .setScale(2, RoundingMode.HALF_UP);
     }
 
     @Override
@@ -229,7 +296,9 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             item.getCantidad(),
             item.getCostoEstimado(),
             item.getPrioridad(),
-            item.isComprado()
+            item.isComprado(),
+            item.getMotivo(),
+            item.getCantidadAgregada()
         );
     }
 

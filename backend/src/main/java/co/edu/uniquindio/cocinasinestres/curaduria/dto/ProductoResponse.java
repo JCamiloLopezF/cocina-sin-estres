@@ -19,6 +19,7 @@ import java.math.BigDecimal;
  * @param capacidadReferencia  cantidad que equivale a "Lleno"; solo para granel
  * @param esBasico             si es un producto básico de la despensa
  * @param activo               si el producto está activo en el catálogo
+ * @param vidaUtilDias         cuántos días dura desde que se compra; puede faltar
  */
 public record ProductoResponse(
     Long id,
@@ -31,6 +32,7 @@ public record ProductoResponse(
     BigDecimal precioUnidadCompra,
     BigDecimal capacidadReferencia,
     boolean esBasico,
-    boolean activo
+    boolean activo,
+    Integer vidaUtilDias
 ) {
 }

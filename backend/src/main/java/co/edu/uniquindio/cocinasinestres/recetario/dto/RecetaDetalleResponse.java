@@ -13,6 +13,9 @@ import java.util.List;
  * @param preparacionPrevia indicación previa (p. ej. remojar), puede ser {@code null}
  * @param pasos             un paso por línea, ya separados y sin numerar
  * @param ingredientes      productos del catálogo que pide la receta
+ * @param restricciones     alergias y condiciones de los ingredientes obligatorios; los
+ *                          opcionales se pueden omitir, así que no cuentan
+ * @param video             cómo se hace, en video; {@code null} si todavía no tiene
  */
 public record RecetaDetalleResponse(
     Long id,
@@ -22,6 +25,8 @@ public record RecetaDetalleResponse(
     int porciones,
     String preparacionPrevia,
     List<String> pasos,
-    List<IngredienteRecetaResponse> ingredientes
+    List<IngredienteRecetaResponse> ingredientes,
+    List<String> restricciones,
+    VideoRecetaResponse video
 ) {
 }

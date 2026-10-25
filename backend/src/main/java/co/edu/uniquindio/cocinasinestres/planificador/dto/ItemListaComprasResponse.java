@@ -11,6 +11,9 @@ import java.math.BigDecimal;
  * @param costoEstimado costo de esa cantidad con el precio de referencia del producto
  * @param prioridad     prioridad de compra (1 es la más alta)
  * @param comprado      si la usuaria ya lo marcó como comprado
+ * @param motivo        {@code PLAN} (lo piden las recetas), {@code REPONER} (quedó por debajo
+ *                      del mínimo) o {@code ALERGIA} (reemplazo o plato aparte de alguien)
+ * @param cantidadAgregada cuánto entró a la despensa al comprarlo (en presentaciones completas)
  */
 public record ItemListaComprasResponse(
     Long id,
@@ -18,6 +21,8 @@ public record ItemListaComprasResponse(
     BigDecimal cantidad,
     BigDecimal costoEstimado,
     Integer prioridad,
-    boolean comprado
+    boolean comprado,
+    String motivo,
+    BigDecimal cantidadAgregada
 ) {
 }
