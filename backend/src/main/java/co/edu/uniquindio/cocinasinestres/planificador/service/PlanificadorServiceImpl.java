@@ -9,6 +9,7 @@ import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.MovimientosDespensa;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.RegistroUso;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
@@ -48,6 +49,7 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
     private final JdbcTemplate jdbcTemplate;
     private final ListaComprasService listaComprasService;
     private final MovimientosDespensa movimientosDespensa;
+    private final RegistroUso registroUso;
 
     public PlanificadorServiceImpl(
         PlanSemanalRepository planSemanalRepository,
@@ -56,7 +58,8 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
         HogarRepository hogarRepository,
         JdbcTemplate jdbcTemplate,
         ListaComprasService listaComprasService,
-        MovimientosDespensa movimientosDespensa) {
+        MovimientosDespensa movimientosDespensa,
+        RegistroUso registroUso) {
         this.planSemanalRepository = planSemanalRepository;
         this.comidaPlanRepository = comidaPlanRepository;
         this.usuarioActualService = usuarioActualService;
@@ -64,6 +67,7 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
         this.jdbcTemplate = jdbcTemplate;
         this.listaComprasService = listaComprasService;
         this.movimientosDespensa = movimientosDespensa;
+        this.registroUso = registroUso;
     }
 
     @Override
@@ -169,6 +173,8 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
 
             // Generación síncrona de lista de compras (se ejecuta antes de responder)
             listaComprasService.generarListaCompras(plan.getId());
+            // Tiempo para armar la semana (KAN-54): se anota la primera vez que queda completa.
+            registroUso.revisarPlanCompleto(plan.getId());
             log.info("Comida asignada: planId={} dia={} tipo={} receta={}", planId, request.dia(), request.tipoComida(), request.recetaId());
             return aComidaPlanResponse(comida);
         } catch (DataIntegrityViolationException dive) {
@@ -228,6 +234,7 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             // marcarla otra vez no descuenta de nuevo.
             int descontados = movimientosDespensa.descontarReceta(hogar.getId(), comida.getRecetaId());
             log.info("Comida preparada: planId={} comidaId={} productosDescontados={}", planId, comidaId, descontados);
+            registroUso.preparacion(hogar.getId(), comida.getRecetaId(), comida.getId());
         }
         comida.setPreparada(true);
         comida.setPreparadaEn(LocalDateTime.now(ZoneOffset.UTC));

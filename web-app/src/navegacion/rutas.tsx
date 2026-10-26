@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router'
 import { PantallaAdmin } from '../features/admin/PantallaAdmin'
+import { PantallaAnalisis } from '../features/admin/PantallaAnalisis'
 import { PantallaBienvenida } from '../features/auth/PantallaBienvenida'
 import { PantallaAvisos } from '../features/avisos/PantallaAvisos'
 import { PantallaEntrar } from '../features/auth/PantallaEntrar'
@@ -94,7 +95,15 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
         },
         {
           element: <RequiereRol roles={['ADMIN']} />,
-          children: [{ element: <DisenoOperativo />, children: [{ path: '/admin', element: <PantallaAdmin /> }] }],
+          children: [
+            {
+              element: <DisenoOperativo />,
+              children: [
+                { path: '/admin', element: <PantallaAdmin /> },
+                { path: '/admin/analisis', element: <PantallaAnalisis /> },
+              ],
+            },
+          ],
         },
       ],
     },

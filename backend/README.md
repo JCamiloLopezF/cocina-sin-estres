@@ -86,6 +86,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `PUT /api/curaduria/productos/{id}` | Actualiza un producto. Si no cambia ningún campo, no se modifica el responsable ni se audita. |
 | `DELETE /api/curaduria/productos/{id}` | Desactiva el producto (no lo borra). Responde 204; repetirlo no tiene efecto. |
 | `GET /api/admin/cuentas` | Lista las cuentas con su rol y si están activas. Solo `ADMIN`. |
+| `GET /api/admin/analisis` | (ADMIN) Análisis del uso y los indicadores del Plan de Calidad (KAN-54): `uso` (usuarias, hogares activos, planes, recetas cocinadas, modo rescate), `indicadores` por proceso con `valor`, `meta`, `cumple` y `muestra`, recetas más cocinadas y planeadas y las que no se usan. Eventos de los últimos 30 días; planes de las últimas 8 semanas. Ver `docs/calidad/indicadores.md`. |
 | `PUT /api/admin/cuentas/{id}` | Cambia el `rol` (`USUARIA`, `CURADOR`, `ADMIN`) o `activo` de otra cuenta. Un administrador no puede cambiarse a sí mismo (409 `ADMIN_CUENTA_PROPIA`). |
 | `GET /api/items-despensa` | Lista la despensa del hogar de la usuaria. Parámetros opcionales: `filtro` (`TODO`, `POR_VENCER`, `BAJO_MINIMO`) y `buscar`. |
 | `GET /api/items-despensa/resumen` | Totales para la pantalla de inicio: `total`, `porVencer` y `bajoMinimo`. |
