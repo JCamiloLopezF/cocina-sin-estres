@@ -14,9 +14,9 @@ export function DisenoAcceso({ titulo, detalle, children }: Props) {
     <div className="acceso">
       <div className="acceso__portada">
         <div className="acceso__portada-interior">
-          <p className="acceso__nombre" aria-label="Cocina sin estrés">
-            <span aria-hidden="true">Cocina</span>
-            <span aria-hidden="true">sin estrés</span>
+          {/* Dos líneas en pantalla; los lectores de pantalla lo leen seguido. Un <p> no admite aria-label. */}
+          <p className="acceso__nombre">
+            <span>Cocina</span> <span>sin estrés</span>
           </p>
           <p className="acceso__lema">Lo que hay en tu despensa, lo que vas a cocinar y lo que cuesta, en un solo lugar.</p>
           <Olla className="acceso__vapor" />
