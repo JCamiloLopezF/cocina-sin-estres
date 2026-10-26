@@ -1,4 +1,4 @@
-import { act, screen, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { backendFalso } from '../../prueba/backendFalso'
@@ -113,7 +113,8 @@ describe('Modo cocinar (pedido del profesor: la receta como tareas, con voz)', (
     const usuario = userEvent.setup()
 
     expect(await screen.findByRole('heading', { name: 'Te acompaño paso a paso' })).toBeInTheDocument()
-    expect(dichas.at(-1)).toMatch(/Te acompaño paso a paso/)
+    // El asistente habla en un efecto, después de pintar: se espera a que hable.
+    await waitFor(() => expect(dichas.at(-1)).toMatch(/Te acompaño paso a paso/))
     await usuario.click(screen.getByRole('button', { name: 'Siguiente' }))
     await usuario.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(screen.getByText(/«siguiente», «repite», «atrás» o «temporizador»/)).toBeInTheDocument()
@@ -165,7 +166,7 @@ describe('Modo cocinar (pedido del profesor: la receta como tareas, con voz)', (
     const usuario = userEvent.setup()
 
     expect(await screen.findByRole('heading', { name: 'Cocina tapado 20 minutos.' })).toBeInTheDocument()
-    expect(dichas.at(-1)).toMatch(/^Seguimos donde ibas\. Último paso\. Paso 2 de 2/)
+    await waitFor(() => expect(dichas.at(-1)).toMatch(/^Seguimos donde ibas\. Último paso\. Paso 2 de 2/))
 
     await usuario.click(screen.getByRole('button', { name: /Contar 20 minutos/ }))
     const temporizador = screen.getByRole('region', { name: 'Temporizador del paso 2' })
