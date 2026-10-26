@@ -46,6 +46,8 @@ public class ListaComprasServiceImpl implements ListaComprasService {
     private static final String MOTIVO_PLAN = "PLAN";
     private static final String MOTIVO_REPONER = "REPONER";
     private static final String MOTIVO_ALERGIA = "ALERGIA";
+    /** Lo más que cabe en {@code costo_real DECIMAL(12,2)}. */
+    private static final BigDecimal COSTO_MAXIMO = new BigDecimal("9999999999.99");
 
     private final PlanSemanalRepository planSemanalRepository;
     private final ComidaPlanRepository comidaPlanRepository;
@@ -178,14 +180,29 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             return;
         }
 
+        // Lo que la usuaria corrigió que paga se conserva si el producto sigue pidiendo la
+        // misma cantidad; si la cantidad cambió, vuelve a contar el estimado (KAN-26).
+        Map<Long, ItemListaCompras> corregidos = new HashMap<>();
+        aBorrar.stream()
+            .filter(i -> i.getCostoReal() != null)
+            .forEach(i -> corregidos.put(i.getProductoId(), i));
+
         List<ItemListaCompras> items = faltantes.entrySet().stream()
-            .map(e -> new ItemListaCompras(
-                lista,
-                e.getKey(),
-                e.getValue().cantidad().setScale(3, RoundingMode.HALF_UP),
-                costoEstimado(e.getKey(), e.getValue().cantidad()),
-                e.getValue().prioridad(),
-                e.getValue().motivo()))
+            .map(e -> {
+                BigDecimal cantidad = e.getValue().cantidad().setScale(3, RoundingMode.HALF_UP);
+                ItemListaCompras item = new ItemListaCompras(
+                    lista,
+                    e.getKey(),
+                    cantidad,
+                    costoEstimado(e.getKey(), e.getValue().cantidad()),
+                    e.getValue().prioridad(),
+                    e.getValue().motivo());
+                ItemListaCompras anterior = corregidos.get(e.getKey());
+                if (anterior != null && anterior.getCantidad().compareTo(cantidad) == 0) {
+                    item.setCostoReal(anterior.getCostoReal());
+                }
+                return item;
+            })
             .collect(Collectors.toList());
         itemListaComprasRepository.saveAll(items);
     }
@@ -217,6 +234,22 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             item.setCantidadAgregada(null);
         }
         return new CompraResponse(aItem(itemListaComprasRepository.save(item)), venceEn);
+    }
+
+    @Override
+    @Transactional
+    public ListaComprasResponse cambiarCosto(PlanSemanal plan, Long itemId, BigDecimal costoReal) {
+        if (costoReal != null && (costoReal.signum() < 0 || costoReal.compareTo(COSTO_MAXIMO) > 0)) {
+            throw new DatosInvalidosException(
+                "LISTA_COSTO_INVALIDO", "Escribe cuánto pagaste: un valor en pesos, sin signo negativo.");
+        }
+        ItemListaCompras item = itemListaComprasRepository.findById(itemId)
+            .filter(i -> i.getListaCompras().getPlanSemanal().getId().equals(plan.getId()))
+            .orElseThrow(() -> new RecursoNoEncontradoException(
+                ERROR_RECURSO_NO_ENCONTRADO, "Ese producto no está en la lista de compras."));
+        item.setCostoReal(costoReal == null ? null : costoReal.setScale(2, RoundingMode.HALF_UP));
+        itemListaComprasRepository.save(item);
+        return consultar(plan.getId());
     }
 
     /** Redondea hacia arriba a presentaciones completas; sin presentación, la cantidad tal cual. */
@@ -267,8 +300,9 @@ public class ListaComprasServiceImpl implements ListaComprasService {
                     .map(ListaComprasServiceImpl::aItem)
                     .toList();
 
+                // Lo que la usuaria corrigió que pagó cuenta en vez del estimado (KAN-26).
                 BigDecimal costoTotal = items.stream()
-                    .map(ItemListaComprasResponse::costoEstimado)
+                    .map(i -> i.costoReal() != null ? i.costoReal() : i.costoEstimado())
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 return new ListaComprasResponse(
@@ -295,6 +329,7 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             item.getProductoId(),
             item.getCantidad(),
             item.getCostoEstimado(),
+            item.getCostoReal(),
             item.getPrioridad(),
             item.isComprado(),
             item.getMotivo(),

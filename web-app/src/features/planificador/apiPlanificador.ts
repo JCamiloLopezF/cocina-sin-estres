@@ -48,6 +48,14 @@ export function marcarComprado(planId: number, itemId: number, comprado: boolean
   })
 }
 
+/** Corrige lo que pagó de verdad por un producto (KAN-26); `null` vuelve al estimado. Devuelve la lista con el total ajustado. */
+export function cambiarCostoItem(planId: number, itemId: number, costoReal: number | null) {
+  return pedir<ListaCompras>(`/planes-semanales/${planId}/lista-compras/items/${itemId}/costo`, {
+    metodo: 'PUT',
+    cuerpo: { costoReal },
+  })
+}
+
 export function listaCompras(planId: number, senal?: AbortSignal) {
   return pedir<ListaCompras>(`/planes-semanales/${planId}/lista-compras`, { senal })
 }

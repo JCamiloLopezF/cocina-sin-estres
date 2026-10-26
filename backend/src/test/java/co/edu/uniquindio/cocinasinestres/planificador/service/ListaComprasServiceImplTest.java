@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -150,7 +151,8 @@ class ListaComprasServiceImplTest {
     /** Plan persistido (id 500) cuyo hogar responde id 10. */
     private PlanSemanal planGeneracion() {
         Hogar hogar = mock(Hogar.class);
-        when(hogar.getId()).thenReturn(10L);
+        // lenient: corregir el costo (KAN-26) no necesita saber de qué hogar es el plan.
+        lenient().when(hogar.getId()).thenReturn(10L);
         PlanSemanal plan = new PlanSemanal(hogar, LocalDate.of(2026, 10, 12));
         ReflectionTestUtils.setField(plan, "id", 500L);
         return plan;
@@ -348,6 +350,87 @@ class ListaComprasServiceImplTest {
         assertEquals(new BigDecimal("1000.000"), ListaComprasServiceImpl.enPresentaciones(new BigDecimal("1000"), new BigDecimal("1000")));
         assertEquals(new BigDecimal("2000.000"), ListaComprasServiceImpl.enPresentaciones(new BigDecimal("1001"), new BigDecimal("1000")));
         assertEquals(new BigDecimal("2.000"), ListaComprasServiceImpl.enPresentaciones(new BigDecimal("2"), null));
+    }
+
+    // ---------------------------------------------------------------------
+    // Costo editable (KAN-26)
+    // ---------------------------------------------------------------------
+
+    @Test
+    void consultar_conPrecioCorregido_elTotalUsaLoQuePago() {
+        when(listaComprasRepository.findByPlanSemanal_Id(300L)).thenReturn(Optional.of(lista));
+        ItemListaCompras arroz = item(1L, "4500.00", 1);
+        arroz.setCostoReal(new BigDecimal("5200.00"));
+        when(itemListaComprasRepository.findByListaCompras_Id(7L)).thenReturn(List.of(arroz, item(2L, "18000.00", 1)));
+
+        ListaComprasResponse respuesta = service.consultar(300L);
+
+        assertEquals(new BigDecimal("23200.00"), respuesta.costoTotal());
+        assertEquals(new BigDecimal("4500.00"), respuesta.items().get(0).costoEstimado());
+        assertEquals(new BigDecimal("5200.00"), respuesta.items().get(0).costoReal());
+        assertNull(respuesta.items().get(1).costoReal());
+    }
+
+    @Test
+    void cambiarCosto_guardaLoQuePagoYDevuelveElTotalAjustado() {
+        ItemListaCompras arroz = new ItemListaCompras(lista, 1L, new BigDecimal("300.000"), new BigDecimal("1350.00"), 1);
+        PlanSemanal plan = planConItem(arroz);
+        ListaCompras deEstePlan = arroz.getListaCompras();
+        ReflectionTestUtils.setField(deEstePlan, "id", 8L);
+        when(listaComprasRepository.findByPlanSemanal_Id(500L)).thenReturn(Optional.of(deEstePlan));
+        when(itemListaComprasRepository.findByListaCompras_Id(8L)).thenReturn(List.of(arroz));
+
+        ListaComprasResponse respuesta = service.cambiarCosto(plan, 70L, new BigDecimal("1800"));
+
+        assertEquals(new BigDecimal("1800.00"), arroz.getCostoReal());
+        assertEquals(new BigDecimal("1800.00"), respuesta.costoTotal());
+
+        // Con null vuelve al estimado.
+        respuesta = service.cambiarCosto(plan, 70L, null);
+        assertNull(arroz.getCostoReal());
+        assertEquals(new BigDecimal("1350.00"), respuesta.costoTotal());
+    }
+
+    @Test
+    void cambiarCosto_unValorNegativoSeRechaza() {
+        PlanSemanal plan = new PlanSemanal(mock(Hogar.class), LocalDate.of(2026, 10, 12));
+
+        assertThrows(co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException.class,
+            () -> service.cambiarCosto(plan, 70L, new BigDecimal("-1")));
+        verify(itemListaComprasRepository, never()).save(any(ItemListaCompras.class));
+    }
+
+    @Test
+    void generar_conservaElPrecioCorregidoSiLaCantidadNoCambia() {
+        planQuePide(1L, "500.000");
+        when(stockEnDespensa.disponibles(10L, HOY)).thenReturn(Map.of());
+        when(listaComprasRepository.findByPlanSemanal_Id(500L)).thenReturn(Optional.of(lista));
+        ItemListaCompras corregido = new ItemListaCompras(lista, 1L, new BigDecimal("500.000"), new BigDecimal("2000.00"), 1);
+        corregido.setCostoReal(new BigDecimal("2600.00"));
+        when(itemListaComprasRepository.findByListaCompras_Id(7L)).thenReturn(List.of(corregido));
+        productoA4000(1L);
+
+        service.generarListaCompras(500L);
+
+        verify(itemListaComprasRepository).saveAll(itemsCaptor.capture());
+        assertEquals(new BigDecimal("2600.00"), itemsCaptor.getValue().get(0).getCostoReal());
+    }
+
+    @Test
+    void generar_siCambiaLaCantidadVuelveAlEstimado() {
+        planQuePide(1L, "800.000");
+        when(stockEnDespensa.disponibles(10L, HOY)).thenReturn(Map.of());
+        when(listaComprasRepository.findByPlanSemanal_Id(500L)).thenReturn(Optional.of(lista));
+        ItemListaCompras corregido = new ItemListaCompras(lista, 1L, new BigDecimal("500.000"), new BigDecimal("2000.00"), 1);
+        corregido.setCostoReal(new BigDecimal("2600.00"));
+        when(itemListaComprasRepository.findByListaCompras_Id(7L)).thenReturn(List.of(corregido));
+        productoA4000(1L);
+
+        service.generarListaCompras(500L);
+
+        verify(itemListaComprasRepository).saveAll(itemsCaptor.capture());
+        assertNull(itemsCaptor.getValue().get(0).getCostoReal());
+        assertEquals(new BigDecimal("3200.00"), itemsCaptor.getValue().get(0).getCostoEstimado());
     }
 
     private ItemListaCompras item(Long productoId, String costo, int prioridad) {

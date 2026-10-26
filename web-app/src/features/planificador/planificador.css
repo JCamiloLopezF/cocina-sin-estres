@@ -255,6 +255,14 @@
   border: var(--borde) solid var(--color-linea);
   border-radius: var(--radio-control);
   background: var(--color-superficie);
+}
+
+.compra__marca {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
   cursor: pointer;
 }
 
@@ -271,7 +279,47 @@
 
 .compra__costo {
   flex: none;
+  display: grid;
+  justify-items: end;
+  min-height: 2.75rem;
+  padding: var(--espacio-1) var(--espacio-2);
+  border: var(--borde) dashed var(--color-linea);
+  border-radius: var(--radio-control);
+  background: none;
+  color: inherit;
+  font: inherit;
   font-size: var(--texto-s);
+  cursor: pointer;
+}
+
+.compra__costo[aria-expanded='true'] {
+  border-style: solid;
+  border-color: var(--color-tinta);
+}
+
+.compra__valor {
+  font-weight: 700;
+}
+
+.compra__estimado {
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+}
+
+.compra-editar {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+}
+
+.compra-editar__acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-2);
 }
 
 .lista__acciones {

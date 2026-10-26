@@ -5,6 +5,7 @@ import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanSemanalResponse;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -35,6 +36,12 @@ public interface PlanificadorService {
      * (ADR-24). 404 si el plan o el ítem no son del hogar de la usuaria.
      */
     CompraResponse marcarComprado(Long planId, Long itemId, boolean comprado);
+
+    /**
+     * Corrige lo que la usuaria pagó por un producto de la lista y devuelve la lista con el
+     * total ajustado (KAN-26). 404 si el plan o el ítem no son del hogar de la usuaria.
+     */
+    ListaComprasResponse cambiarCostoItem(Long planId, Long itemId, BigDecimal costoReal);
 
     /**
      * La usuaria revisó la semana que la app armó sola y se queda con ella: deja de ser

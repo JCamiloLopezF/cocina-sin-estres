@@ -343,7 +343,7 @@ describe('Lista de compras (pantalla 31)', () => {
     const usuario = userEvent.setup()
 
     expect(await screen.findByText('2 productos')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Costo estimado' })).toHaveTextContent(/11\.600/)
+    expect(screen.getByRole('region', { name: 'Total de la lista' })).toHaveTextContent(/11\.600/)
     const indispensable = within(screen.getByRole('region', { name: 'Indispensable' }))
     expect(indispensable.getByText('Pollo · 500 g')).toBeInTheDocument()
     expect(indispensable.getByText('Arroz con pollo')).toBeInTheDocument()
@@ -358,6 +358,51 @@ describe('Lista de compras (pantalla 31)', () => {
 
     await usuario.click(screen.getByRole('checkbox', { name: /Pollo/ }))
     expect(await screen.findByText('Quitamos pollo de tu despensa.')).toBeInTheDocument()
+  })
+
+  it('se corrige lo que se pagó de verdad y el total se ajusta (KAN-26)', async () => {
+    const POLLO = { id: 1, productoId: 5, cantidad: 500, costoEstimado: 9800, prioridad: 1, comprado: true, motivo: 'PLAN' }
+    const ARROZ = { id: 2, productoId: 4, cantidad: 400, costoEstimado: 1800, prioridad: 1, comprado: false, motivo: 'PLAN' }
+    const { llamadas } = backendFalso({
+      ...conPlan([comida(71, 3, 'CENA', 11)]),
+      'GET /planes-semanales/7/lista-compras': () =>
+        respuestaJson({ id: 1, planSemanalId: 7, costoTotal: 11600, items: [POLLO, ARROZ] }),
+      'PUT /planes-semanales/7/lista-compras/items/1/costo': (cuerpo) => {
+        const costoReal = (cuerpo as { costoReal: number | null }).costoReal
+        return respuestaJson({
+          id: 1,
+          planSemanalId: 7,
+          costoTotal: (costoReal ?? 9800) + 1800,
+          items: [{ ...POLLO, costoReal }, ARROZ],
+        })
+      },
+    })
+    montarApp(crearServicioFalso(LUISA).servicio, '/plan/lista')
+    const usuario = userEvent.setup()
+
+    expect(await screen.findByText('¿Pagaste otro precio? Toca el valor del producto para corregirlo.')).toBeInTheDocument()
+    await usuario.click(screen.getByRole('button', { name: /Corregir el precio de Pollo/ }))
+    const formulario = screen.getByRole('form', { name: 'Precio de Pollo' })
+    await usuario.click(within(formulario).getByRole('button', { name: 'Guardar' }))
+    expect(within(formulario).getByText('Escribe cuánto pagaste, en pesos.')).toBeInTheDocument()
+
+    await usuario.type(within(formulario).getByLabelText('¿Cuánto pagaste por pollo?'), '$12.500')
+    await usuario.click(within(formulario).getByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByText(/Anotamos \$\s?12\.500 por pollo\. El total quedó en \$\s?14\.300\./)).toBeInTheDocument()
+    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toEqual({ costoReal: 12500 })
+    const total = screen.getByRole('region', { name: 'Total de la lista' })
+    expect(total).toHaveTextContent(/Total con tus precios/)
+    expect(total).toHaveTextContent(/14\.300/)
+    expect(screen.getByRole('button', { name: /Corregir el precio de Pollo: \$\s?12\.500/ })).toHaveTextContent(/estimado \$\s?9\.800/)
+    expect(screen.queryByRole('form', { name: 'Precio de Pollo' })).not.toBeInTheDocument()
+
+    // Volver al estimado.
+    await usuario.click(screen.getByRole('button', { name: /Corregir el precio de Pollo/ }))
+    await usuario.click(screen.getByRole('button', { name: 'Usar el estimado' }))
+    expect(await screen.findByText('Volvimos al precio estimado de pollo.')).toBeInTheDocument()
+    expect(llamadas.filter((l) => l.metodo === 'PUT').at(-1)?.cuerpo).toEqual({ costoReal: null })
+    expect(screen.getByRole('region', { name: 'Total de la lista' })).toHaveTextContent(/Costo estimado/)
   })
 
   it('si la despensa alcanza, dice que no falta nada', async () => {
