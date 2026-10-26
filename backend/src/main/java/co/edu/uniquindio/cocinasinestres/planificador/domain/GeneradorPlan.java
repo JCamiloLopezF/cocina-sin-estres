@@ -35,6 +35,10 @@ import java.util.TreeSet;
  *       pero no se excluyen: el recetario solo avisa.</li>
  * </ol>
  *
+ * <p>Al final, si se sabe cuándo le pagan a la usuaria ({@link CicloIngreso}), ubica las
+ * comidas más costosas en los días siguientes al pago (Definición, proceso 3): solo cambia
+ * de día lo que propuso, sin cambiar las recetas ni el costo de la semana.</p>
+ *
  * <p>Ante un empate gana la más barata y luego la de menor id, para que el resultado
  * sea siempre el mismo con los mismos datos.</p>
  */
@@ -45,6 +49,9 @@ public final class GeneradorPlan {
 
     /** Un producto "por vencer" es el que vence en estos días o menos. */
     public static final int DIAS_POR_VENCER = 3;
+
+    /** El día del pago y los que le siguen hasta este número cuentan como "recién pagó". */
+    public static final int DIAS_DESPUES_DEL_PAGO = 1;
 
     /** Comidas que llena "Armar mi semana": el desayuno es opcional (pantalla 27). */
     public static final List<String> COMIDAS_A_LLENAR = List.of("ALMUERZO", "CENA");
@@ -93,7 +100,21 @@ public final class GeneradorPlan {
         }
         // Si el plan quedó por encima del presupuesto, se abarata solo lo que se propuso.
         nuevas.putAll(abaratar(contexto, plan, nuevas.keySet()));
+        // Lo más costoso, para cuando recién le pagaron.
+        nuevas.putAll(ordenarPorIngreso(contexto, plan, nuevas.keySet()));
         return nuevas;
+    }
+
+    /**
+     * Días de la semana en que la usuaria recién recibió el pago: el día del pago y el
+     * siguiente. Vacío si no se sabe cuándo le pagan o si la semana no tiene pago.
+     */
+    public List<Integer> diasDespuesDelPago(ContextoPlan contexto) {
+        return contexto.diasDesdeElPago().entrySet().stream()
+            .filter(e -> e.getValue() <= DIAS_DESPUES_DEL_PAGO)
+            .map(Map.Entry::getKey)
+            .sorted()
+            .toList();
     }
 
     /**
@@ -345,6 +366,82 @@ public final class GeneradorPlan {
             cambios.put(mejorHueco, mejorReceta.id());
         }
         return cambios;
+    }
+
+    /**
+     * Intercambia de día las comidas propuestas para que las más costosas queden más cerca
+     * del último pago. Solo mueve recetas entre los huecos {@code nuevos}, así que la
+     * semana sigue teniendo las mismas recetas y el mismo costo.
+     *
+     * <p>No se mueve lo que gasta productos por vencer (pasarlo a un día posterior podría
+     * dejar que se dañen), ni se rompe la regla de los días sin tiempo ni la de no repetir
+     * receta en el mismo día.</p>
+     *
+     * @return los huecos que cambiaron de receta, con su receta nueva
+     */
+    private Map<Hueco, Long> ordenarPorIngreso(ContextoPlan contexto, Map<Hueco, Long> plan, Set<Hueco> nuevos) {
+        Map<Hueco, Long> cambios = new LinkedHashMap<>();
+        Map<Integer, Integer> desdeElPago = contexto.diasDesdeElPago();
+        if (desdeElPago.isEmpty()) {
+            return cambios;
+        }
+        // Primero los días más cerca del pago; en el mismo día, el almuerzo antes que la cena.
+        List<Hueco> orden = nuevos.stream()
+            .filter(h -> contexto.recetas().containsKey(plan.get(h)))
+            .filter(h -> !usaPorVencer(contexto, contexto.recetas().get(plan.get(h))))
+            .sorted(Comparator
+                .comparingInt((Hueco h) -> desdeElPago.getOrDefault(h.dia(), Integer.MAX_VALUE))
+                .thenComparing(Hueco.ORDEN))
+            .toList();
+
+        // Cada cambio deja una comida más costosa antes que una más barata, así que el ciclo termina.
+        boolean huboCambio = true;
+        while (huboCambio) {
+            huboCambio = false;
+            for (int i = 0; i < orden.size(); i++) {
+                for (int j = i + 1; j < orden.size(); j++) {
+                    Hueco antes = orden.get(i);
+                    Hueco despues = orden.get(j);
+                    RecetaCandidata temprana = contexto.recetas().get(plan.get(antes));
+                    RecetaCandidata tardia = contexto.recetas().get(plan.get(despues));
+                    if (tardia.costo().compareTo(temprana.costo()) > 0
+                        && cabe(contexto, plan, tardia, antes, despues, temprana)
+                        && cabe(contexto, plan, temprana, despues, antes, tardia)) {
+                        plan.put(antes, tardia.id());
+                        plan.put(despues, temprana.id());
+                        cambios.put(antes, tardia.id());
+                        cambios.put(despues, temprana.id());
+                        huboCambio = true;
+                    }
+                }
+            }
+        }
+        return cambios;
+    }
+
+    /**
+     * La receta puede pasar al hueco {@code destino} (que hoy tiene {@code queSale}) si no
+     * se repite en otra comida de ese día y, en un día sin tiempo, no es más demorada de lo
+     * que se permite ni de lo que ya había.
+     */
+    private static boolean cabe(
+        ContextoPlan contexto, Map<Hueco, Long> plan, RecetaCandidata receta,
+        Hueco destino, Hueco origen, RecetaCandidata queSale) {
+
+        if (contexto.diasSinTiempo().contains(destino.dia())
+            && receta.tiempoMinutos() > Math.max(MINUTOS_DIA_SIN_TIEMPO, queSale.tiempoMinutos())) {
+            return false;
+        }
+        return plan.entrySet().stream()
+            .filter(e -> e.getKey().dia() == destino.dia())
+            .filter(e -> !e.getKey().equals(destino) && !e.getKey().equals(origen))
+            .noneMatch(e -> e.getValue().equals(receta.id()));
+    }
+
+    private static boolean usaPorVencer(ContextoPlan contexto, RecetaCandidata receta) {
+        return receta.ingredientes().keySet().stream()
+            .filter(contexto.porVencer()::contains)
+            .anyMatch(p -> contexto.stock().getOrDefault(p, BigDecimal.ZERO).signum() > 0);
     }
 
     /**

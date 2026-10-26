@@ -18,6 +18,8 @@ import java.util.Set;
  *                           se le pida (ajustar al presupuesto, otra opción)
  * @param hayNinos           en el hogar vive al menos un niño (12 años o menos)
  * @param alergias           alergias por persona, alérgenos y reemplazos para adaptar recetas
+ * @param diasDesdeElPago    por cada día de la semana (1 = lunes … 7 = domingo), cuántos días
+ *                           van desde el último pago ({@link CicloIngreso}); vacío si no se sabe
  */
 public record ContextoPlan(
     Map<Long, RecetaCandidata> recetas,
@@ -28,7 +30,8 @@ public record ContextoPlan(
     Set<Long> porVencer,
     Map<Hueco, Long> fijas,
     boolean hayNinos,
-    ReglasAlergia alergias) {
+    ReglasAlergia alergias,
+    Map<Integer, Integer> diasDesdeElPago) {
 
     public ContextoPlan {
         recetas = Map.copyOf(recetas);
@@ -39,6 +42,22 @@ public record ContextoPlan(
         porVencer = Set.copyOf(porVencer);
         fijas = Map.copyOf(fijas);
         alergias = alergias == null ? ReglasAlergia.SIN_DETALLE : alergias;
+        diasDesdeElPago = diasDesdeElPago == null ? Map.of() : Map.copyOf(diasDesdeElPago);
+    }
+
+    /** Un hogar del que no se sabe cuándo le pagan. */
+    public ContextoPlan(
+        Map<Long, RecetaCandidata> recetas,
+        Set<String> restricciones,
+        Set<Integer> diasSinTiempo,
+        BigDecimal presupuestoSemanal,
+        Map<Long, BigDecimal> stock,
+        Set<Long> porVencer,
+        Map<Hueco, Long> fijas,
+        boolean hayNinos,
+        ReglasAlergia alergias) {
+        this(recetas, restricciones, diasSinTiempo, presupuestoSemanal, stock, porVencer, fijas, hayNinos, alergias,
+            Map.of());
     }
 
     /** Un hogar sin detalle de alergias por persona. */
@@ -70,16 +89,21 @@ public record ContextoPlan(
 
     /** El mismo hogar con otro plan de partida. */
     public ContextoPlan conFijas(Map<Hueco, Long> otras) {
-        return new ContextoPlan(recetas, restricciones, diasSinTiempo, presupuestoSemanal, stock, porVencer, otras, hayNinos, alergias);
+        return new ContextoPlan(recetas, restricciones, diasSinTiempo, presupuestoSemanal, stock, porVencer, otras, hayNinos, alergias, diasDesdeElPago);
     }
 
     /** El mismo hogar con el detalle de alergias por persona. */
     public ContextoPlan conAlergias(ReglasAlergia reglas) {
-        return new ContextoPlan(recetas, restricciones, diasSinTiempo, presupuestoSemanal, stock, porVencer, fijas, hayNinos, reglas);
+        return new ContextoPlan(recetas, restricciones, diasSinTiempo, presupuestoSemanal, stock, porVencer, fijas, hayNinos, reglas, diasDesdeElPago);
+    }
+
+    /** El mismo hogar, sabiendo cuántos días van desde el pago en cada día de la semana. */
+    public ContextoPlan conIngreso(Map<Integer, Integer> dias) {
+        return new ContextoPlan(recetas, restricciones, diasSinTiempo, presupuestoSemanal, stock, porVencer, fijas, hayNinos, alergias, dias);
     }
 
     /** El mismo hogar, con o sin niños. */
     public ContextoPlan conNinos(boolean ninos) {
-        return new ContextoPlan(recetas, restricciones, diasSinTiempo, presupuestoSemanal, stock, porVencer, fijas, ninos, alergias);
+        return new ContextoPlan(recetas, restricciones, diasSinTiempo, presupuestoSemanal, stock, porVencer, fijas, ninos, alergias, diasDesdeElPago);
     }
 }

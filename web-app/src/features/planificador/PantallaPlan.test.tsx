@@ -47,6 +47,7 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
           excedePresupuesto: false,
           aprovecha: ['Lenteja'],
           paraNinos: 2,
+          diasDespuesDelPago: [5, 6],
         })
       },
       'GET /planes-semanales/7/costo': () =>
@@ -61,6 +62,7 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
     expect(await screen.findByText(/Te propusimos 2 comidas\. Usamos primero lo que está por vencer: lenteja\./)).toBeInTheDocument()
     expect(screen.getByText(/El plan quedó en \$\s?16\.000 de \$\s?195\.000/)).toBeInTheDocument()
     expect(screen.getByText(/Como en casa hay niños, incluimos 2 recetas de las que suelen gustarles\./)).toBeInTheDocument()
+    expect(screen.getByText(/Dejamos las comidas más costosas para el viernes y el sábado, cuando recién te pagan\./)).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: /^Lunes/ })).toHaveTextContent('Almuerzo · Sopa de lentejas')
     expect(llamadas.find((l) => l.metodo === 'POST' && l.ruta === '/planes-semanales')?.cuerpo).toEqual({ semanaInicio: LUNES })
     expect(llamadas.some((l) => l.ruta === '/planes-semanales/7/generar')).toBe(true)
