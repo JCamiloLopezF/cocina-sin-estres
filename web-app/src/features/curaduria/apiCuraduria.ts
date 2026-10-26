@@ -68,7 +68,7 @@ export function quitarReemplazo(productoId: number, reemplazoId: number) {
   return pedir<Reemplazo[]>(`/curaduria/productos/${productoId}/reemplazos/${reemplazoId}`, { metodo: 'DELETE' })
 }
 
-/** `GET /api/curaduria/recetas`: cada receta con su video (V10). */
+/** `GET /api/curaduria/recetas`: cada receta con su video (V10) y sus etiquetas (V7). */
 export interface RecetaConVideo {
   id: number
   nombre: string
@@ -78,6 +78,10 @@ export interface RecetaConVideo {
   youtubeId?: string | null
   inicioSeg?: number | null
   finSeg?: number | null
+  /** Sirve como almuerzo o cena: "Armar mi semana" solo usa estas. */
+  platoFuerte: boolean
+  /** En general les gusta a los niños: se prefiere si en el hogar hay niños. */
+  gustaANinos: boolean
 }
 
 export function listarVideosRecetas(senal?: AbortSignal) {
@@ -86,6 +90,11 @@ export function listarVideosRecetas(senal?: AbortSignal) {
 
 export function guardarVideoReceta(recetaId: number, datos: { enlace: string; inicioSeg: number; finSeg: number }) {
   return pedir<RecetaConVideo>(`/curaduria/recetas/${recetaId}/video`, { metodo: 'PUT', cuerpo: datos })
+}
+
+/** Marca la receta como plato fuerte o que les gusta a los niños (KAN-17). Lo que no se envía no cambia. */
+export function cambiarEtiquetasReceta(recetaId: number, etiquetas: { platoFuerte?: boolean; gustaANinos?: boolean }) {
+  return pedir<RecetaConVideo>(`/curaduria/recetas/${recetaId}/etiquetas`, { metodo: 'PUT', cuerpo: etiquetas })
 }
 
 export function quitarVideoReceta(recetaId: number) {

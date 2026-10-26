@@ -56,7 +56,7 @@ export function PantallaCuraduria() {
 
       <div className="curaduria__barra">
         <Link className="boton boton--secundario" to="/curaduria/recetas">
-          Videos de recetas
+          Recetas
         </Link>
         <Link className="boton boton--primario" to="/curaduria/productos/nuevo">
           + Nuevo producto
