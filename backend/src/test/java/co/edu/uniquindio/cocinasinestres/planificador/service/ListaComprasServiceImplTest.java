@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -150,7 +151,8 @@ class ListaComprasServiceImplTest {
     /** Plan persistido (id 500) cuyo hogar responde id 10. */
     private PlanSemanal planGeneracion() {
         Hogar hogar = mock(Hogar.class);
-        when(hogar.getId()).thenReturn(10L);
+        // lenient: corregir el costo (KAN-26) no necesita saber de qué hogar es el plan.
+        lenient().when(hogar.getId()).thenReturn(10L);
         PlanSemanal plan = new PlanSemanal(hogar, LocalDate.of(2026, 10, 12));
         ReflectionTestUtils.setField(plan, "id", 500L);
         return plan;
