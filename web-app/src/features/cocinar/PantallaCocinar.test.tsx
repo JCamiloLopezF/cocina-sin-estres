@@ -85,9 +85,20 @@ function oidoFalso() {
   }
 }
 
+/** Arroz y sofrito al mismo tiempo: dos pasos con su propio tiempo. */
+const ARROZ_CON_TOMATE: RecetaDetalle = {
+  id: 13,
+  nombre: 'Arroz con tomate',
+  tiempoMinutos: 25,
+  porciones: 2,
+  pasos: ['Pon el arroz con agua a hervir.', 'Cocina el arroz 20 minutos sin destapar.', 'Sofríe la cebolla 2 minutos.', 'Sirve.'],
+  ingredientes: [{ productoId: 4, cantidad: 200, opcional: false }],
+}
+
 const yaVioLaIntro = () => localStorage.setItem('cocina-sin-estres:intro-cocina-vista', 'si')
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
@@ -157,13 +168,13 @@ describe('Modo cocinar (pedido del profesor: la receta como tareas, con voz)', (
     expect(dichas.at(-1)).toMatch(/^Seguimos donde ibas\. Último paso\. Paso 2 de 2/)
 
     await usuario.click(screen.getByRole('button', { name: /Contar 20 minutos/ }))
-    const temporizador = screen.getByRole('region', { name: 'Temporizador' })
+    const temporizador = screen.getByRole('region', { name: 'Temporizador del paso 2' })
     expect(within(temporizador).getByText('20:00')).toBeInTheDocument()
     expect(dichas.at(-1)).toMatch(/cuento 20 minutos/)
     await usuario.click(within(temporizador).getByRole('button', { name: 'Pausar' }))
     expect(within(temporizador).getByRole('button', { name: 'Seguir' })).toBeInTheDocument()
     await usuario.click(within(temporizador).getByRole('button', { name: 'Cancelar' }))
-    expect(screen.queryByRole('region', { name: 'Temporizador' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Temporizador/ })).not.toBeInTheDocument()
 
     // Silenciar: el asistente deja de hablar, pero la pantalla sigue igual.
     await usuario.click(screen.getByRole('button', { name: 'Silenciar el asistente' }))
@@ -177,6 +188,72 @@ describe('Modo cocinar (pedido del profesor: la receta como tareas, con voz)', (
     expect(llamadas.some((l) => l.metodo === 'PUT' && l.ruta === '/planes-semanales/7/comidas/70/marcar-preparada')).toBe(true)
     expect(llamadas.some((l) => l.ruta === '/preparaciones')).toBe(false)
     expect(localStorage.getItem('cocina-sin-estres:cocinando:12')).toBeNull()
+  })
+
+  it('cuando se acaba el tiempo, «Listo» quita el aviso y pasa al siguiente paso', async () => {
+    const dichas = vozFalsa()
+    yaVioLaIntro()
+    localStorage.setItem('cocina-sin-estres:cocinando:13', JSON.stringify({ etapa: 1, alistados: [], en: Date.now() }))
+    backendFalso({ ...rutasCocina(), 'GET /recetas/13': () => respuestaJson(ARROZ_CON_TOMATE) })
+    montarApp(crearServicioFalso(LUISA).servicio, '/recetas/13/cocinar')
+    expect(await screen.findByRole('heading', { name: 'Cocina el arroz 20 minutos sin destapar.' })).toBeInTheDocument()
+
+    // El reloj del temporizador es de mentiras; lo demás (clics, voz) usa el reloj real.
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    const usuario = userEvent.setup()
+    await usuario.click(screen.getByRole('button', { name: /Contar 20 minutos/ }))
+    act(() => vi.advanceTimersByTime(20 * 60_000 + 1_000))
+
+    const aviso = screen.getByRole('alert', { name: 'Temporizador del paso 2' })
+    expect(within(aviso).getByText('¡Tiempo!')).toBeInTheDocument()
+    expect(dichas.at(-1)).toBe('¡Ya pasaron los 20 minutos! Toca «Listo» y seguimos.')
+
+    await usuario.click(screen.getByRole('button', { name: 'Listo' }))
+    expect(screen.getByRole('heading', { name: 'Sofríe la cebolla 2 minutos.' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Temporizador/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('un tiempo sigue contando en los pasos siguientes y se puede contar otro a la vez', async () => {
+    const dichas = vozFalsa()
+    yaVioLaIntro()
+    localStorage.setItem('cocina-sin-estres:cocinando:13', JSON.stringify({ etapa: 1, alistados: [], en: Date.now() }))
+    backendFalso({ ...rutasCocina(), 'GET /recetas/13': () => respuestaJson(ARROZ_CON_TOMATE) })
+    montarApp(crearServicioFalso(LUISA).servicio, '/recetas/13/cocinar')
+    expect(await screen.findByRole('heading', { name: 'Cocina el arroz 20 minutos sin destapar.' })).toBeInTheDocument()
+
+    // El reloj del temporizador es de mentiras; lo demás (clics, voz) usa el reloj real.
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    const usuario = userEvent.setup()
+    await usuario.click(screen.getByRole('button', { name: /Contar 20 minutos/ }))
+    await usuario.click(screen.getByRole('button', { name: 'Listo' }))
+
+    // El arroz sigue contando mientras se hace el sofrito, que tiene su propio tiempo.
+    expect(screen.getByRole('heading', { name: 'Sofríe la cebolla 2 minutos.' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Temporizador del paso 2' })).toBeInTheDocument()
+    await usuario.click(screen.getByRole('button', { name: /Contar 2 minutos/ }))
+    expect(screen.getByRole('region', { name: 'Temporizador del paso 3' })).toBeInTheDocument()
+
+    act(() => vi.advanceTimersByTime(2 * 60_000 + 1_000))
+    expect(within(screen.getByRole('alert', { name: 'Temporizador del paso 3' })).getByText('¡Tiempo!')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Temporizador del paso 2' })).getByText('17:59')).toBeInTheDocument()
+
+    // «Atrás» también da por visto el aviso; el arroz sigue contando.
+    await usuario.click(screen.getByRole('button', { name: 'Atrás' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Temporizador del paso 2' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Contar 20 minutos/ })).not.toBeInTheDocument()
+    expect(dichas.at(-1)).not.toMatch(/toca el botón del temporizador/)
+
+    await usuario.click(screen.getByRole('button', { name: 'Listo' }))
+    await usuario.click(screen.getByRole('button', { name: 'Listo' }))
+    act(() => vi.advanceTimersByTime(18 * 60_000))
+    expect(screen.getByRole('heading', { name: 'Sirve.' })).toBeInTheDocument()
+    expect(within(screen.getByRole('alert', { name: 'Temporizador del paso 2' })).getByText('Paso 2 · pasaron 20 minutos')).toBeInTheDocument()
+    expect(dichas.at(-1)).toBe('¡Ya pasaron los 20 minutos del paso 2!')
+    await usuario.click(screen.getByRole('button', { name: 'Quitar' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Sirve.' })).toBeInTheDocument()
   })
 
   it('con manos libres entiende «siguiente», «atrás» y «temporizador»', async () => {
@@ -195,7 +272,9 @@ describe('Modo cocinar (pedido del profesor: la receta como tareas, con voz)', (
     oir('siguiente')
     expect(screen.getByRole('heading', { name: 'Cocina tapado 20 minutos.' })).toBeInTheDocument()
     oir('pon el temporizador')
-    expect(screen.getByRole('region', { name: 'Temporizador' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Temporizador del paso 2' })).toBeInTheDocument()
+    oir('temporizador')
+    expect(screen.getAllByRole('region', { name: /Temporizador/ })).toHaveLength(1)
     oir('atrás')
     expect(screen.getByRole('heading', { name: 'Sofríe el ajo.' })).toBeInTheDocument()
     oir('qué rico huele')
