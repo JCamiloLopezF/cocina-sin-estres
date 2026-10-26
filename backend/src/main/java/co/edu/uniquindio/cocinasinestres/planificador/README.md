@@ -29,6 +29,7 @@ La lógica respeta la estructura definida en V1 (`plan_semanal` y `comida_plan`)
 - La usuaria solo puede operar sobre planes de su propio hogar.
 - Se usa `id_cambio_cliente` para manejar idempotencia y reenvíos del navegador.
 - La lista de compras se genera automáticamente después de asignar una receta o al cambiar el plan.
+- La usuaria puede corregir lo que pagó por un producto de la lista (`costo_real`, KAN-26) y guardar hasta 5 tiendas para pedirles por WhatsApp (`tienda`, KAN-53).
 - "Armar mi semana" deja las comidas más costosas en el día del pago y los siguientes (`CicloIngreso`, ADR-24), sin cambiar las recetas ni el costo.
 
 ## Endpoints

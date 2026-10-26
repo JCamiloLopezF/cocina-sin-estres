@@ -14,6 +14,20 @@ const MENSAJES: Record<string, string> = {
   LISTA_COSTO_INVALIDO: 'Escribe cuánto pagaste: un valor en pesos.',
 }
 
+/** Mensajes de las tiendas para pedir por WhatsApp (KAN-53). */
+const MENSAJES_TIENDA: Record<string, string> = {
+  TIENDA_DATOS_INVALIDOS: 'Revisa el celular: son 10 dígitos y empiezan por 3.',
+  TIENDA_REPETIDA: 'Ya tienes guardada una tienda con ese número.',
+  TIENDAS_MAXIMO: 'Puedes guardar hasta 5 tiendas. Quita una para agregar otra.',
+}
+
+export function mensajeTienda(error: unknown): string {
+  if (error instanceof ErrorApi && MENSAJES_TIENDA[error.codigo]) {
+    return MENSAJES_TIENDA[error.codigo]
+  }
+  return mensajePlan(error)
+}
+
 export function mensajePlan(error: unknown): string {
   if (error instanceof ErrorApi && MENSAJES[error.codigo]) {
     return MENSAJES[error.codigo]

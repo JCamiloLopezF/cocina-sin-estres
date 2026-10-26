@@ -405,6 +405,60 @@ describe('Lista de compras (pantalla 31)', () => {
     expect(screen.getByRole('region', { name: 'Total de la lista' })).toHaveTextContent(/Costo estimado/)
   })
 
+  it('pide lo que falta a la tienda por WhatsApp y guarda el número de la tienda (KAN-53)', async () => {
+    let tiendas: { id: number; nombre: string; whatsapp: string }[] = []
+    const { llamadas } = backendFalso({
+      ...conPlan([comida(71, 3, 'CENA', 11)]),
+      'GET /planes-semanales/7/lista-compras': () =>
+        respuestaJson({
+          id: 1,
+          planSemanalId: 7,
+          costoTotal: 11600,
+          items: [
+            { id: 1, productoId: 5, cantidad: 500, costoEstimado: 9800, prioridad: 1, comprado: false, motivo: 'PLAN' },
+            { id: 2, productoId: 4, cantidad: 400, costoEstimado: 1800, prioridad: 1, comprado: true, motivo: 'PLAN' },
+          ],
+        }),
+      'GET /tiendas': () => respuestaJson(tiendas),
+      'POST /tiendas': (cuerpo) => {
+        const { nombre } = cuerpo as { nombre: string; whatsapp: string }
+        tiendas = [{ id: 3, nombre, whatsapp: '573001234567' }]
+        return respuestaJson(tiendas[0], 201)
+      },
+      'DELETE /tiendas/3': () => new Response(null, { status: 204 }),
+    })
+    montarApp(crearServicioFalso(LUISA).servicio, '/plan/lista')
+    const usuario = userEvent.setup()
+
+    const pedido = within(await screen.findByRole('region', { name: 'Pedir a la tienda' }))
+    expect(pedido.getByText(/Armamos el mensaje con el producto que te falta/)).toBeInTheDocument()
+    // Sin tiendas guardadas, WhatsApp deja escoger el contacto. Lo ya comprado (arroz) no se pide.
+    const sinNumero = pedido.getByRole('link', { name: 'Pedir por WhatsApp' })
+    const texto = decodeURIComponent(sinNumero.getAttribute('href')!.split('?text=')[1])
+    expect(sinNumero.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/)
+    expect(texto).toBe('Hola. Le quiero hacer este pedido:\n\n- Pollo: 1 bolsa de 500 g\n\n¿Me confirma el valor y si me lo pueden traer? Muchas gracias. Luisa')
+    expect(sinNumero).toHaveAttribute('target', '_blank')
+
+    await usuario.click(pedido.getByRole('button', { name: '+ Guardar el WhatsApp de mi tienda' }))
+    await usuario.type(pedido.getByLabelText('Nombre de la tienda'), 'Tienda de don Jorge')
+    await usuario.type(pedido.getByLabelText(/Celular con WhatsApp/), '300 123 4567')
+    await usuario.click(pedido.getByRole('button', { name: 'Guardar tienda' }))
+
+    expect(await pedido.findByText('Guardamos Tienda de don Jorge. Ya puedes pedirle desde aquí.')).toBeInTheDocument()
+    expect(llamadas.find((l) => l.metodo === 'POST' && l.ruta === '/tiendas')?.cuerpo).toEqual({
+      nombre: 'Tienda de don Jorge',
+      whatsapp: '300 123 4567',
+    })
+    const aJorge = pedido.getByRole('link', { name: 'Pedir a Tienda de don Jorge' })
+    expect(aJorge.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/573001234567\?text=Hola%2C%20Tienda%20de%20don%20Jorge/)
+    expect(pedido.queryByRole('link', { name: 'Pedir por WhatsApp' })).not.toBeInTheDocument()
+
+    await usuario.click(pedido.getByRole('button', { name: 'Quitar Tienda de don Jorge' }))
+    await usuario.click(pedido.getByRole('button', { name: 'Sí, quitar' }))
+    expect(await pedido.findByText('Quitamos Tienda de don Jorge de tus tiendas.')).toBeInTheDocument()
+    expect(pedido.getByRole('link', { name: 'Pedir por WhatsApp' })).toBeInTheDocument()
+  })
+
   it('si la despensa alcanza, dice que no falta nada', async () => {
     backendFalso({
       ...conPlan([comida(71, 3, 'CENA', 10)]),

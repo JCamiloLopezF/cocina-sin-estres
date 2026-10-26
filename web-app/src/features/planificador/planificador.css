@@ -365,6 +365,65 @@
   list-style: none;
 }
 
+/* Pedir a la tienda por WhatsApp (KAN-53). */
+.pedido {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-5);
+  padding: var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: var(--radio-tarjeta);
+  background: var(--color-superficie);
+}
+
+.pedido .lista__titulo {
+  margin: 0;
+}
+
+.pedido__nota {
+  margin: 0;
+  font-size: var(--texto-s);
+}
+
+.pedido__tiendas {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pedido__tiendas:empty {
+  display: none;
+}
+
+.pedido__tienda {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.pedido__tienda > .boton {
+  flex: 1;
+  min-width: 0;
+}
+
+.pedido__confirmar {
+  display: flex;
+  gap: var(--espacio-1);
+}
+
+.pedido__formulario {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.pedido__acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-2);
+}
+
 .lista__aviso {
   margin-bottom: var(--espacio-3);
 }

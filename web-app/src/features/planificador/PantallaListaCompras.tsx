@@ -5,6 +5,7 @@ import { cantidadConUnidad, enPesos, fechaCorta, leerPesos } from '../despensa/f
 import { cambiarCostoItem, listaCompras, marcarComprado } from './apiPlanificador'
 import { mensajePlan, planSinHogar } from './mensajesPlan'
 import { ErrorCarga, PrimeroElHogar } from './PantallaPlan'
+import { PedirATienda } from './PedirATienda'
 import type { ItemListaCompras, ListaCompras } from './tipos'
 import { conSemana } from './semana'
 import { useSemana, type Semana } from './useSemana'
@@ -231,6 +232,8 @@ export function PantallaListaCompras() {
         alternar={(i) => void alternar(i)}
         edicion={edicion}
       />
+
+      <PedirATienda semana={semana} pendientes={items.filter((i) => !i.comprado)} />
 
       {compartido && <Alerta tono="exito">Copiamos la lista. Pégala donde quieras enviarla.</Alerta>}
       <div className="lista__acciones">
