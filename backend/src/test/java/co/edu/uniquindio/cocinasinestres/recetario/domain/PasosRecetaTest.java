@@ -43,4 +43,21 @@ class PasosRecetaTest {
     void unirRechazaListaNula() {
         assertThatNullPointerException().isThrownBy(() -> PasosReceta.unir(null));
     }
+
+    @Test
+    void encuentraLosTiemposQueEntiendeElTemporizador() {
+        assertThat(PasosReceta.tiemposDelPaso("Cocina tapado 20 minutos.")).containsExactly("20 minutos");
+        assertThat(PasosReceta.tiemposDelPaso("Hierve de 8 a 10 minutos.")).containsExactly("8 a 10 minutos");
+        assertThat(PasosReceta.tiemposDelPaso("Revuelve un minuto.")).containsExactly("un minuto");
+        assertThat(PasosReceta.tiemposDelPaso("Deja reposar media hora.")).containsExactly("media hora");
+        assertThat(PasosReceta.tiemposDelPaso("Pica la cebolla.")).isEmpty();
+        assertThat(PasosReceta.tiemposDelPaso(null)).isEmpty();
+    }
+
+    @Test
+    void detectaUnPasoConDosTiempos() {
+        String paso = "Sofríe la cebolla 2 minutos, añade el tomate y cocina 4 minutos.";
+
+        assertThat(PasosReceta.tiemposDelPaso(paso)).containsExactly("2 minutos", "4 minutos");
+    }
 }

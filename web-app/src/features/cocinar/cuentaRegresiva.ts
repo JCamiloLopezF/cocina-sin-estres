@@ -1,6 +1,11 @@
-/** Estado y alarma del temporizador de cada paso del Modo cocinar. */
+/**
+ * Estado y alarma de los temporizadores del Modo cocinar. Puede haber varios a la vez
+ * (el arroz se cocina mientras se hace el sofrito), uno por paso.
+ */
 
 export interface EstadoTemporizador {
+  /** Paso (índice desde 0) cuyo tiempo se cuenta. */
+  paso: number
   /** Minutos que se pidieron. */
   minutos: number
   /** Momento (ms) en que termina; si está en pausa, cuántos ms faltaban. */
@@ -10,8 +15,8 @@ export interface EstadoTemporizador {
   terminado: boolean
 }
 
-export function nuevoTemporizador(minutos: number, ahora = Date.now()): EstadoTemporizador {
-  return { minutos, terminaEn: ahora + minutos * 60_000, pausado: false, restantePausado: 0, terminado: false }
+export function nuevoTemporizador(minutos: number, paso: number, ahora = Date.now()): EstadoTemporizador {
+  return { paso, minutos, terminaEn: ahora + minutos * 60_000, pausado: false, restantePausado: 0, terminado: false }
 }
 
 /** Tres pitidos con el audio del navegador y una vibración, para oírlo desde la cocina. */
