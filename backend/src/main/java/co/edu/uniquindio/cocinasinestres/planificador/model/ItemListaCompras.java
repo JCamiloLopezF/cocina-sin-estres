@@ -37,6 +37,10 @@ public class ItemListaCompras {
     @Column(name = "costo_estimado", nullable = false, precision = 12, scale = 2)
     private BigDecimal costoEstimado;
 
+    /** Lo que la usuaria dice que pagó (V13); {@code null} mientras no lo corrija. */
+    @Column(name = "costo_real", precision = 12, scale = 2)
+    private BigDecimal costoReal;
+
     // Columna SMALLINT UNSIGNED: sin esto, la validación de Hibernate espera INTEGER.
     @JdbcTypeCode(SqlTypes.SMALLINT)
     @Column(name = "prioridad", nullable = false)
@@ -90,6 +94,19 @@ public class ItemListaCompras {
 
     public BigDecimal getCostoEstimado() {
         return costoEstimado;
+    }
+
+    public BigDecimal getCostoReal() {
+        return costoReal;
+    }
+
+    public void setCostoReal(BigDecimal costoReal) {
+        this.costoReal = costoReal;
+    }
+
+    /** Lo que cuesta en la cuenta de la lista: lo que pagó si lo corrigió, si no el estimado. */
+    public BigDecimal getCosto() {
+        return costoReal != null ? costoReal : costoEstimado;
     }
 
     public Integer getPrioridad() {

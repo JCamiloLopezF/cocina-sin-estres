@@ -4,6 +4,7 @@ import co.edu.uniquindio.cocinasinestres.perfil.domain.ResumenHogar;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
 import co.edu.uniquindio.cocinasinestres.perfil.service.ResumenHogarService;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.CatalogoParaPlan;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.CicloIngreso;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.Comensal;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.ContextoPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.GeneradorPlan;
@@ -47,6 +48,21 @@ public class ContextoPlanFactory {
         this.catalogo = catalogo;
         this.stockEnDespensa = stockEnDespensa;
         this.reloj = reloj;
+    }
+
+    /**
+     * El contexto para planear la semana que empieza en {@code lunes}: además de lo de
+     * siempre, sabe cuántos días van desde el pago en cada día, para dejar las comidas
+     * más costosas después del pago.
+     */
+    public Contexto construir(Hogar entidad, List<ComidaPlan> actuales, LocalDate lunes) {
+        Contexto contexto = construir(entidad, actuales);
+        if (lunes == null || entidad.getPeriodicidadIngreso() == null || entidad.getDiaPago1() == null) {
+            return contexto;
+        }
+        CicloIngreso ciclo = new CicloIngreso(
+            entidad.getPeriodicidadIngreso(), entidad.getDiaPago1(), entidad.getDiaPago2());
+        return new Contexto(contexto.plan().conIngreso(ciclo.diasDesdeElPagoEnLaSemana(lunes)), contexto.porVencer());
     }
 
     public Contexto construir(Hogar entidad, List<ComidaPlan> actuales) {

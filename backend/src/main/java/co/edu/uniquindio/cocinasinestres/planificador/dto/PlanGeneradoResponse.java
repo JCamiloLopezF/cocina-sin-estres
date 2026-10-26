@@ -17,6 +17,9 @@ import java.util.List;
  *                           hogar no hay niños
  * @param conAdaptaciones    comidas del plan que llevan un cambio o un plato aparte para
  *                           alguien con alergia (ADR-24)
+ * @param diasDespuesDelPago días de esta semana (1 = lunes … 7 = domingo) en que la usuaria
+ *                           recién recibió el pago; ahí quedaron las comidas más costosas.
+ *                           Vacío si la semana no tiene pago
  */
 public record PlanGeneradoResponse(
     PlanSemanalResponse plan,
@@ -26,5 +29,6 @@ public record PlanGeneradoResponse(
     boolean excedePresupuesto,
     List<String> aprovecha,
     int paraNinos,
-    int conAdaptaciones) {
+    int conAdaptaciones,
+    List<Integer> diasDespuesDelPago) {
 }

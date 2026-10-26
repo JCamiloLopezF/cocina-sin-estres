@@ -68,7 +68,7 @@ class BorradorSemanaServiceTest {
             .mapToObj(i -> new CambioPlanResponse(i % 7 + 1, i < 7 ? "ALMUERZO" : "CENA", 5L, null))
             .toList();
         return new PlanGeneradoResponse(null, cambios, BigDecimal.valueOf(150_000), BigDecimal.valueOf(195_000),
-            false, List.of(), 0, 0);
+            false, List.of(), 0, 0, List.of());
     }
 
     @Test

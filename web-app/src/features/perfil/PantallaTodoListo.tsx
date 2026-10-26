@@ -21,16 +21,19 @@ export function PantallaTodoListo() {
   useEffect(() => {
     const control = new AbortController()
     // Si algo falla, se muestra sin ese dato: no vale la pena un error en esta pantalla.
-    pedir<{ personas: unknown[]; presupuestoMonto: number; periodicidadIngreso: keyof typeof CICLO }>('/perfil/hogar', {
+    pedir<{ personas?: unknown[]; presupuestoMonto?: number; periodicidadIngreso?: keyof typeof CICLO }>('/perfil/hogar', {
       senal: control.signal,
     })
-      .then((perfil) =>
-        setResumen((r) => ({
-          ...r,
-          personas: perfil.personas.length,
-          presupuesto: `${enPesos(perfil.presupuestoMonto)} · ${CICLO[perfil.periodicidadIngreso]}`,
-        })),
-      )
+      .then((perfil) => {
+        // Se calcula aquí y no dentro de setResumen: un dato que falte no debe romper la pantalla.
+        const personas = perfil.personas?.length
+        const ciclo = perfil.periodicidadIngreso ? CICLO[perfil.periodicidadIngreso] : undefined
+        const presupuesto =
+          perfil.presupuestoMonto !== undefined
+            ? [enPesos(perfil.presupuestoMonto), ciclo].filter(Boolean).join(' · ')
+            : undefined
+        setResumen((r) => ({ ...r, personas, presupuesto }))
+      })
       .catch(() => undefined)
     resumenDespensa(control.signal)
       .then((d) => setResumen((r) => ({ ...r, productos: d.total })))
