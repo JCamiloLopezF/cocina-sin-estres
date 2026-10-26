@@ -9,6 +9,7 @@ import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanCostoResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.model.PlanSemanal;
+import co.edu.uniquindio.cocinasinestres.planificador.repository.ComidaPlanRepository;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.PlanSemanalRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -27,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
  * cuenta los ingredientes obligatorios; no usa los repositorios de curaduría ni de
  * recetario (RNF-26). Si el total de la semana supera el presupuesto, la respuesta lo
  * marca con {@code excedePresupuesto}.</p>
+ *
+ * <p>Suma además el reemplazo o el plato aparte de quien tiene alergia (KAN-24): es comida
+ * que también hay que pagar.</p>
  */
 @Service
 public class PlanificadorCostoService {
@@ -50,16 +54,22 @@ public class PlanificadorCostoService {
     private final HogarRepository hogarRepository;
     private final UsuarioActualService usuarioActualService;
     private final JdbcTemplate jdbcTemplate;
+    private final ComidaPlanRepository comidaPlanRepository;
+    private final CostoPorAlergias costoPorAlergias;
 
     public PlanificadorCostoService(
         PlanSemanalRepository planSemanalRepository,
         HogarRepository hogarRepository,
         UsuarioActualService usuarioActualService,
-        JdbcTemplate jdbcTemplate) {
+        JdbcTemplate jdbcTemplate,
+        ComidaPlanRepository comidaPlanRepository,
+        CostoPorAlergias costoPorAlergias) {
         this.planSemanalRepository = planSemanalRepository;
         this.hogarRepository = hogarRepository;
         this.usuarioActualService = usuarioActualService;
         this.jdbcTemplate = jdbcTemplate;
+        this.comidaPlanRepository = comidaPlanRepository;
+        this.costoPorAlergias = costoPorAlergias;
     }
 
     /**
@@ -101,6 +111,18 @@ public class PlanificadorCostoService {
             }
         }
 
+        // Lo extra por alergias (reemplazo o plato aparte) también cuesta (KAN-24).
+        Map<Integer, BigDecimal> alergias = costoPorAlergias.porDia(
+            hogar, comidaPlanRepository.findByPlanSemanal_IdOrderByDiaAscTipoComidaAsc(planId));
+        BigDecimal costoAlergias = BigDecimal.ZERO;
+        for (Map.Entry<Integer, BigDecimal> extra : alergias.entrySet()) {
+            int dia = extra.getKey();
+            if (dia >= 1 && dia <= 7) {
+                costoPorDia[dia - 1] = costoPorDia[dia - 1].add(extra.getValue());
+                costoAlergias = costoAlergias.add(extra.getValue());
+            }
+        }
+
         // acumulado del lunes en adelante
         List<BigDecimal> acumulado = new ArrayList<>(7);
         BigDecimal acumuladoHastaAhora = BigDecimal.ZERO;
@@ -112,6 +134,6 @@ public class PlanificadorCostoService {
 
         boolean excede = acumuladoHastaAhora.compareTo(presupuestoSemanal) > 0;
 
-        return new PlanCostoResponse(acumulado, presupuestoSemanal, excede);
+        return new PlanCostoResponse(acumulado, presupuestoSemanal, excede, costoAlergias.setScale(2, RoundingMode.HALF_UP));
     }
 }

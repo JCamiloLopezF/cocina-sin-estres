@@ -63,6 +63,7 @@ class GeneradorPlanServiceTest {
     @Mock private StockEnDespensa stockEnDespensa;
     @Mock private ListaComprasService listaComprasService;
     @Mock private RegistroUso registroUso;
+    @Mock private CostoPorAlergias costoPorAlergias;
 
     private GeneradorPlanService servicio;
     private Hogar hogar;
@@ -75,7 +76,7 @@ class GeneradorPlanServiceTest {
         servicio = new GeneradorPlanService(
             planSemanalRepository, comidaPlanRepository, hogarRepository, usuarioActualService,
             new ContextoPlanFactory(resumenHogarService, catalogo, stockEnDespensa, reloj),
-            catalogo, listaComprasService, registroUso);
+            catalogo, listaComprasService, registroUso, costoPorAlergias);
 
         UsuarioAutenticado usuario = mock(UsuarioAutenticado.class);
         lenient().when(usuario.id()).thenReturn(1L);
@@ -92,6 +93,7 @@ class GeneradorPlanServiceTest {
         lenient().when(resumenHogarService.resumir(hogar)).thenReturn(
             new ResumenHogar(10L, Set.of(), Set.of(), BigDecimal.valueOf(195_000), false));
         lenient().when(stockEnDespensa.disponibles(any(), any())).thenReturn(Map.of());
+        lenient().when(costoPorAlergias.total(any(), any())).thenReturn(BigDecimal.ZERO);
         lenient().when(stockEnDespensa.porVencer(any(), any(), any())).thenReturn(Map.of());
 
         Map<Long, RecetaCandidata> recetas = new HashMap<>();

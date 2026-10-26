@@ -60,6 +60,7 @@ public class GeneradorPlanService {
     private final CatalogoParaPlan catalogo;
     private final ListaComprasService listaComprasService;
     private final RegistroUso registroUso;
+    private final CostoPorAlergias costoPorAlergias;
     private final GeneradorPlan generador = new GeneradorPlan();
 
     public GeneradorPlanService(
@@ -70,7 +71,8 @@ public class GeneradorPlanService {
         ContextoPlanFactory contextos,
         CatalogoParaPlan catalogo,
         ListaComprasService listaComprasService,
-        RegistroUso registroUso) {
+        RegistroUso registroUso,
+        CostoPorAlergias costoPorAlergias) {
         this.planSemanalRepository = planSemanalRepository;
         this.comidaPlanRepository = comidaPlanRepository;
         this.hogarRepository = hogarRepository;
@@ -79,6 +81,7 @@ public class GeneradorPlanService {
         this.catalogo = catalogo;
         this.listaComprasService = listaComprasService;
         this.registroUso = registroUso;
+        this.costoPorAlergias = costoPorAlergias;
     }
 
     /** Llena los huecos vacíos del almuerzo y la cena (o las comidas pedidas). */
@@ -218,7 +221,10 @@ public class GeneradorPlanService {
         Map<Hueco, Long> comoQuedo = new HashMap<>();
         finales.forEach(c -> comoQuedo.put(new Hueco(c.getDia(), c.getTipoComida()), c.getRecetaId()));
 
-        BigDecimal costo = generador.costo(contexto.plan(), comoQuedo).setScale(2, RoundingMode.HALF_UP);
+        // Igual que la barra de presupuesto: recetas más lo extra por alergias (KAN-24).
+        BigDecimal costo = generador.costo(contexto.plan(), comoQuedo)
+            .add(costoPorAlergias.total(plan.getHogar(), finales))
+            .setScale(2, RoundingMode.HALF_UP);
         BigDecimal presupuesto = contexto.plan().presupuestoSemanal();
         Set<String> aprovecha = new LinkedHashSet<>();
         generador.aprovechados(contexto.plan(), comoQuedo.values())

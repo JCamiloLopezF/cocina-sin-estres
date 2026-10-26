@@ -31,6 +31,8 @@ export interface CostoPlan {
   costoAcumuladoPorDia: number[]
   presupuestoSemanal: number
   excedePresupuesto: boolean
+  /** Lo que suma el reemplazo o el plato aparte de quien tiene alergia (KAN-24); ya está en el total. */
+  costoAlergias?: number
 }
 
 export interface ItemListaCompras {

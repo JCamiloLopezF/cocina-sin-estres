@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -49,6 +50,12 @@ class PlanificadorCostoServiceTest {
     @Mock
     private JdbcTemplate jdbcTemplate;
 
+    @Mock
+    private co.edu.uniquindio.cocinasinestres.planificador.repository.ComidaPlanRepository comidaPlanRepository;
+
+    @Mock
+    private CostoPorAlergias costoPorAlergias;
+
     private PlanificadorCostoService service;
 
     /** Hogar de la usuaria autenticada: id 10, presupuesto semanal de $5000. */
@@ -57,7 +64,8 @@ class PlanificadorCostoServiceTest {
     @BeforeEach
     void setUp() {
         service = new PlanificadorCostoService(
-            planSemanalRepository, hogarRepository, usuarioActualService, jdbcTemplate);
+            planSemanalRepository, hogarRepository, usuarioActualService, jdbcTemplate,
+            comidaPlanRepository, costoPorAlergias);
 
         hogar = mock(Hogar.class);
         lenient().when(hogar.getId()).thenReturn(10L);
@@ -105,6 +113,23 @@ class PlanificadorCostoServiceTest {
         assertEquals(0, respuesta.costoAcumuladoPorDia().get(6)
             .compareTo(new BigDecimal("6000.00")));
         assertTrue(respuesta.excedePresupuesto());
+    }
+
+    @Test
+    @DisplayName("suma el reemplazo o el plato aparte de quien tiene alergia (KAN-24)")
+    void sumaLoDeLasAlergias() {
+        PlanSemanal plan = planDePrueba();
+        when(planSemanalRepository.findById(500L)).thenReturn(Optional.of(plan));
+        when(jdbcTemplate.queryForList(anyString(), eq(500L))).thenReturn(List.of(
+            Map.of("dia", 1, "costo", new BigDecimal("1000.00"))));
+        when(costoPorAlergias.porDia(eq(hogar), any())).thenReturn(Map.of(2, new BigDecimal("450.00")));
+
+        PlanCostoResponse respuesta = service.calcularCosto(500L);
+
+        assertEquals(0, respuesta.costoAcumuladoPorDia().get(0).compareTo(new BigDecimal("1000.00")));
+        assertEquals(0, respuesta.costoAcumuladoPorDia().get(1).compareTo(new BigDecimal("1450.00")));
+        assertEquals(0, respuesta.costoAcumuladoPorDia().get(6).compareTo(new BigDecimal("1450.00")));
+        assertEquals(0, respuesta.costoAlergias().compareTo(new BigDecimal("450.00")));
     }
 
     @Test
