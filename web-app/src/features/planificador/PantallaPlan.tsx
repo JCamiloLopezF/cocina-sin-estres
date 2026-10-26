@@ -4,7 +4,7 @@ import { Alerta, Boton, Cargando, EncabezadoPagina, EstadoVacio } from '../../sh
 import { enPesos } from '../despensa/formato'
 import { ajustarPresupuesto, asignarComida, confirmarBorrador, crearPlan, generarPlan, obtenerPlan } from './apiPlanificador'
 import { mensajePlan, planSinHogar } from './mensajesPlan'
-import { aIso, COMIDAS, conSemana, DIAS, diaDe, fechaDelDia, NOMBRE_COMIDA, rangoSemana, tituloDia } from './semana'
+import { aIso, COMIDAS, conSemana, DIAS, diaDe, fechaDelDia, NOMBRE_COMIDA, NOMBRE_DIA, rangoSemana, tituloDia } from './semana'
 import type { Dia, PlanGenerado } from './tipos'
 import { useSemana, type Semana } from './useSemana'
 import './planificador.css'
@@ -46,6 +46,10 @@ function contarResultado(resultado: PlanGenerado, accion: 'armar' | 'ajustar'): 
         ? '1 comida trae un cambio para quien tiene alergias: míralo en ese día.'
         : `${resultado.conAdaptaciones} comidas traen un cambio para quien tiene alergias: míralo en cada día.`,
     )
+  }
+  const diasDelPago = resultado.diasDespuesDelPago ?? []
+  if (diasDelPago.length) {
+    partes.push(`Dejamos las comidas más costosas para ${enLista(diasDelPago.map((d) => `el ${NOMBRE_DIA[d]}`))}, cuando recién te pagan.`)
   }
   if (resultado.paraNinos) {
     partes.push(

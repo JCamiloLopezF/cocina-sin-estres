@@ -197,7 +197,7 @@ public class GeneradorPlanService {
     }
 
     private Contexto contexto(PlanSemanal plan, List<ComidaPlan> actuales) {
-        return contextos.construir(plan.getHogar(), actuales);
+        return contextos.construir(plan.getHogar(), actuales, plan.getSemanaInicio());
     }
 
     private Contexto contexto(Hogar hogar, List<ComidaPlan> actuales) {
@@ -233,7 +233,8 @@ public class GeneradorPlanService {
             (int) comoQuedo.values().stream()
                 .map(id -> generador.adaptar(contexto.plan(), id).estado())
                 .filter(e -> e == AdaptacionReceta.Estado.ADAPTADA || e == AdaptacionReceta.Estado.PLATO_APARTE)
-                .count());
+                .count(),
+            generador.diasDespuesDelPago(contexto.plan()));
     }
 
     private Hogar hogarDeLaUsuaria() {

@@ -83,4 +83,6 @@ export interface PlanGenerado {
   paraNinos?: number
   /** Comidas que llevan un cambio o un plato aparte para alguien con alergia (ADR-24). */
   conAdaptaciones?: number
+  /** Días de la semana en que recién le pagaron; ahí quedaron las comidas más costosas. */
+  diasDespuesDelPago?: Dia[]
 }

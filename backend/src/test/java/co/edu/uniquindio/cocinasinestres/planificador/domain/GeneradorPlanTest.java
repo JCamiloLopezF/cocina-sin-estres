@@ -258,4 +258,85 @@ class GeneradorPlanTest {
         assertThat(generador.otraOpcion(contexto, hueco, Set.of(2L))).contains(3L);
         assertThat(generador.otraOpcion(contexto, hueco, Set.of(2L, 3L))).isEmpty();
     }
+
+    // --- Comidas costosas después del pago (Definición, proceso 3) ----------------------
+
+    /** Siete recetas de $3.000 a $9.000; cada día de la semana lleva solo el almuerzo. */
+    private static Map<Long, RecetaCandidata> recetasDeVariosPrecios() {
+        Map<Long, RecetaCandidata> recetas = new HashMap<>();
+        for (long id = 1; id <= 7; id++) {
+            recetas.put(id, receta(id, 30, 2000 + 1000 * id, Map.of(ARROZ, 100), Set.of(), Set.of()));
+        }
+        return recetas;
+    }
+
+    private static List<Hueco> almuerzos() {
+        List<Hueco> huecos = new ArrayList<>();
+        for (int dia = 1; dia <= 7; dia++) {
+            huecos.add(new Hueco(dia, "ALMUERZO"));
+        }
+        return huecos;
+    }
+
+    /** Pago el viernes: viernes 0, sábado 1, domingo 2, lunes 3, … jueves 6. */
+    private static Map<Integer, Integer> pagoElViernes() {
+        return new CicloIngreso("SEMANAL", 5, null).diasDesdeElPagoEnLaSemana(java.time.LocalDate.of(2026, 10, 26));
+    }
+
+    private static long costo(Map<Long, RecetaCandidata> recetas, Long id) {
+        return recetas.get(id).costo().longValue();
+    }
+
+    @Test
+    @DisplayName("deja las comidas más costosas para el día del pago y los siguientes")
+    void costosasDespuesDelPago() {
+        Map<Long, RecetaCandidata> recetas = recetasDeVariosPrecios();
+        ContextoPlan contexto = contexto(recetas).conIngreso(pagoElViernes());
+
+        Map<Hueco, Long> plan = generador.completar(contexto, almuerzos());
+
+        assertThat(plan).hasSize(7);
+        // Del viernes (pago) al jueves siguiente, cada día cuesta lo mismo o menos que el anterior.
+        List<Integer> desdeElPago = List.of(5, 6, 7, 1, 2, 3, 4);
+        for (int i = 1; i < desdeElPago.size(); i++) {
+            long anterior = costo(recetas, plan.get(new Hueco(desdeElPago.get(i - 1), "ALMUERZO")));
+            long este = costo(recetas, plan.get(new Hueco(desdeElPago.get(i), "ALMUERZO")));
+            assertThat(este).isLessThanOrEqualTo(anterior);
+        }
+        assertThat(generador.diasDespuesDelPago(contexto)).containsExactly(5, 6);
+    }
+
+    @Test
+    @DisplayName("ordenar por el pago no cambia las recetas ni el costo de la semana")
+    void mismoCostoConOSinPago() {
+        Map<Long, RecetaCandidata> recetas = recetasDeVariosPrecios();
+        Map<Hueco, Long> sinPago = generador.completar(contexto(recetas), almuerzos());
+        Map<Hueco, Long> conPago = generador.completar(contexto(recetas).conIngreso(pagoElViernes()), almuerzos());
+
+        assertThat(conPago.values()).containsExactlyInAnyOrderElementsOf(sinPago.values());
+        assertThat(generador.costo(contexto(recetas), conPago)).isEqualByComparingTo(generador.costo(contexto(recetas), sinPago));
+        assertThat(generador.diasDespuesDelPago(contexto(recetas))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("no pasa una receta demorada a un día sin tiempo ni mueve lo que salva algo por vencer")
+    void respetaDiasSinTiempoYPorVencer() {
+        Map<Long, RecetaCandidata> recetas = new HashMap<>();
+        // La más cara es lenta: no puede ir al viernes, que es un día sin tiempo.
+        recetas.put(1L, receta(1, 60, 20000, Map.of(ARROZ, 100), Set.of(), Set.of()));
+        recetas.put(2L, receta(2, 15, 3000, Map.of(ARROZ, 100), Set.of(), Set.of()));
+        // Gasta el huevo que está por vencer: el generador la pone primero y ahí se queda.
+        recetas.put(3L, receta(3, 15, 15000, Map.of(HUEVO, 2), Set.of(), Set.of()));
+        ContextoPlan contexto = new ContextoPlan(
+            recetas, Set.of(), Set.of(5), BigDecimal.valueOf(200_000),
+            Map.of(HUEVO, BigDecimal.valueOf(2)), Set.of(HUEVO), Map.of())
+            .conIngreso(pagoElViernes());
+
+        Map<Hueco, Long> plan = generador.completar(
+            contexto, List.of(new Hueco(1, "ALMUERZO"), new Hueco(4, "ALMUERZO"), new Hueco(5, "ALMUERZO")));
+
+        assertThat(plan).containsEntry(new Hueco(1, "ALMUERZO"), 3L);
+        assertThat(recetas.get(plan.get(new Hueco(5, "ALMUERZO"))).tiempoMinutos())
+            .isLessThanOrEqualTo(GeneradorPlan.MINUTOS_DIA_SIN_TIEMPO);
+    }
 }
