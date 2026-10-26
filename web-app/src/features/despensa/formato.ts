@@ -32,6 +32,12 @@ export function enPesos(valor: number): string {
   return pesos.format(valor)
 }
 
+/** Lo que la usuaria escribe como precio: "12.500", "$12.500" o "12500" → 12500. Sin números → `undefined`. */
+export function leerPesos(texto: string): number | undefined {
+  const digitos = texto.replace(/\D/g, '')
+  return digitos ? Number(digitos) : undefined
+}
+
 /** "6 unidades", "1 unidad", "500 g", "1,5 l"… */
 export function cantidadConUnidad(cantidad: number, unidad: UnidadBase): string {
   if (unidad === 'unidad') {

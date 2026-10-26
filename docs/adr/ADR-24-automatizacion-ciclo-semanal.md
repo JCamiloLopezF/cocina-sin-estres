@@ -83,6 +83,7 @@ Las rutas del plan regeneran la lista de compras una sola vez, al final.
 
 - La lista ya no cuenta las comidas preparadas, porque sus ingredientes ya salieron de la despensa.
 - Lo comprado queda en la lista aunque el plan cambie, para poder deshacerlo. Antes se guardaba en el teléfono; ahora se guarda en el servidor.
+- **Costo editable** (KAN-26, V13). En la tienda el precio cambia: la usuaria toca el valor de un producto y escribe lo que pagó (`PUT /api/planes-semanales/{id}/lista-compras/items/{itemId}/costo`, con `costoReal` en pesos o `null` para volver al estimado). Se guarda en `item_lista_compras.costo_real` sin borrar el estimado, y el total de la lista suma lo pagado donde lo corrigió y el estimado en lo demás. Si el plan cambia y el producto sigue pidiendo la misma cantidad, el precio corregido se conserva; si la cantidad cambia, vuelve al estimado. No cambia el precio de referencia del catálogo ni el costo del plan.
 - **Puertos:** el planificador mueve la despensa con su propio puerto `MovimientosDespensa` (SQL directo sobre `item_despensa`), sin las entidades del módulo de despensa (RNF-26).
 - **Vida útil:** la vida útil del catálogo inicial es una referencia para una casa colombiana (granos 1 año, pollo y carne 3 días en la nevera, leche 7 días…). El curador la corrige en la ficha del producto.
 

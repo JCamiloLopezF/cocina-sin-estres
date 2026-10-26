@@ -15,7 +15,8 @@ import java.util.List;
  * @param planSemanalId  plan al que pertenece
  * @param generadaEn     cuándo se generó por última vez, {@code null} si no existe
  * @param items          productos pendientes de comprar
- * @param costoTotal     suma de los costos estimados de los ítems
+ * @param costoTotal     suma del costo de los ítems: lo que la usuaria pagó en los que lo
+ *                       corrigió y el estimado en los demás (KAN-26)
  */
 public record ListaComprasResponse(
     Long id,

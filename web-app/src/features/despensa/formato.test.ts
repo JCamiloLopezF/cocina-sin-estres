@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cantidadConUnidad, describirVencimiento, detalleItem, nombreCategoria } from './formato'
+import { cantidadConUnidad, describirVencimiento, detalleItem, leerPesos, nombreCategoria } from './formato'
 import type { ItemDespensa } from './tipos'
 
 const base: ItemDespensa = {
@@ -49,5 +49,19 @@ describe('formato de la despensa', () => {
   it('nombra las categorías del catálogo', () => {
     expect(nombreCategoria('GRANOS')).toBe('Granos y básicos')
     expect(nombreCategoria('BEBIDAS')).toBe('Bebidas')
+  })
+})
+
+describe('leerPesos (precio que escribe la usuaria)', () => {
+  it('acepta puntos de miles y el signo de pesos', () => {
+    expect(leerPesos('12.500')).toBe(12500)
+    expect(leerPesos('$ 12.500')).toBe(12500)
+    expect(leerPesos('9800')).toBe(9800)
+    expect(leerPesos('0')).toBe(0)
+  })
+
+  it('sin números no hay precio', () => {
+    expect(leerPesos('')).toBeUndefined()
+    expect(leerPesos('mucho')).toBeUndefined()
   })
 })

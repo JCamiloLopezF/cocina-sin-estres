@@ -38,6 +38,8 @@ export interface ItemListaCompras {
   productoId: number
   cantidad: number
   costoEstimado: number
+  /** Lo que la usuaria corrigió que pagó (KAN-26); si falta, cuenta el estimado. */
+  costoReal?: number | null
   /** 1 = indispensable; mayor = se puede posponer. */
   prioridad: number
   comprado: boolean
@@ -59,6 +61,7 @@ export interface ListaCompras {
   id?: number
   planSemanalId: number
   items: ItemListaCompras[]
+  /** Suma de lo que pagó (en lo que corrigió) y del estimado (en lo demás). */
   costoTotal: number
 }
 

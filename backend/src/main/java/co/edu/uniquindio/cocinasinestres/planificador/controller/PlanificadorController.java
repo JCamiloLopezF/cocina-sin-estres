@@ -3,6 +3,7 @@ package co.edu.uniquindio.cocinasinestres.planificador.controller;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanAssignRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraRequest;
+import co.edu.uniquindio.cocinasinestres.planificador.dto.CostoItemRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.CompraResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.GenerarPlanRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ListaComprasResponse;
@@ -106,6 +107,18 @@ public class PlanificadorController {
         @PathVariable("itemId") Long itemId,
         @RequestBody CompraRequest request) {
         return planificadorService.marcarComprado(planId, itemId, request != null && request.comprado());
+    }
+
+    /**
+     * Corrige lo que la usuaria pagó de verdad por un producto de la lista (KAN-26). Con
+     * {@code costoReal: null} vuelve al estimado. Responde la lista con el total ajustado.
+     */
+    @PutMapping("/{planId}/lista-compras/items/{itemId}/costo")
+    public ListaComprasResponse cambiarCostoItem(
+        @PathVariable("planId") Long planId,
+        @PathVariable("itemId") Long itemId,
+        @RequestBody(required = false) CostoItemRequest request) {
+        return planificadorService.cambiarCostoItem(planId, itemId, request == null ? null : request.costoReal());
     }
 
     /**

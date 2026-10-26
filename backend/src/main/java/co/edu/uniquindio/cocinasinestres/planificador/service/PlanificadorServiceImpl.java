@@ -17,6 +17,7 @@ import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.model.PlanSemanal;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.ComidaPlanRepository;
 import co.edu.uniquindio.cocinasinestres.planificador.repository.PlanSemanalRepository;
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -267,6 +268,21 @@ public class PlanificadorServiceImpl implements co.edu.uniquindio.cocinasinestre
             throw new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado.");
         }
         return listaComprasService.marcarComprado(plan, itemId, comprado);
+    }
+
+    @Override
+    @Transactional
+    public ListaComprasResponse cambiarCostoItem(Long planId, Long itemId, BigDecimal costoReal) {
+        UsuarioAutenticado usuario = usuarioActualService.obtener();
+        Hogar hogar = hogarRepository.findByUsuario_Id(usuario.id())
+            .orElseThrow(() -> new ConflictoException("PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
+        PlanSemanal plan = planSemanalRepository.findById(planId)
+            .orElseThrow(() -> new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado."));
+        if (!plan.getHogar().getId().equals(hogar.getId())) {
+            // Plan de otro hogar: mismo 404 que "no existe" (RNF-22)
+            throw new RecursoNoEncontradoException(ERROR_RECURSO_NO_ENCONTRADO, "Plan semanal no encontrado.");
+        }
+        return listaComprasService.cambiarCosto(plan, itemId, costoReal);
     }
 
     private void validarRequestAsignacion(ComidaPlanAssignRequest r) {
