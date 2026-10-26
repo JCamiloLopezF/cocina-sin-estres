@@ -228,6 +228,16 @@
   font-weight: 700;
 }
 
+.temporizador__paso {
+  margin: 0;
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.temporizador--fin .temporizador__paso {
+  color: var(--color-tinta);
+}
+
 .temporizador__acciones {
   display: flex;
   align-items: center;
@@ -401,4 +411,8 @@
   .temporizador--fin {
     animation: none;
   }
+}
+
+.intro-cocina__voz {
+  margin: 0;
 }

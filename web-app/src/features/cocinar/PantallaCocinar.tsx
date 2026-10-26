@@ -106,7 +106,7 @@ export function PantallaCocinar() {
   const [etapa, setEtapa] = useState<Etapa>(guardado?.etapa ?? 'alistar')
   const [alistados, setAlistados] = useState<number[]>(guardado?.alistados ?? [])
   const [manosLibres, setManosLibres] = useState(() => leer(CLAVE_MANOS_LIBRES) === 'si')
-  const [temporizador, setTemporizador] = useState<EstadoTemporizador>()
+  const [temporizadores, setTemporizadores] = useState<EstadoTemporizador[]>([])
   const [preparando, setPreparando] = useState(false)
   const [preparada, setPreparada] = useState(false)
   const [errorPreparar, setErrorPreparar] = useState<unknown>()
@@ -143,6 +143,8 @@ export function PantallaCocinar() {
   const vista = carga.tipo === 'listo' ? carga.vista : undefined
   const pasos = useMemo(() => vista?.receta.pasos ?? [], [vista])
   const minutosPaso = typeof etapa === 'number' ? minutosDelPaso(pasos[etapa] ?? '') : undefined
+  const temporizadorDelPaso = temporizadores.find((t) => t.paso === etapa)
+  const contandoEstePaso = temporizadorDelPaso !== undefined && !temporizadorDelPaso.terminado
   const { decir } = voz
 
   /** Lo que dice el asistente al llegar a una etapa. */
@@ -163,11 +165,13 @@ export function PantallaCocinar() {
       } else if (cual === 'final') {
         frase = `¡Quedó listo${nombre ? `, ${nombre}` : ''}! Buen provecho. Cuando sirvas, toca «La preparé» y descuento los ingredientes de tu despensa.`
       } else {
-        frase = fraseDelPaso(cual + 1, pasos.length, pasos[cual], minutosDelPaso(pasos[cual]))
+        // Si el tiempo de este paso ya se está contando, no se ofrece otra vez.
+        const contando = temporizadores.some((t) => t.paso === cual && !t.terminado)
+        frase = fraseDelPaso(cual + 1, pasos.length, pasos[cual], contando ? undefined : minutosDelPaso(pasos[cual]))
       }
       decir(prefijo ? `${prefijo} ${frase}` : frase)
     },
-    [vista, carga, nombre, pasos, decir],
+    [vista, carga, nombre, pasos, temporizadores, decir],
   )
 
   // Al abrir (después de la introducción) se anuncia dónde va.
@@ -181,6 +185,9 @@ export function PantallaCocinar() {
 
   const irA = useCallback(
     (destino: Etapa, prefijo?: string) => {
+      // Al avanzar o volver, el aviso de un tiempo que ya terminó se da por visto. Los
+      // que siguen contando se quedan: el arroz se cocina mientras se hace otro paso.
+      setTemporizadores((antes) => (antes.some((t) => t.terminado) ? antes.filter((t) => !t.terminado) : antes))
       setEtapa(destino)
       anunciar(destino, prefijo)
     },
@@ -198,17 +205,29 @@ export function PantallaCocinar() {
   }, [etapa, pasos.length, irA])
 
   const iniciarTemporizador = useCallback(() => {
-    if (!minutosPaso) return
-    setTemporizador(nuevoTemporizador(minutosPaso))
+    if (!minutosPaso || typeof etapa !== 'number') return
+    setTemporizadores((antes) => [...antes.filter((t) => t.paso !== etapa), nuevoTemporizador(minutosPaso, etapa)])
     decir(`Listo, cuento ${minutosEnPalabras(minutosPaso)}. Te aviso cuando acabe.`)
-  }, [minutosPaso, decir])
+  }, [minutosPaso, etapa, decir])
+
+  const cambiarTemporizador = useCallback((paso: number, nuevo: EstadoTemporizador | undefined) => {
+    setTemporizadores((antes) =>
+      nuevo ? antes.map((t) => (t.paso === paso ? nuevo : t)) : antes.filter((t) => t.paso !== paso),
+    )
+  }, [])
 
   const alTerminarTemporizador = useCallback(
-    (minutos: number) => {
+    (terminado: EstadoTemporizador) => {
       sonarAlarma()
-      decir(`¡Ya pasaron los ${minutosEnPalabras(minutos)}!`)
+      const tiempo = minutosEnPalabras(terminado.minutos)
+      const seguir = manosLibres ? 'Di «listo» y seguimos.' : 'Toca «Listo» y seguimos.'
+      decir(
+        terminado.paso === etapa
+          ? `¡Ya pasaron los ${tiempo}! ${seguir}`
+          : `¡Ya pasaron los ${tiempo} del paso ${terminado.paso + 1}!`,
+      )
     },
-    [decir],
+    [decir, etapa, manosLibres],
   )
 
   const ejecutar = useCallback(
@@ -217,11 +236,12 @@ export function PantallaCocinar() {
       else if (comando === 'atras') atras()
       else if (comando === 'repite') anunciar(etapa)
       else if (comando === 'temporizador') {
-        if (minutosPaso) iniciarTemporizador()
-        else decir('Este paso no tiene tiempo para contar.')
+        if (!minutosPaso) decir('Este paso no tiene tiempo para contar.')
+        else if (contandoEstePaso) decir('Ya lo estoy contando. Te aviso cuando acabe.')
+        else iniciarTemporizador()
       }
     },
-    [siguiente, atras, anunciar, etapa, minutosPaso, iniciarTemporizador, decir],
+    [siguiente, atras, anunciar, etapa, minutosPaso, contandoEstePaso, iniciarTemporizador, decir],
   )
 
   const escucha = useEscucha(manosLibres && !verIntro, voz.hablando, ejecutar)
@@ -340,9 +360,14 @@ export function PantallaCocinar() {
         </p>
       )}
 
-      {temporizador && (
-        <Temporizador estado={temporizador} alCambiar={setTemporizador} alTerminar={alTerminarTemporizador} />
-      )}
+      {temporizadores.map((t) => (
+        <Temporizador
+          key={t.paso}
+          estado={t}
+          alCambiar={(nuevo) => cambiarTemporizador(t.paso, nuevo)}
+          alTerminar={alTerminarTemporizador}
+        />
+      ))}
 
       {etapa === 'alistar' && (
         <section className="cocinar__tarjeta" aria-labelledby="titulo-etapa">
@@ -402,7 +427,7 @@ export function PantallaCocinar() {
           <h1 id="titulo-etapa" className="cocinar__paso">
             {pasos[etapa]}
           </h1>
-          {minutosPaso && !temporizador && (
+          {minutosPaso && !contandoEstePaso && (
             <Boton variante="secundario" ancho onClick={iniciarTemporizador}>
               ⏱ Contar {minutosEnPalabras(minutosPaso)}
             </Boton>

@@ -23,7 +23,10 @@
 **Temporizador.** Si el paso dice un tiempo ("20 minutos", "15 a 20 minutos", "media hora"), ofrece contarlo.
 
 - Cuenta con la hora real, así que no se atrasa si la pantalla se duerme.
-- Al terminar suena, vibra y lo dice.
+- Al terminar suena, vibra y lo dice ("¡Ya pasaron los 20 minutos! Toca «Listo» y seguimos").
+- Puede haber varios a la vez, uno por paso: el arroz sigue contando mientras se hace el sofrito. Cada uno dice de qué paso es.
+- El aviso de un tiempo que terminó se quita solo al tocar o decir «Listo» (o «Atrás»), sin un clic aparte. «Quitar» lo cierra sin avanzar.
+- Regla de los pasos: **como máximo un tiempo por paso** y con un solo número. Un paso como "sofríe la cebolla 2 minutos, luego el tomate 4 minutos" se parte en dos. `PasosReceta.tiemposDelPaso` aplica la regla y `PasosRecetasIntegracionTest` la vigila sobre todo el catálogo; V12 reescribió los pasos de las 21 recetas con ella.
 
 **Manos libres** (comandos de voz). Usa `SpeechRecognition` del navegador.
 
@@ -67,7 +70,10 @@
 
 - `SpeechRecognition` solo existe en Chrome y Edge (Android y escritorio). En Safari y Firefox no aparece el botón 🎤.
 - En Chrome el audio de Manos libres lo procesa el servicio de voz de Google. Por eso está apagado por defecto y la introducción lo avisa antes de encenderlo. Se debe mencionar en la política de privacidad.
-- La calidad de la voz depende del celular. Las voces "naturales" o de Google suenan mejor y se prefieren cuando están instaladas.
-- Los minutos del temporizador salen del texto del paso. Si el curador escribe el tiempo de otra forma, no se ofrece y la usuaria cuenta por su cuenta.
+- La calidad de la voz depende del celular. Se elige la más natural que haya: primero las "Natural", "Mejorada", "Premium", de Google o en línea, aunque sean de otro país, y luego el español latinoamericano. Las voces de efectos de Apple (Eddy, Flo, Grandma…) se descartan. Si la voz elegida es básica, la introducción le dice a la usuaria dónde descargar una mejor en iPhone o Android.
+- Habla frase por frase, con velocidad 0,95 y tono normal, para que haga las pausas de la puntuación (y porque Chrome corta las frases de más de 15 segundos).
+- Safari solo deja hablar si la primera frase sale de un toque, y pierde la frase si se corta la anterior en el mismo instante. La voz se "despierta" con el primer toque en cualquier parte de la app (una frase vacía en silencio), lo que se quiso decir antes de ese toque se dice con él, y después de cortar se esperan 80 ms. En iPhone, con el interruptor de silencio activado, la voz no suena.
+- Los minutos del temporizador salen del texto del paso. Si el curador escribe el tiempo de otra forma, no se ofrece y la usuaria cuenta por su cuenta. La expresión de `guion.ts` y la de `PasosReceta` deben cambiar juntas.
+- Las cantidades de agua de los pasos son para las porciones de la receta: si la usuaria cocina para más personas, los ingredientes se escalan pero el texto del paso no.
 - `POST /api/preparaciones` descuenta, pero no queda registro de qué se cocinó fuera del plan. El análisis del administrador (bloque 5) puede necesitar guardarlo.
 - Si el video se borra de YouTube, la portada sale vacía. El curador lo cambia desde «Videos de recetas».

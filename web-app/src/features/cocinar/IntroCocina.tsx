@@ -87,6 +87,11 @@ export function IntroCocina({ voz, puedeEscuchar, manosLibres, alternarManosLibr
                   Probar la voz
                 </Boton>
               )}
+              {voz.encendida && voz.nombreVoz && (
+                <p className="campo__ayuda intro-cocina__voz">
+                  Voz: {voz.nombreVoz}.{!voz.vozNatural && consejoVoz() ? ` ${consejoVoz()}` : ''}
+                </p>
+              )}
             </>
           ) : (
             <p className="campo__ayuda">Este celular no puede hablar, pero puedes cocinar leyendo los pasos.</p>
@@ -118,4 +123,19 @@ export function IntroCocina({ voz, puedeEscuchar, manosLibres, alternarManosLibr
       </div>
     </section>
   )
+}
+
+/**
+ * Dónde descargar una voz más natural, según el celular. Las voces "mejoradas" de iPhone
+ * y las de Google en Android suenan mucho menos robóticas que las que vienen instaladas.
+ */
+function consejoVoz(): string | undefined {
+  const agente = typeof navigator === 'undefined' ? '' : navigator.userAgent
+  if (/iPhone|iPad|Macintosh/.test(agente)) {
+    return 'Para que suene más natural, descarga una voz «Mejorada» en Ajustes → Accesibilidad → Contenido leído → Voces → Español.'
+  }
+  if (/Android/.test(agente)) {
+    return 'Para que suene más natural, en Ajustes → Idiomas → Salida de texto a voz elige «Servicios de voz de Google».'
+  }
+  return undefined
 }
