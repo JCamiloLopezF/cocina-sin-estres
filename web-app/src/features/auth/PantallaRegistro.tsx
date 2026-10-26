@@ -128,6 +128,10 @@ export function PantallaRegistro() {
             />
             Autorizo el tratamiento de mis datos personales y los de salud de mi hogar (Ley 1581 de 2012).
           </label>
+          <p className="campo__ayuda">
+            Lee la <Link to="/privacidad">política de tratamiento de datos</Link>: qué guardamos y cómo pedir que lo
+            borremos.
+          </p>
           {errores.autorizacion && (
             <span className="campo__error" id="error-autorizacion">
               {errores.autorizacion}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { Boton } from '../../shared/componentes'
 import type { Voz } from './voz'
 
@@ -107,6 +108,11 @@ export function IntroCocina({ voz, puedeEscuchar, manosLibres, alternarManosLibr
                 </span>
               </span>
             </label>
+          )}
+          {puedeEscuchar && (
+            <p className="campo__ayuda">
+              No grabamos tu voz. Más detalles en la <Link to="/privacidad">política de datos</Link>.
+            </p>
           )}
         </div>
       )}

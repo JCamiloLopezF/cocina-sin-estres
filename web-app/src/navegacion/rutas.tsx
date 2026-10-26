@@ -30,6 +30,7 @@ import { DisenoOperativo } from './DisenoOperativo'
 import { DisenoUsuaria } from './DisenoUsuaria'
 import { RequiereRol, RutaPrivada, RutaPublica } from './guardas'
 import { PantallaNoEncontrada } from './PantallaNoEncontrada'
+import { PantallaPrivacidad } from '../features/legal/PantallaPrivacidad'
 
 /**
  * Mapa de pantallas. Cada rol tiene su propia zona (ADR-16); el backend vuelve a
@@ -107,6 +108,8 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
         },
       ],
     },
+    // Se abre con o sin sesión: la bienvenida y el registro la enlazan (Ley 1581).
+    { path: '/privacidad', element: <PantallaPrivacidad /> },
     { path: '*', element: <PantallaNoEncontrada /> },
   ]
 }
