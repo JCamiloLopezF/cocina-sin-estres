@@ -32,7 +32,8 @@ jobs:
     name: desplegar-backend
     runs-on: ubuntu-latest
     environment: produccion
-    timeout-minutes: 30
+    # El script espera hasta 30 minutos a Elastic Beanstalk; más la compilación.
+    timeout-minutes: 45
     permissions:
       contents: read
       id-token: write
