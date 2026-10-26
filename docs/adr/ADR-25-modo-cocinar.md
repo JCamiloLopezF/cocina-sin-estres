@@ -67,7 +67,9 @@
 
 - `SpeechRecognition` solo existe en Chrome y Edge (Android y escritorio). En Safari y Firefox no aparece el botón 🎤.
 - En Chrome el audio de Manos libres lo procesa el servicio de voz de Google. Por eso está apagado por defecto y la introducción lo avisa antes de encenderlo. Se debe mencionar en la política de privacidad.
-- La calidad de la voz depende del celular. Las voces "naturales" o de Google suenan mejor y se prefieren cuando están instaladas.
+- La calidad de la voz depende del celular. Se elige la más natural que haya: primero las "Natural", "Mejorada", "Premium", de Google o en línea, aunque sean de otro país, y luego el español latinoamericano. Las voces de efectos de Apple (Eddy, Flo, Grandma…) se descartan. Si la voz elegida es básica, la introducción le dice a la usuaria dónde descargar una mejor en iPhone o Android.
+- Habla frase por frase, con velocidad 0,95 y tono normal, para que haga las pausas de la puntuación (y porque Chrome corta las frases de más de 15 segundos).
+- Safari solo deja hablar si la primera frase sale de un toque, y pierde la frase si se corta la anterior en el mismo instante. La voz se "despierta" con el primer toque en cualquier parte de la app (una frase vacía en silencio), lo que se quiso decir antes de ese toque se dice con él, y después de cortar se esperan 80 ms. En iPhone, con el interruptor de silencio activado, la voz no suena.
 - Los minutos del temporizador salen del texto del paso. Si el curador escribe el tiempo de otra forma, no se ofrece y la usuaria cuenta por su cuenta.
 - `POST /api/preparaciones` descuenta, pero no queda registro de qué se cocinó fuera del plan. El análisis del administrador (bloque 5) puede necesitar guardarlo.
 - Si el video se borra de YouTube, la portada sale vacía. El curador lo cambia desde «Videos de recetas».

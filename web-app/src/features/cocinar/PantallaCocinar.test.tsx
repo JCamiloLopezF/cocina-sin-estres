@@ -16,25 +16,39 @@ const ARROZ_BLANCO: RecetaDetalle = {
   ingredientes: [{ productoId: 1, cantidad: 250, opcional: false }],
 }
 
-/** `speechSynthesis` de mentiras: guarda lo que dijo el asistente. */
+/**
+ * `speechSynthesis` de mentiras: guarda lo que dijo el asistente. El asistente habla
+ * frase por frase; las frases de un mismo mensaje se unen en una sola entrada (la última
+ * frase de cada mensaje es la que trae `onend`), así `dichas.at(-1)` es el último mensaje
+ * completo.
+ */
 function vozFalsa() {
   const dichas: string[] = []
+  let mensajeAbierto = false
   class Frase {
     lang = ''
     voice = null
     rate = 1
     pitch = 1
+    volume = 1
     onstart = null
-    onend = null
+    onend: (() => void) | null = null
     onerror = null
     text: string
     constructor(text: string) {
       this.text = text
     }
   }
+  function hablar(frase: Frase) {
+    // La frase en silencio con la que se "despierta" la voz en Safari no cuenta.
+    if (!frase.text.trim()) return
+    if (mensajeAbierto) dichas[dichas.length - 1] += ` ${frase.text}`
+    else dichas.push(frase.text)
+    mensajeAbierto = frase.onend === null
+  }
   vi.stubGlobal('SpeechSynthesisUtterance', Frase)
   vi.stubGlobal('speechSynthesis', {
-    speak: vi.fn((frase: Frase) => dichas.push(frase.text)),
+    speak: vi.fn(hablar),
     cancel: vi.fn(),
     getVoices: () => [],
     addEventListener: vi.fn(),
