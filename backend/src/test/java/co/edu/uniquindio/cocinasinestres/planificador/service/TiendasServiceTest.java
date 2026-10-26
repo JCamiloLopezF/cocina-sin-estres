@@ -83,14 +83,21 @@ class TiendasServiceTest {
     }
 
     @Test
-    @DisplayName("no repite número ni pasa de cinco tiendas")
-    void limites() {
+    @DisplayName("no repite el número de una tienda ya guardada")
+    void noRepiteNumero() {
         when(tiendaRepository.existsByHogarIdAndWhatsapp(10L, "573001234567")).thenReturn(true);
-        assertThatThrownBy(() -> servicio.crear(new TiendaRequest("Otra", "3001234567")))
+
+        assertThatThrownBy(() -> servicio.crear(new TiendaRequest("Otra", "300 123 4567")))
             .isInstanceOf(ConflictoException.class)
             .hasFieldOrPropertyWithValue("codigo", "TIENDA_REPETIDA");
+        verify(tiendaRepository, never()).save(any());
+    }
 
+    @Test
+    @DisplayName("no pasa de cinco tiendas por hogar")
+    void maximoCinco() {
         when(tiendaRepository.countByHogarId(10L)).thenReturn(5L);
+
         assertThatThrownBy(() -> servicio.crear(new TiendaRequest("Sexta", "3109998877")))
             .isInstanceOf(ConflictoException.class)
             .hasFieldOrPropertyWithValue("codigo", "TIENDAS_MAXIMO");
