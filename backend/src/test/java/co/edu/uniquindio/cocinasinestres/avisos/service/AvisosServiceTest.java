@@ -159,7 +159,7 @@ class AvisosServiceTest {
     void cincoReglas() {
         LocalDate hoy = LocalDate.of(2026, 10, 23);
         when(fuente.bajoMinimo(HOGAR)).thenReturn(List.of(new ProductoAviso(1L, "Arroz", null)));
-        when(fuente.porVencer(HOGAR, hoy, hoy.plusDays(3))).thenReturn(List.of(new ProductoAviso(2L, "Leche", hoy.plusDays(1))));
+        when(fuente.porVencer(HOGAR, hoy.minusDays(7), hoy.plusDays(3))).thenReturn(List.of(new ProductoAviso(2L, "Leche", hoy.plusDays(1))));
         when(fuente.preparacionesPara(HOGAR, hoy.plusDays(1))).thenReturn(List.of(
             new co.edu.uniquindio.cocinasinestres.avisos.domain.PreparacionPendiente(6, "ALMUERZO", "Fríjoles", "Remoja los fríjoles.")));
         when(fuente.semana(HOGAR, LUNES_SIGUIENTE)).thenReturn(new EstadoSemana(EstadoSemana.Situacion.BORRADOR, 14));
