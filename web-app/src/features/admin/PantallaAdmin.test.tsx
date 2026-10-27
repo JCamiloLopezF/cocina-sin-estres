@@ -19,7 +19,7 @@ describe('Cuentas y roles (rol ADMIN)', () => {
     montarApp(crearServicioFalso({ uid: 'a', correo: ADMIN.correo, nombre: null }).servicio, '/admin')
     const usuario = userEvent.setup()
 
-    expect(await screen.findByText('1 usuarias · 0 curadores · 1 administradores')).toBeInTheDocument()
+    expect(await screen.findByText('1 usuaria · 0 curadores · 1 administrador')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Rol de admin@correo.com' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: /admin@correo.com/ })).not.toBeInTheDocument()
 
