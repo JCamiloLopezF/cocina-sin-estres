@@ -23,6 +23,7 @@ import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.CatalogoParaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.RecetaCandidata;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.StockEnDespensa;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.RegistroUso;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.AdaptacionResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.OtraOpcionRequest;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PlanGeneradoResponse;
@@ -61,6 +62,7 @@ class GeneradorPlanServiceTest {
     @Mock private CatalogoParaPlan catalogo;
     @Mock private StockEnDespensa stockEnDespensa;
     @Mock private ListaComprasService listaComprasService;
+    @Mock private RegistroUso registroUso;
 
     private GeneradorPlanService servicio;
     private Hogar hogar;
@@ -73,7 +75,7 @@ class GeneradorPlanServiceTest {
         servicio = new GeneradorPlanService(
             planSemanalRepository, comidaPlanRepository, hogarRepository, usuarioActualService,
             new ContextoPlanFactory(resumenHogarService, catalogo, stockEnDespensa, reloj),
-            catalogo, listaComprasService);
+            catalogo, listaComprasService, registroUso);
 
         UsuarioAutenticado usuario = mock(UsuarioAutenticado.class);
         lenient().when(usuario.id()).thenReturn(1L);

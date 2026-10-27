@@ -112,9 +112,13 @@ public class AvisosService {
             .map(AvisosService::aRespuesta)
             .toList();
 
-        // Métricas del Plan de Calidad: avisos por sesión y tiempo del motor (RNF-07).
-        log.info("Avisos evaluados: hogarId={} vigentes={} mostrados={} ms={}",
-            hogarId, avisos.size(), mostrar.size(), (System.nanoTime() - inicio) / 1_000_000);
+        // Métricas del Plan de Calidad: avisos por sesión, reglas evaluadas (RNF-04) y tiempo
+        // del motor (RNF-07). Quedan en apertura_app para el análisis del administrador (KAN-54).
+        long ms = (System.nanoTime() - inicio) / 1_000_000;
+        int reglas = TipoAviso.values().length - apagados.size();
+        almacen.registrarApertura(hogarId, avisos.size(), mostrar.size(), reglas, ms);
+        log.info("Avisos evaluados: hogarId={} vigentes={} mostrados={} reglas={} ms={}",
+            hogarId, avisos.size(), mostrar.size(), reglas, ms);
         return mostrar;
     }
 

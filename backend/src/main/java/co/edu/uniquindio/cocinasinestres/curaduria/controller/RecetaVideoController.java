@@ -1,5 +1,6 @@
 package co.edu.uniquindio.cocinasinestres.curaduria.controller;
 
+import co.edu.uniquindio.cocinasinestres.curaduria.dto.EtiquetasRecetaRequest;
 import co.edu.uniquindio.cocinasinestres.curaduria.dto.RecetaVideoRequest;
 import co.edu.uniquindio.cocinasinestres.curaduria.dto.RecetaVideoResponse;
 import co.edu.uniquindio.cocinasinestres.curaduria.service.RecetaVideoService;
@@ -13,7 +14,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** El curador carga el video de cada receta (máximo la mitad del tiempo de la receta). */
+/**
+ * El curador carga el video de cada receta (máximo la mitad del tiempo de la receta) y marca
+ * si es plato fuerte o si les gusta a los niños (KAN-17).
+ */
 @RestController
 @RequestMapping("/api/curaduria/recetas")
 @PreAuthorize("hasRole('CURADOR')")
@@ -33,6 +37,13 @@ public class RecetaVideoController {
     @PutMapping("/{id}/video")
     public RecetaVideoResponse guardar(@PathVariable("id") Long id, @RequestBody RecetaVideoRequest request) {
         return recetaVideoService.guardar(id, request);
+    }
+
+    /** Marca la receta como plato fuerte o que les gusta a los niños (KAN-17). */
+    @PutMapping("/{id}/etiquetas")
+    public RecetaVideoResponse etiquetas(
+        @PathVariable("id") Long id, @RequestBody(required = false) EtiquetasRecetaRequest request) {
+        return recetaVideoService.cambiarEtiquetas(id, request);
     }
 
     @DeleteMapping("/{id}/video")

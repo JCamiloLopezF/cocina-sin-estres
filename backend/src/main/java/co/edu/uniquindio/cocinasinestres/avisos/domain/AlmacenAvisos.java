@@ -47,4 +47,11 @@ public interface AlmacenAvisos {
 
     /** Enciende o apaga un tipo de aviso para el hogar. */
     void cambiarPreferencia(Long hogarId, TipoAviso tipo, boolean activo);
+
+    /**
+     * Anota una apertura de la app para las métricas del Plan de Calidad (KAN-54, V15):
+     * avisos vigentes y mostrados, reglas evaluadas (RNF-04) y cuánto tardó el motor
+     * (RNF-07). Si falla, no interrumpe a la usuaria.
+     */
+    void registrarApertura(Long hogarId, int vigentes, int mostrados, int reglas, long duracionMs);
 }

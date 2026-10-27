@@ -6,6 +6,7 @@ import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.MovimientosDespensa;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.RegistroUso;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.PreparacionRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,14 +29,17 @@ public class PreparacionController {
     private final HogarRepository hogarRepository;
     private final UsuarioActualService usuarioActualService;
     private final MovimientosDespensa movimientosDespensa;
+    private final RegistroUso registroUso;
 
     public PreparacionController(
         HogarRepository hogarRepository,
         UsuarioActualService usuarioActualService,
-        MovimientosDespensa movimientosDespensa) {
+        MovimientosDespensa movimientosDespensa,
+        RegistroUso registroUso) {
         this.hogarRepository = hogarRepository;
         this.usuarioActualService = usuarioActualService;
         this.movimientosDespensa = movimientosDespensa;
+        this.registroUso = registroUso;
     }
 
     @PostMapping
@@ -48,6 +52,8 @@ public class PreparacionController {
             .orElseThrow(() -> new ConflictoException(
                 "PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de usar la despensa."));
         movimientosDespensa.descontarReceta(hogar.getId(), request.recetaId());
+        // Recetas más cocinadas (KAN-54): también lo que se cocina fuera del plan.
+        registroUso.preparacion(hogar.getId(), request.recetaId(), null);
         return ResponseEntity.noContent().build();
     }
 }

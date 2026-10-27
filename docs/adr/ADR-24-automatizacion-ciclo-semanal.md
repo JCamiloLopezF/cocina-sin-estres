@@ -39,7 +39,7 @@ En la sustentación el profesor observó que la aplicación era "muy CRUD": la u
   - La respuesta trae `diasDespuesDelPago` y la pantalla lo cuenta: "Dejamos las comidas más costosas para el viernes y el sábado, cuando recién te pagan".
 - **Empates.** Gana la receta más barata y luego la de menor id. Con los mismos datos el plan sale igual, lo que hace las pruebas repetibles.
 - **Costo.** Se calcula con la fórmula del costo del plan (`cantidad / cantidadUnidadCompra × precio`, solo ingredientes obligatorios). Así el resultado coincide con la barra de presupuesto.
-- **Plato fuerte.** Solo las recetas con `receta.es_plato_fuerte` (V7) van al almuerzo o la cena. Un batido o una ensalada de frutas no son una comida.
+- **Plato fuerte.** Solo las recetas con `receta.es_plato_fuerte` (V7) van al almuerzo o la cena. Un batido o una ensalada de frutas no son una comida. El curador cambia esta marca y la de `gusta_a_ninos` en **Recetas** (`PUT /api/curaduria/recetas/{id}/etiquetas`, KAN-17), sin tocar código ni migraciones.
 - **Edad de las personas.** El perfil ya pide la edad de cada persona (ADR-13). `ResumenHogarService` la usa para saber si hay niños, sin exponer quién es.
 - El generador lee el catálogo con su propio puerto (`CatalogoParaPlan`). El perfil le entrega las restricciones ya descifradas mediante `ResumenHogarService` (RNF-26, ADR-20).
 

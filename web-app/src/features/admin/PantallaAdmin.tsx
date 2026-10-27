@@ -3,6 +3,7 @@ import { ErrorApi, pedir } from '../../api/cliente'
 import { mensajeDeError } from '../../api/mensajesError'
 import { Alerta, Boton, Cargando, EncabezadoPagina } from '../../shared/componentes'
 import { useCuenta, type Rol } from '../auth/contextoSesion'
+import { NavAdmin } from './NavAdmin'
 import './admin.css'
 
 /** `GET /api/admin/cuentas` (CuentaResponse). */
@@ -74,6 +75,7 @@ export function PantallaAdmin() {
   if (estado.tipo !== 'listo') {
     return (
       <>
+        <NavAdmin />
         <EncabezadoPagina titulo="Cuentas" />
         {estado.tipo === 'cargando' ? (
           <Cargando texto="Cargando cuentas…" />
@@ -95,6 +97,7 @@ export function PantallaAdmin() {
 
   return (
     <>
+      <NavAdmin />
       <EncabezadoPagina
         titulo="Cuentas"
         detalle={`${contar('USUARIA')} usuarias · ${contar('CURADOR')} curadores · ${contar('ADMIN')} administradores`}

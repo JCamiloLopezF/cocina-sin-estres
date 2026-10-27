@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Alerta, Boton, CampoTexto, Cargando, EncabezadoPagina } from '../../shared/componentes'
 import { relojDe } from '../cocinar/guion'
 import {
+  cambiarEtiquetasReceta,
   guardarVideoReceta,
   listarVideosRecetas,
   mensajeCuraduria,
@@ -14,15 +15,18 @@ import './curaduria.css'
 type Estado = { tipo: 'cargando' } | { tipo: 'listo'; recetas: RecetaConVideo[] } | { tipo: 'error'; error: unknown }
 
 /**
- * El curador le pone a cada receta un video de YouTube que muestra lo más importante.
- * Solo se guarda el fragmento útil, que dura como máximo la mitad del tiempo de la
- * receta (pedido del profesor). El video se ve en el detalle de la receta.
+ * Las recetas del catálogo, para el curador:
+ * - un video de YouTube que muestra lo más importante. Solo se guarda el fragmento útil, que
+ *   dura como máximo la mitad del tiempo de la receta (pedido del profesor);
+ * - si es plato fuerte y si les gusta a los niños, que "Armar mi semana" tiene en cuenta (KAN-17).
  */
 export function PantallaVideosRecetas() {
   const [estado, setEstado] = useState<Estado>({ tipo: 'cargando' })
   const [version, setVersion] = useState(0)
   const [editando, setEditando] = useState<number>()
   const [aviso, setAviso] = useState<string>()
+  const [errorEtiqueta, setErrorEtiqueta] = useState<string>()
+  const [marcando, setMarcando] = useState<number>()
 
   useEffect(() => {
     const control = new AbortController()
@@ -44,18 +48,44 @@ export function PantallaVideosRecetas() {
     setAviso(texto)
   }
 
+  async function marcar(receta: RecetaConVideo, cambio: { platoFuerte?: boolean; gustaANinos?: boolean }) {
+    setMarcando(receta.id)
+    setAviso(undefined)
+    setErrorEtiqueta(undefined)
+    try {
+      const nueva = await cambiarEtiquetasReceta(receta.id, cambio)
+      const texto =
+        cambio.platoFuerte !== undefined
+          ? nueva.platoFuerte
+            ? `${nueva.nombre} ya puede ir en el almuerzo o la cena.`
+            : `${nueva.nombre} ya no se propone como almuerzo o cena.`
+          : nueva.gustaANinos
+            ? `${nueva.nombre} queda entre las que les gustan a los niños.`
+            : `${nueva.nombre} ya no se marca como de niños.`
+      setEstado((antes) =>
+        antes.tipo === 'listo' ? { tipo: 'listo', recetas: antes.recetas.map((r) => (r.id === nueva.id ? nueva : r)) } : antes,
+      )
+      setAviso(texto)
+    } catch (causa) {
+      setErrorEtiqueta(mensajeCuraduria(causa))
+    } finally {
+      setMarcando(undefined)
+    }
+  }
+
   const recetas = estado.tipo === 'listo' ? estado.recetas : []
   const conVideo = recetas.filter((r) => r.youtubeId).length
 
   return (
     <>
       <EncabezadoPagina
-        titulo="Videos de recetas"
-        detalle="Un video corto por receta: lo más importante de la preparación, máximo la mitad de su tiempo."
+        titulo="Recetas"
+        detalle="Un video corto por receta (máximo la mitad de su tiempo) y cómo la usa «Armar mi semana»."
         detalleAbajo
         volver={{ ruta: '/curaduria', etiqueta: 'Volver al catálogo' }}
       />
       {aviso && <Alerta tono="exito">{aviso}</Alerta>}
+      {errorEtiqueta && <Alerta tono="error">{errorEtiqueta}</Alerta>}
 
       {estado.tipo === 'cargando' && <Cargando texto="Cargando las recetas…" />}
       {estado.tipo === 'error' && (
@@ -97,6 +127,25 @@ export function PantallaVideosRecetas() {
                     </Boton>
                   )}
                 </div>
+                <fieldset className="etiquetas-receta" disabled={marcando === receta.id}>
+                  <legend className="solo-lectores">Cómo se usa {receta.nombre} al armar la semana</legend>
+                  <label className="etiquetas-receta__opcion">
+                    <input
+                      type="checkbox"
+                      checked={receta.platoFuerte}
+                      onChange={(e) => void marcar(receta, { platoFuerte: e.target.checked })}
+                    />
+                    Plato fuerte (almuerzo o cena)
+                  </label>
+                  <label className="etiquetas-receta__opcion">
+                    <input
+                      type="checkbox"
+                      checked={receta.gustaANinos}
+                      onChange={(e) => void marcar(receta, { gustaANinos: e.target.checked })}
+                    />
+                    Les gusta a los niños
+                  </label>
+                </fieldset>
                 {editando === receta.id && (
                   <FormularioVideo
                     receta={receta}

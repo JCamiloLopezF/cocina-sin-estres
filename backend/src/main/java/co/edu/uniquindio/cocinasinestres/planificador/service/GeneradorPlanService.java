@@ -12,6 +12,7 @@ import co.edu.uniquindio.cocinasinestres.planificador.domain.CatalogoParaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.ContextoPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.GeneradorPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.Hueco;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.RegistroUso;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.CambioPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.GenerarPlanRequest;
@@ -58,6 +59,7 @@ public class GeneradorPlanService {
     private final ContextoPlanFactory contextos;
     private final CatalogoParaPlan catalogo;
     private final ListaComprasService listaComprasService;
+    private final RegistroUso registroUso;
     private final GeneradorPlan generador = new GeneradorPlan();
 
     public GeneradorPlanService(
@@ -67,7 +69,8 @@ public class GeneradorPlanService {
         UsuarioActualService usuarioActualService,
         ContextoPlanFactory contextos,
         CatalogoParaPlan catalogo,
-        ListaComprasService listaComprasService) {
+        ListaComprasService listaComprasService,
+        RegistroUso registroUso) {
         this.planSemanalRepository = planSemanalRepository;
         this.comidaPlanRepository = comidaPlanRepository;
         this.hogarRepository = hogarRepository;
@@ -75,6 +78,7 @@ public class GeneradorPlanService {
         this.contextos = contextos;
         this.catalogo = catalogo;
         this.listaComprasService = listaComprasService;
+        this.registroUso = registroUso;
     }
 
     /** Llena los huecos vacíos del almuerzo y la cena (o las comidas pedidas). */
@@ -99,6 +103,8 @@ public class GeneradorPlanService {
             cambios.add(new CambioPlanResponse(hueco.dia(), hueco.tipoComida(), receta, null));
         });
         log.info("Plan generado: planId={} comidasNuevas={}", planId, nuevas.size());
+        // Tiempo para armar la semana (KAN-54): se anota la primera vez que queda completa.
+        registroUso.revisarPlanCompleto(planId);
         return terminar(plan, contexto, cambios);
     }
 

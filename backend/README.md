@@ -86,6 +86,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `PUT /api/curaduria/productos/{id}` | Actualiza un producto. Si no cambia ningún campo, no se modifica el responsable ni se audita. |
 | `DELETE /api/curaduria/productos/{id}` | Desactiva el producto (no lo borra). Responde 204; repetirlo no tiene efecto. |
 | `GET /api/admin/cuentas` | Lista las cuentas con su rol y si están activas. Solo `ADMIN`. |
+| `GET /api/admin/analisis` | (ADMIN) Análisis del uso y los indicadores del Plan de Calidad (KAN-54): `uso` (usuarias, hogares activos, planes, recetas cocinadas, modo rescate), `indicadores` por proceso con `valor`, `meta`, `cumple` y `muestra`, recetas más cocinadas y planeadas y las que no se usan. Eventos de los últimos 30 días; planes de las últimas 8 semanas. Ver `docs/calidad/indicadores.md`. |
 | `PUT /api/admin/cuentas/{id}` | Cambia el `rol` (`USUARIA`, `CURADOR`, `ADMIN`) o `activo` de otra cuenta. Un administrador no puede cambiarse a sí mismo (409 `ADMIN_CUENTA_PROPIA`). |
 | `GET /api/items-despensa` | Lista la despensa del hogar de la usuaria. Parámetros opcionales: `filtro` (`TODO`, `POR_VENCER`, `BAJO_MINIMO`) y `buscar`. |
 | `GET /api/items-despensa/resumen` | Totales para la pantalla de inicio: `total`, `porVencer` y `bajoMinimo`. |
@@ -124,3 +125,4 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `GET /api/curaduria/recetas` | (CURADOR) Recetas activas con su video y `maximoSegundos` (la mitad del tiempo de la receta, ADR-25). |
 | `PUT /api/curaduria/recetas/{id}/video` | (CURADOR) Cuerpo `{ "enlace": "https://youtu.be/…", "inicioSeg": 30, "finSeg": 210 }`. Acepta enlaces de `watch`, `youtu.be`, `shorts`, `embed` y `live`. 400 `RECETA_VIDEO_ENLACE_INVALIDO`, `RECETA_VIDEO_FRAGMENTO_INVALIDO` o `RECETA_VIDEO_MUY_LARGO`. Queda en la auditoría del catálogo. |
 | `DELETE /api/curaduria/recetas/{id}/video` | (CURADOR) Quita el video. Idempotente. |
+| `PUT /api/curaduria/recetas/{id}/etiquetas` | (CURADOR) Cuerpo `{ "platoFuerte": true, "gustaANinos": false }`; lo que no se envía no cambia (KAN-17). "Armar mi semana" solo usa platos fuertes y prefiere los que les gustan a los niños (ADR-24). 400 `RECETA_SIN_CAMBIOS` sin campos. Queda en la auditoría del catálogo. `GET /api/curaduria/recetas` trae `platoFuerte` y `gustaANinos`. |

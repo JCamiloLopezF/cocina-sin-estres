@@ -8,7 +8,14 @@ import type { RecetaConVideo } from './apiCuraduria'
 import { inicioDelEnlace, segundosDe } from './tiempoVideo'
 
 const CURADORA = { uid: 'c', correo: 'curadora@correo.com', nombre: null }
-const SOPA: RecetaConVideo = { id: 10, nombre: 'Sopa de lentejas', tiempoMinutos: 10, maximoSegundos: 300 }
+const SOPA: RecetaConVideo = {
+  id: 10,
+  nombre: 'Sopa de lentejas',
+  tiempoMinutos: 10,
+  maximoSegundos: 300,
+  platoFuerte: true,
+  gustaANinos: false,
+}
 const ARROZ: RecetaConVideo = {
   id: 11,
   nombre: 'Arroz con pollo',
@@ -17,6 +24,8 @@ const ARROZ: RecetaConVideo = {
   youtubeId: 'dQw4w9WgXcQ',
   inicioSeg: 30,
   finSeg: 150,
+  platoFuerte: true,
+  gustaANinos: true,
 }
 
 function backend(extra = {}) {
@@ -28,7 +37,7 @@ function backend(extra = {}) {
   })
 }
 
-describe('Videos de recetas (curador)', () => {
+describe('Recetas del curador: video y etiquetas', () => {
   it('entiende los tiempos como minutos:segundos y el inicio que trae el enlace', () => {
     expect(segundosDe('1:30')).toBe(90)
     expect(segundosDe('01:05')).toBe(65)
@@ -45,7 +54,7 @@ describe('Videos de recetas (curador)', () => {
     const usuario = userEvent.setup()
     montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria')
 
-    await usuario.click(await screen.findByRole('link', { name: 'Videos de recetas' }))
+    await usuario.click(await screen.findByRole('link', { name: 'Recetas' }))
     expect(await screen.findByText('1 de 2 recetas tienen video')).toBeInTheDocument()
     expect(screen.getByText('Sin video · máximo 05:00')).toBeInTheDocument()
     expect(screen.getByText('Video de 02:00 (desde 00:30)')).toBeInTheDocument()
@@ -102,5 +111,24 @@ describe('Videos de recetas (curador)', () => {
     expect(await screen.findByText('Quitamos el video de Arroz con pollo.')).toBeInTheDocument()
     const fila = screen.getByText('Arroz con pollo').closest('li')!
     expect(within(fila).getByText('Sin video · máximo 25:00')).toBeInTheDocument()
+  })
+
+  it('marca si la receta es plato fuerte y si les gusta a los niños (KAN-17)', async () => {
+    const { llamadas } = backend({
+      'PUT /curaduria/recetas/10/etiquetas': (cuerpo: unknown) => respuestaJson({ ...SOPA, ...(cuerpo as object) }),
+    })
+    const usuario = userEvent.setup()
+    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/recetas')
+
+    const sopa = within((await screen.findByText('Sopa de lentejas')).closest('li')!)
+    expect(sopa.getByRole('checkbox', { name: 'Plato fuerte (almuerzo o cena)' })).toBeChecked()
+    await usuario.click(sopa.getByRole('checkbox', { name: 'Les gusta a los niños' }))
+
+    expect(await screen.findByText('Sopa de lentejas queda entre las que les gustan a los niños.')).toBeInTheDocument()
+    expect(sopa.getByRole('checkbox', { name: 'Les gusta a los niños' })).toBeChecked()
+    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toEqual({ gustaANinos: true })
+
+    await usuario.click(sopa.getByRole('checkbox', { name: 'Plato fuerte (almuerzo o cena)' }))
+    expect(await screen.findByText('Sopa de lentejas ya no se propone como almuerzo o cena.')).toBeInTheDocument()
   })
 })
