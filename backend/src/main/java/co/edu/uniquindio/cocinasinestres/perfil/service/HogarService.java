@@ -35,6 +35,18 @@ public class HogarService {
     private static final String ERROR_DATOS_INVALIDOS =
         "PERFIL_HOGAR_DATOS_INVALIDOS";
 
+    /** Lo que cabe en {@code hogar.presupuesto_monto DECIMAL(12,2)}. */
+    static final BigDecimal PRESUPUESTO_MAXIMO = new BigDecimal("9999999999.99");
+
+    /** Tope de personas por hogar: de sobra para una casa y evita perfiles gigantes. */
+    static final int MAXIMO_PERSONAS = 20;
+
+    /** Tope de códigos por lista; el catálogo de restricciones es mucho más corto. */
+    static final int MAXIMO_CODIGOS = 30;
+
+    /** Igual que el campo del formulario. */
+    static final int LARGO_MAXIMO_CONDICIONES = 200;
+
     private final HogarRepository hogarRepository;
     private final PersonaRepository personaRepository;
     private final UsuarioActualService usuarioActualService;
@@ -211,6 +223,12 @@ public class HogarService {
                 "El presupuesto debe ser mayor que cero.");
         }
 
+        if (presupuesto.compareTo(PRESUPUESTO_MAXIMO) > 0) {
+            throw new DatosInvalidosException(
+                ERROR_DATOS_INVALIDOS,
+                "El presupuesto es demasiado alto. Revisa la cifra.");
+        }
+
         PeriodicidadIngreso periodicidad = request.periodicidadIngreso();
 
         if (periodicidad == null) {
@@ -263,6 +281,19 @@ public class HogarService {
                 "Debes registrar al menos una persona en el hogar.");
         }
 
+        if (request.personas().size() > MAXIMO_PERSONAS) {
+            throw new DatosInvalidosException(
+                ERROR_DATOS_INVALIDOS,
+                "Puedes registrar hasta " + MAXIMO_PERSONAS + " personas en el hogar.");
+        }
+
+        if (request.otrasCondiciones() != null
+            && request.otrasCondiciones().trim().length() > LARGO_MAXIMO_CONDICIONES) {
+            throw new DatosInvalidosException(
+                ERROR_DATOS_INVALIDOS,
+                "Otras condiciones admite máximo " + LARGO_MAXIMO_CONDICIONES + " caracteres.");
+        }
+
         for (PersonaRequest persona : request.personas()) {
             if (persona == null || persona.edad() == null
                 || persona.edad() < 0 || persona.edad() > 120) {
@@ -303,6 +334,11 @@ public class HogarService {
 
     private void validarCodigos(List<String> restricciones) {
         if (restricciones != null) {
+            if (restricciones.size() > MAXIMO_CODIGOS) {
+                throw new DatosInvalidosException(
+                    ERROR_DATOS_INVALIDOS,
+                    "Hay demasiadas restricciones en una sola lista.");
+            }
             if (restricciones.stream().anyMatch(
                 codigo -> codigo == null || codigo.isBlank()
                     || codigo.trim().length() > 40)

@@ -50,6 +50,27 @@ describe('cliente de la API', () => {
     await expect(pedir('/yo')).rejects.toMatchObject({ status: 502, codigo: RESPUESTA_INESPERADA })
   })
 
+  it('avisa que hay que esperar cuando la API pone el límite de peticiones', async () => {
+    fetchFalso.mockResolvedValue(
+      respuestaJson({ status: 429, codigo: 'LIMITE_PETICIONES', detail: 'Vas muy rápido.' }, 429, 'application/problem+json'),
+    )
+
+    const error = await pedir('/planes-semanales/1/generar', { metodo: 'POST' }).catch((e: unknown) => e)
+
+    expect(error).toMatchObject({ status: 429, codigo: 'LIMITE_PETICIONES' })
+    expect(mensajeDeError(error)).toMatch(/Espera un minuto/)
+  })
+
+  it('reconoce un 429 o un 413 del balanceador aunque no traiga Problem Details', async () => {
+    fetchFalso.mockResolvedValueOnce(new Response('<html>429</html>', { status: 429 }))
+    fetchFalso.mockResolvedValueOnce(new Response('<html>413</html>', { status: 413 }))
+
+    await expect(pedir('/yo')).rejects.toMatchObject({ status: 429, codigo: 'LIMITE_PETICIONES' })
+    const grande = await pedir('/perfil/hogar', { metodo: 'PUT', cuerpo: {} }).catch((e: unknown) => e)
+    expect(grande).toMatchObject({ status: 413, codigo: 'CUERPO_DEMASIADO_GRANDE' })
+    expect(mensajeDeError(grande)).toMatch(/demasiado grande/)
+  })
+
   it('distingue cuando no hubo conexión', async () => {
     fetchFalso.mockRejectedValue(new TypeError('Failed to fetch'))
 

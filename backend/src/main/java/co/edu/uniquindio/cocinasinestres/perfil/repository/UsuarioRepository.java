@@ -1,5 +1,6 @@
 package co.edu.uniquindio.cocinasinestres.perfil.repository;
 
+import co.edu.uniquindio.cocinasinestres.perfil.domain.Rol;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Usuario;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,4 +16,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
      * entra toda petición autenticada.
      */
     Optional<Usuario> findByFirebaseUid(String firebaseUid);
+
+    /** Si ya hay alguna cuenta con ese rol; sirve para no repartir el ADMIN inicial dos veces. */
+    boolean existsByRol(Rol rol);
 }

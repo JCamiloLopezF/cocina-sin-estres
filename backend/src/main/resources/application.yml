@@ -67,6 +67,11 @@ cocina:
     correo: ${ADMIN_INICIAL_CORREO:}
   cors:
     origenes: ${CORS_ORIGENES:http://localhost:5173}
+  # Topes contra el abuso, ver PropiedadesLimites. Cero apaga el límite.
+  limites:
+    peticiones-por-minuto: ${LIMITE_PETICIONES_POR_MINUTO:240}
+    costosas-por-minuto: ${LIMITE_COSTOSAS_POR_MINUTO:20}
+    cuerpo-maximo-bytes: 65536
 
 logging:
   level:
