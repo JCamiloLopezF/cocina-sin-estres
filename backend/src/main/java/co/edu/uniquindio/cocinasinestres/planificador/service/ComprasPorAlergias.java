@@ -34,11 +34,31 @@ public class ComprasPorAlergias {
     }
 
     /**
+     * Lo que hay que comprar de más: los reemplazos que no están en la despensa y los
+     * platos aparte (lista de compras).
+     *
      * @param pendientes comidas que todavía no se han preparado
      * @return cantidad extra por producto, en su unidad base
      */
     public Map<Long, BigDecimal> extras(Hogar hogar, List<ComidaPlan> pendientes) {
-        if (pendientes.isEmpty()) {
+        Map<Long, BigDecimal> total = new HashMap<>();
+        extrasPorDia(hogar, pendientes, true).values()
+            .forEach(delDia -> delDia.forEach((producto, cantidad) -> sumar(total, producto, cantidad)));
+        return total;
+    }
+
+    /**
+     * Lo extra por alergias, separado por día de la semana (1 = lunes … 7 = domingo).
+     *
+     * @param comidas        comidas a revisar
+     * @param soloLoQueFalta {@code true} para la lista de compras (un reemplazo que ya está en
+     *                       la despensa no se compra); {@code false} para el costo del plan, que
+     *                       cuenta todo lo que pide la receta, como el resto del costo (KAN-24)
+     * @return por día, la cantidad extra por producto en su unidad base
+     */
+    public Map<Integer, Map<Long, BigDecimal>> extrasPorDia(
+        Hogar hogar, List<ComidaPlan> comidas, boolean soloLoQueFalta) {
+        if (comidas.isEmpty()) {
             return Map.of();
         }
         ContextoPlan contexto = contextos.construir(hogar, List.of()).plan();
@@ -48,14 +68,15 @@ public class ComprasPorAlergias {
         Map<Long, Integer> porciones = catalogo.porciones();
         Map<Long, ProductoPlan> productos = catalogo.productos();
 
-        Map<Long, BigDecimal> extras = new HashMap<>();
-        for (ComidaPlan comida : pendientes) {
+        Map<Integer, Map<Long, BigDecimal>> porDia = new HashMap<>();
+        for (ComidaPlan comida : comidas) {
             RecetaCandidata receta = contexto.recetas().get(comida.getRecetaId());
             if (receta == null) {
                 continue;
             }
+            Map<Long, BigDecimal> extras = porDia.computeIfAbsent(comida.getDia(), d -> new HashMap<>());
             for (AdaptacionReceta.Cambio cambio : adaptador.adaptar(contexto, receta).cambios()) {
-                if (cambio.tipo() == AdaptacionReceta.TipoCambio.REEMPLAZO && !cambio.enDespensa()) {
+                if (cambio.tipo() == AdaptacionReceta.TipoCambio.REEMPLAZO && !(soloLoQueFalta && cambio.enDespensa())) {
                     sumar(extras, cambio.reemplazoId(), porcionDeReemplazo(receta, cambio, porciones, productos));
                 } else if (cambio.tipo() == AdaptacionReceta.TipoCambio.PLATO_APARTE && cambio.recetaAparteId() != null) {
                     RecetaCandidata aparte = contexto.recetas().get(cambio.recetaAparteId());
@@ -67,7 +88,8 @@ public class ComprasPorAlergias {
                 }
             }
         }
-        return extras;
+        porDia.values().removeIf(Map::isEmpty);
+        return porDia;
     }
 
     /**

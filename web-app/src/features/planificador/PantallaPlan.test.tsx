@@ -14,7 +14,13 @@ function comida(id: number, dia: number, tipoComida: ComidaPlan['tipoComida'], r
   return { id, planSemanalId: 7, dia, tipoComida, recetaId, preparada }
 }
 
-function conPlan(comidas: ComidaPlan[], costo = { acumulado: [3600, 3600, 16000, 16000, 16000, 16000, 16000], presupuesto: 195000 }) {
+function conPlan(
+  comidas: ComidaPlan[],
+  costo: { acumulado: number[]; presupuesto: number; alergias?: number } = {
+    acumulado: [3600, 3600, 16000, 16000, 16000, 16000, 16000],
+    presupuesto: 195000,
+  },
+) {
   return {
     ...rutasCocina(),
     'GET /planes-semanales': () => respuestaJson({ id: 7, semanaInicio: LUNES, comidas }),
@@ -23,6 +29,7 @@ function conPlan(comidas: ComidaPlan[], costo = { acumulado: [3600, 3600, 16000,
         costoAcumuladoPorDia: costo.acumulado,
         presupuestoSemanal: costo.presupuesto,
         excedePresupuesto: costo.acumulado[6] > costo.presupuesto,
+        costoAlergias: costo.alergias ?? 0,
       }),
   }
 }
@@ -128,6 +135,7 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
       conPlan([comida(70, 1, 'ALMUERZO', 10, true), comida(71, 3, 'CENA', 11)], {
         acumulado: [3600, 3600, 16000, 16000, 16000, 16000, 16000],
         presupuesto: 10000,
+        alergias: 1200,
       }),
     )
     montarApp(crearServicioFalso(LUISA).servicio, '/plan')
@@ -135,6 +143,7 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
     const costo = await screen.findByRole('region', { name: 'Costo del plan' })
     expect(costo).toHaveTextContent(/16\.000.*10\.000/)
     expect(within(costo).getByText(/ingreso quincenal/)).toBeInTheDocument()
+    expect(within(costo).getByText(/Incluye \$\s?1\.200 por la porción de quien tiene alergia\./)).toBeInTheDocument()
     const aviso = screen.getByRole('alert')
     expect(aviso).toHaveTextContent('Este plan supera tu presupuesto')
     expect(aviso).toHaveTextContent(/Son \$\s?6\.000 de más/)
