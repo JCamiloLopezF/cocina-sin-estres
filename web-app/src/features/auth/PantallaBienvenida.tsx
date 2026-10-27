@@ -16,7 +16,8 @@ export function PantallaBienvenida() {
           Ya tengo cuenta
         </Link>
         <p className="bienvenida__nota">
-          Al continuar aceptas la política de tratamiento de datos personales (Ley 1581 de 2012).
+          Al continuar aceptas la <Link to="/privacidad">política de tratamiento de datos personales</Link> (Ley 1581 de
+          2012).
         </p>
       </div>
     </DisenoAcceso>

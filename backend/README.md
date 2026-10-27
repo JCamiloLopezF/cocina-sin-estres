@@ -70,7 +70,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | --- | --- |
 | `GET /api/salud` | Cualquiera, sin token |
 | `/api/**` | Cuenta autenticada y activa |
-| `/api/curaduria/**` | `CURADOR` o `ADMIN` |
+| `/api/curaduria/**` | Solo `CURADOR`: el catálogo lo edita el curador y el administrador gestiona cuentas (ADR-16) |
 | `/api/admin/**` | `ADMIN` |
 | Todo lo demás | Nadie |
 
@@ -80,7 +80,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | --- | --- |
 | `GET /api/salud` | Comprobación de salud. Público. Devuelve estado, versión y hora UTC. |
 | `GET /api/yo` | Devuelve la cuenta autenticada: `id`, `correo`, `rol` y `perfilCompleto`. |
-| `GET /api/curaduria/productos` | Lista los productos activos del catálogo, ordenados por categoría y nombre. `CURADOR` o `ADMIN`. |
+| `GET /api/curaduria/productos` | Lista los productos activos del catálogo, ordenados por categoría y nombre. Solo `CURADOR`. |
 | `GET /api/curaduria/productos/{id}` | Devuelve un producto. 404 si no existe. |
 | `POST /api/curaduria/productos` | Crea un producto del catálogo global. Responde 201 con `Location`. |
 | `PUT /api/curaduria/productos/{id}` | Actualiza un producto. Si no cambia ningún campo, no se modifica el responsable ni se audita. |

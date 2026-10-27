@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { ErrorApi, pedir } from '../../api/cliente'
 import { mensajeDeError } from '../../api/mensajesError'
 import { Alerta, Boton, Cargando, CampoTexto, GrupoOpciones } from '../../shared/componentes'
@@ -392,6 +392,9 @@ export function PantallaPerfilHogar() {
                 />
                 Autorizo guardar estos datos de salud, cifrados y solo para filtrar recetas (Ley 1581 de 2012).
               </label>
+              <p className="campo__ayuda">
+                <Link to="/privacidad">Política de tratamiento de datos</Link>
+              </p>
               {errores.consentimiento && (
                 <span className="campo__error" id="error-consentimiento">
                   {errores.consentimiento}

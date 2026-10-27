@@ -1,0 +1,68 @@
+/* Política de tratamiento de datos (Ley 1581 de 2012): texto largo, fácil de leer en el celular. */
+.legal {
+  min-height: 100dvh;
+  background: var(--color-fondo);
+}
+
+.legal__barra {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-bottom: var(--borde) solid var(--color-linea);
+  background: var(--color-fondo);
+}
+
+.legal__volver {
+  min-height: 2.75rem;
+  padding: 0 var(--espacio-2);
+  border: 0;
+  background: none;
+  color: var(--color-tinta);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.legal__cuerpo {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: var(--espacio-5) var(--espacio-4) var(--espacio-7);
+  line-height: 1.6;
+}
+
+.legal__cuerpo h1 {
+  margin: 0 0 var(--espacio-2);
+  font-size: var(--texto-l);
+  line-height: 1.25;
+}
+
+.legal__cuerpo h2 {
+  margin: var(--espacio-5) 0 var(--espacio-2);
+  font-size: var(--texto-m);
+}
+
+.legal__cuerpo p,
+.legal__cuerpo ul {
+  margin: 0 0 var(--espacio-3);
+}
+
+.legal__cuerpo ul {
+  padding-left: var(--espacio-5);
+}
+
+.legal__cuerpo li + li {
+  margin-top: var(--espacio-2);
+}
+
+.legal__vigencia {
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.legal__pie {
+  margin-top: var(--espacio-6);
+}
