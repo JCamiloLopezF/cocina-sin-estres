@@ -42,6 +42,7 @@ public class FiltroUsuarioDev extends FiltroAutenticacionBase {
         }
 
         String limpio = uid.trim();
-        return Optional.of(new IdentidadExterna(limpio, limpio + DOMINIO_FICTICIO));
+        // En dev no hay correo que verificar: se da por verificado para poder probar el ADMIN.
+        return Optional.of(new IdentidadExterna(limpio, limpio + DOMINIO_FICTICIO, true));
     }
 }

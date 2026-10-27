@@ -152,4 +152,45 @@ class HogarServiceTest {
             .isInstanceOf(DatosInvalidosException.class)
             .hasMessageContaining("alergia grave");
     }
+
+    @Test
+    void rechazaUnPresupuestoQueNoCabeEnLaBase() {
+        PerfilHogarRequest gigante = new PerfilHogarRequest(new BigDecimal("1e15"), PeriodicidadIngreso.QUINCENAL,
+            15, 30, List.of(3), null, true, null, false, List.of(new PersonaRequest("Luisa", 34, null)));
+
+        assertThatThrownBy(() -> servicio.guardar(gigante))
+            .isInstanceOf(DatosInvalidosException.class)
+            .hasMessageContaining("presupuesto");
+    }
+
+    @Test
+    void rechazaDemasiadasPersonas() {
+        PersonaRequest[] muchas = new PersonaRequest[HogarService.MAXIMO_PERSONAS + 1];
+        java.util.Arrays.fill(muchas, new PersonaRequest("Alguien", 30, null));
+
+        assertThatThrownBy(() -> servicio.guardar(perfil(true, false, muchas)))
+            .isInstanceOf(DatosInvalidosException.class)
+            .hasMessageContaining("personas");
+    }
+
+    @Test
+    void rechazaDemasiadosCodigosEnUnaPersona() {
+        List<String> codigos = java.util.stream.IntStream.rangeClosed(0, HogarService.MAXIMO_CODIGOS)
+            .mapToObj(i -> "codigo-" + i)
+            .toList();
+
+        assertThatThrownBy(() -> servicio.guardar(perfil(false, true, new PersonaRequest("Luisa", 34, codigos))))
+            .isInstanceOf(DatosInvalidosException.class);
+    }
+
+    @Test
+    void rechazaOtrasCondicionesMuyLargas() {
+        PerfilHogarRequest largo = new PerfilHogarRequest(new BigDecimal("780000"), PeriodicidadIngreso.QUINCENAL,
+            15, 30, List.of(3), null, false, "x".repeat(HogarService.LARGO_MAXIMO_CONDICIONES + 1), true,
+            List.of(new PersonaRequest("Luisa", 34, List.of("lactosa"))));
+
+        assertThatThrownBy(() -> servicio.guardar(largo))
+            .isInstanceOf(DatosInvalidosException.class)
+            .hasMessageContaining("condiciones");
+    }
 }

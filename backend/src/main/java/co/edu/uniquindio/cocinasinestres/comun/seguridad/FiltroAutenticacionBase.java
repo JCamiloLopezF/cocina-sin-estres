@@ -82,7 +82,8 @@ public abstract class FiltroAutenticacionBase extends OncePerRequestFilter {
 
     private void autenticar(IdentidadExterna identidad) {
         UsuarioAutenticado usuario =
-                usuarioActualService.registrarSiNoExiste(identidad.firebaseUid(), identidad.correo());
+                usuarioActualService.registrarSiNoExiste(
+                        identidad.firebaseUid(), identidad.correo(), identidad.correoVerificado());
 
         var autenticacion = UsernamePasswordAuthenticationToken.authenticated(
                 usuario,
@@ -96,8 +97,9 @@ public abstract class FiltroAutenticacionBase extends OncePerRequestFilter {
      * Identidad que afirma la credencial, antes de buscarla en la base.
      *
      * @param firebaseUid identificador de la cuenta en Firebase
-     * @param correo      correo asociado a esa cuenta
+     * @param correo           correo asociado a esa cuenta
+     * @param correoVerificado si quien emite la credencial confirmó que el correo es suyo
      */
-    protected record IdentidadExterna(String firebaseUid, String correo) {
+    protected record IdentidadExterna(String firebaseUid, String correo, boolean correoVerificado) {
     }
 }

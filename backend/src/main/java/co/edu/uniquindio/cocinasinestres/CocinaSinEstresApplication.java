@@ -1,6 +1,7 @@
 package co.edu.uniquindio.cocinasinestres;
 
 import co.edu.uniquindio.cocinasinestres.comun.config.PropiedadesCocina;
+import co.edu.uniquindio.cocinasinestres.comun.config.PropiedadesLimites;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -12,7 +13,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  * {@code prod} para el ambiente desplegado.</p>
  */
 @SpringBootApplication
-@EnableConfigurationProperties(PropiedadesCocina.class)
+@EnableConfigurationProperties({PropiedadesCocina.class, PropiedadesLimites.class})
 public class CocinaSinEstresApplication {
 
     public static void main(String[] args) {

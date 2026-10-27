@@ -44,6 +44,7 @@ public class FiltroTokenFirebase extends FiltroAutenticacionBase {
         }
 
         var identidad = verificador.verificar(idToken);
-        return Optional.of(new IdentidadExterna(identidad.firebaseUid(), identidad.correo()));
+        return Optional.of(new IdentidadExterna(
+                identidad.firebaseUid(), identidad.correo(), identidad.correoVerificado()));
     }
 }

@@ -68,17 +68,18 @@ public class UsuarioActualService {
      * Devuelve la cuenta de ese {@code firebase_uid} y la crea si es la primera vez
      * que entra. Lo usa la capa de seguridad en cada petición autenticada.
      *
-     * @param firebaseUid identificador que trae el token ya verificado
-     * @param correo      correo que trae el token
+     * @param firebaseUid      identificador que trae el token ya verificado
+     * @param correo           correo que trae el token
+     * @param correoVerificado si Firebase confirmó que el correo es de quien entra
      * @throws NoAutenticadoException si faltan datos del token o la cuenta está desactivada
      */
-    public UsuarioAutenticado registrarSiNoExiste(String firebaseUid, String correo) {
+    public UsuarioAutenticado registrarSiNoExiste(String firebaseUid, String correo, boolean correoVerificado) {
         if (estaEnBlanco(firebaseUid) || estaEnBlanco(correo)) {
             throw new NoAutenticadoException("No pudimos identificar tu cuenta. Vuelve a entrar.");
         }
 
         Usuario usuario = usuarioRepository.findByFirebaseUid(firebaseUid)
-                .orElseGet(() -> crear(firebaseUid, correo));
+                .orElseGet(() -> crear(firebaseUid, correo, correoVerificado));
 
         if (!usuario.isActivo()) {
             throw new NoAutenticadoException(CodigoError.AUTH_CUENTA_INACTIVA,
@@ -105,8 +106,8 @@ public class UsuarioActualService {
         return usuario;
     }
 
-    private Usuario crear(String firebaseUid, String correo) {
-        Rol rol = esAdminInicial(correo) ? Rol.ADMIN : Rol.PREDETERMINADO;
+    private Usuario crear(String firebaseUid, String correo, boolean correoVerificado) {
+        Rol rol = esAdminInicial(correo, correoVerificado) ? Rol.ADMIN : Rol.PREDETERMINADO;
         try {
             Usuario creado = usuarioRepository.save(Usuario.nueva(firebaseUid, correo, rol));
             // Sin el correo en el log: es un dato personal (RNF-21).
@@ -121,9 +122,20 @@ public class UsuarioActualService {
     /**
      * La primera cuenta con el correo de {@code ADMIN_INICIAL_CORREO} entra como ADMIN:
      * es la forma de tener un administrador sin sembrar usuarios en una migración (ADR-16).
+     *
+     * <p>Solo si Firebase verificó el correo y todavía no hay ningún ADMIN. Sin lo primero,
+     * cualquiera podría registrarse en Firebase con ese correo (sin ser su dueño) y entrar
+     * como administrador; sin lo segundo, borrar y volver a crear la cuenta daría otro ADMIN.</p>
      */
-    private boolean esAdminInicial(String correo) {
-        return !estaEnBlanco(correoAdminInicial) && correoAdminInicial.equalsIgnoreCase(correo);
+    private boolean esAdminInicial(String correo, boolean correoVerificado) {
+        if (estaEnBlanco(correoAdminInicial) || !correoAdminInicial.equalsIgnoreCase(correo)) {
+            return false;
+        }
+        if (!correoVerificado) {
+            log.warn("El correo del administrador inicial entró sin verificar: la cuenta se crea sin rol ADMIN");
+            return false;
+        }
+        return !usuarioRepository.existsByRol(Rol.ADMIN);
     }
 
     private UsuarioAutenticado aUsuarioAutenticado(Usuario usuario) {

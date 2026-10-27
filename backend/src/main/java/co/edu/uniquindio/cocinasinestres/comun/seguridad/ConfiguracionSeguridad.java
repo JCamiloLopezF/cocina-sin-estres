@@ -1,7 +1,10 @@
 package co.edu.uniquindio.cocinasinestres.comun.seguridad;
 
 import co.edu.uniquindio.cocinasinestres.comun.config.PropiedadesCocina;
+import co.edu.uniquindio.cocinasinestres.comun.config.PropiedadesLimites;
+import co.edu.uniquindio.cocinasinestres.comun.error.EscritorProblemDetail;
 import co.edu.uniquindio.cocinasinestres.perfil.domain.Rol;
+import java.time.Clock;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +14,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,16 +35,20 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class ConfiguracionSeguridad {
 
     private final PropiedadesCocina propiedades;
+    private final PropiedadesLimites limites;
 
-    public ConfiguracionSeguridad(PropiedadesCocina propiedades) {
+    public ConfiguracionSeguridad(PropiedadesCocina propiedades, PropiedadesLimites limites) {
         this.propiedades = propiedades;
+        this.limites = limites;
     }
 
     @Bean
     public SecurityFilterChain cadenaDeFiltros(HttpSecurity http,
                                                FiltroAutenticacionBase filtroAutenticacion,
                                                EntryPointNoAutenticado entryPoint,
-                                               ManejadorAccesoDenegado accesoDenegado)
+                                               ManejadorAccesoDenegado accesoDenegado,
+                                               EscritorProblemDetail escritorProblemDetail,
+                                               Clock reloj)
             throws Exception {
 
         http
@@ -66,7 +74,13 @@ public class ConfiguracionSeguridad {
                 .exceptionHandling(errores -> errores
                         .authenticationEntryPoint(entryPoint)
                         .accessDeniedHandler(accesoDenegado))
-                .addFilterBefore(filtroAutenticacion, UsernamePasswordAuthenticationFilter.class);
+                // Después de CORS, para que el 413 lleve los encabezados y el navegador lo lea.
+                .addFilterAfter(new FiltroTamanoCuerpo(limites.cuerpoMaximoBytes(), escritorProblemDetail),
+                        CorsFilter.class)
+                .addFilterBefore(filtroAutenticacion, UsernamePasswordAuthenticationFilter.class)
+                // Después de la autenticación, para contar por cuenta y no por IP.
+                .addFilterAfter(new FiltroLimitePeticiones(limites, escritorProblemDetail, reloj),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

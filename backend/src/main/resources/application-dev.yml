@@ -26,6 +26,11 @@ cocina:
     # Clave SOLO para desarrollo y pruebas, con datos inventados. Es pública a propósito:
     # producción usa su propia CIFRADO_CLAVE_V1, guardada como secreto (ADR-20).
     clave-v1: ${CIFRADO_CLAVE_V1:GTjox554s0ORjbm7LDGNJLe9hcD0iHyD8dYI5OjqTss=}
+  # Sin límite de peticiones en tu computador ni en las pruebas; el del tamaño del
+  # cuerpo sí aplica. Para probar el límite: LIMITE_PETICIONES_POR_MINUTO=10.
+  limites:
+    peticiones-por-minuto: ${LIMITE_PETICIONES_POR_MINUTO:0}
+    costosas-por-minuto: ${LIMITE_COSTOSAS_POR_MINUTO:0}
 
 logging:
   level:

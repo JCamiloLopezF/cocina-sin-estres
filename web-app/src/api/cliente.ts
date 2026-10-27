@@ -104,5 +104,13 @@ async function leerError(respuesta: Response): Promise<ErrorApi> {
   } catch {
     // Cuerpo vacío o que no es JSON: lo resuelve el return de abajo.
   }
-  return new ErrorApi(respuesta.status, RESPUESTA_INESPERADA, `El servidor respondió ${respuesta.status}.`)
+  // Un 429 o un 413 pueden venir del balanceador, sin Problem Details: igual se
+  // reconocen para mostrar el mensaje que corresponde.
+  const codigoPorEstado = CODIGO_POR_ESTADO[respuesta.status] ?? RESPUESTA_INESPERADA
+  return new ErrorApi(respuesta.status, codigoPorEstado, `El servidor respondió ${respuesta.status}.`)
+}
+
+const CODIGO_POR_ESTADO: Record<number, string> = {
+  413: 'CUERPO_DEMASIADO_GRANDE',
+  429: 'LIMITE_PETICIONES',
 }

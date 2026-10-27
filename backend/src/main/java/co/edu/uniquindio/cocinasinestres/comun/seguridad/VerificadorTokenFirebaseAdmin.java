@@ -28,7 +28,7 @@ public class VerificadorTokenFirebaseAdmin implements VerificadorTokenFirebase {
     public Identidad verificar(String idToken) {
         try {
             FirebaseToken token = firebaseAuth.verifyIdToken(idToken, true);
-            return new Identidad(token.getUid(), token.getEmail());
+            return new Identidad(token.getUid(), token.getEmail(), token.isEmailVerified());
         } catch (FirebaseAuthException excepcion) {
             // El motivo exacto no se le cuenta al cliente; queda en la traza del log.
             throw new NoAutenticadoException("Tu sesión expiró. Vuelve a entrar.");
