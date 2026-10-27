@@ -279,6 +279,11 @@ function ResumenCosto({ semana, ajustando, alAjustar }: { semana: Semana; ajusta
         >
           <span style={{ width: `${porcentaje}%` }} />
         </div>
+        {(costo.costoAlergias ?? 0) > 0 && (
+          <p className="costo-plan__nota">
+            Incluye {enPesos(costo.costoAlergias ?? 0)} por la porción de quien tiene alergia.
+          </p>
+        )}
         {semana.periodicidad && (
           <p className="costo-plan__nota">
             Presupuesto semanal calculado con tu ingreso {NOMBRE_PERIODICIDAD[semana.periodicidad]}.

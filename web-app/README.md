@@ -48,10 +48,14 @@ src/
 │   ├── inicio/         Pantalla de inicio de la usuaria
 │   ├── perfil/         Cuenta y perfil del hogar
 │   ├── despensa/       Despensa virtual
-│   ├── recetario/      Catálogo de recetas
-│   ├── planificador/   Plan semanal y lista de compras
-│   ├── curaduria/      Catálogo para el rol CURADOR
-│   └── admin/          Cuentas y roles para el rol ADMIN
+│   ├── recetario/      Catálogo de recetas, detalle y video
+│   ├── cocinar/        Modo cocinar: paso a paso, voz, Manos libres y temporizadores (ADR-25)
+│   ├── planificador/   Plan semanal, "Armar mi semana", lista de compras y pedido por WhatsApp
+│   ├── rescate/        Modo rescate: qué cocinar hoy sin comprar nada
+│   ├── avisos/         Centro de avisos (motor de reglas, ADR-17)
+│   ├── curaduria/      Catálogo, recetas y reemplazos para el rol CURADOR
+│   ├── admin/          Análisis con los indicadores de calidad y cuentas, para el rol ADMIN
+│   └── legal/          Política de tratamiento de datos (Ley 1581)
 ├── navegacion/         Rutas, guardas por sesión y rol, y los marcos con el menú
 ├── shared/             Componentes reutilizables (RNF-30) y estilos base
 ├── api/                Cliente HTTP que adjunta el token y lee los errores del backend
@@ -65,18 +69,29 @@ src/
 | --- | --- | --- |
 | `USUARIA` | `/` | Inicio, Despensa, Plan, Recetas y Perfil |
 | `CURADOR` | `/curaduria` | Sin menú de hogar |
-| `ADMIN` | `/admin` | Sin menú de hogar |
+| `ADMIN` | `/admin` | Sin menú de hogar; arriba, Análisis y Cuentas |
 
 Si alguien abre una pantalla que no es de su rol, la aplicación lo lleva a su propio inicio. Esto ordena la navegación, pero **no es la barrera de seguridad**: el backend revisa el rol en cada petición (RNF-23).
 
-### Pantallas del prototipo 1
+### Pantallas
 
 | Ruta | Pantalla | API |
 | --- | --- | --- |
+| `/` | Inicio: comidas de hoy, avisos y modo rescate | `GET /api/avisos`, `GET /api/rescate` |
 | `/perfil/hogar` | Perfil del hogar: personas, presupuesto, ingreso, días sin tiempo y restricciones (pantallas 4 y 5) | `GET` y `PUT /api/perfil/hogar` |
 | `/despensa` | Listado con búsqueda y filtros Todo, Por vencer y Bajo mínimo (14, 15 y 20) | `GET /api/items-despensa` |
 | `/despensa/agregar` | Buscar en el catálogo y registrar cantidad o nivel (16, 17 y 18) | `GET /api/items-despensa/catalogo`, `POST /api/items-despensa` |
 | `/despensa/:id` | Detalle, editar y quitar con confirmación y deshacer (19, RNF-13) | `GET`, `PUT` y `DELETE /api/items-despensa/{id}` |
+| `/plan` | Semana actual o la próxima (`?semana=proxima`), "Armar mi semana", costo frente al presupuesto | `/api/planes-semanales/**` |
+| `/plan/dia/:dia` | Las comidas de un día, "Otra opción" y adaptaciones por alergia | `/api/planes-semanales/{id}/comidas/**`, `GET /api/adaptaciones` |
+| `/plan/lista` | Lista de compras: marcar comprado, corregir el precio y pedir a la tienda por WhatsApp | `/api/planes-semanales/{id}/lista-compras/**`, `/api/tiendas` |
+| `/recetas`, `/recetas/:id` | Recetario con filtros y detalle con porciones y video | `GET /api/recetas` |
+| `/recetas/:id/cocinar` | Modo cocinar (ADR-25) | `POST /api/preparaciones`, `marcar-preparada` |
+| `/rescate` | Modo rescate | `GET /api/rescate` |
+| `/avisos` | Centro de avisos y qué tipos recibir | `/api/avisos/**` |
+| `/curaduria`, `/curaduria/recetas` | (CURADOR) Productos y precios; videos y etiquetas de las recetas | `/api/curaduria/**` |
+| `/admin/analisis`, `/admin` | (ADMIN) Indicadores de calidad y uso; cuentas y roles | `/api/admin/**` |
+| `/privacidad` | Política de tratamiento de datos, con o sin sesión | — |
 
 Las restricciones de salud solo se envían con el consentimiento marcado (Ley 1581, RNF-22). La lista de restricciones del formulario es provisional hasta que exista el catálogo de restricciones (RNF-03).
 

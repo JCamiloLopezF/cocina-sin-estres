@@ -55,3 +55,207 @@
   color: var(--color-tenue);
   font-size: var(--texto-s);
 }
+
+/* Navegación del administrador: Análisis y Cuentas. */
+.nav-admin {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-1);
+  margin-bottom: var(--espacio-4);
+  padding: var(--espacio-1);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: 999px;
+  background: var(--color-superficie);
+}
+
+.nav-admin__enlace {
+  display: grid;
+  place-items: center;
+  min-height: 2.75rem;
+  border-radius: 999px;
+  color: var(--color-tinta);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.nav-admin__enlace--actual {
+  background: var(--color-primario);
+}
+
+/* Análisis del administrador (KAN-54). */
+.analisis__bloque {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-5);
+}
+
+.analisis__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.analisis__cabecera .rotulo,
+.analisis__bloque > .rotulo {
+  margin: 0;
+}
+
+.analisis__resumen {
+  margin: 0;
+  font-size: var(--texto-m);
+  font-weight: 700;
+}
+
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--espacio-2);
+  margin: 0;
+}
+
+.cifra {
+  display: grid;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+}
+
+.cifra__etiqueta,
+.cifra__detalle {
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+}
+
+.cifra__valor {
+  margin: 0;
+  font-size: var(--texto-xl);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.cifra__detalle {
+  margin: 0;
+}
+
+.indicadores {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.indicadores__proceso {
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-m);
+}
+
+.indicadores__lista,
+.recetas-uso__lista,
+.sin-usar__lista {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.indicador {
+  display: grid;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-superficie);
+}
+
+.indicador__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espacio-1) var(--espacio-3);
+}
+
+.indicador__valor {
+  margin: 0;
+  font-size: var(--texto-l);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.indicador__meta {
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+  font-weight: 400;
+}
+
+.indicador__nota {
+  margin: 0;
+  color: var(--color-tenue);
+  font-size: var(--texto-xs);
+}
+
+/* El estado se dice con texto (✓ Cumple, ✗ No cumple); el fondo solo lo acompaña. */
+.estado {
+  flex: none;
+  padding: 0.125rem var(--espacio-2);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: 999px;
+  font-size: var(--texto-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.estado--cumple {
+  background: var(--color-primario);
+}
+
+.estado--no-cumple {
+  border-style: dashed;
+  background: var(--color-crema);
+}
+
+.estado--neutro {
+  border-color: var(--color-linea-fuerte);
+  background: var(--color-beige);
+  color: var(--color-tenue);
+}
+
+.recetas-uso {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--espacio-4);
+}
+
+.recetas-uso__lista {
+  counter-reset: receta;
+}
+
+.recetas-uso__lista li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  padding-bottom: var(--espacio-2);
+  border-bottom: var(--borde) solid var(--color-linea);
+}
+
+.recetas-uso__veces {
+  flex: none;
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
+.sin-usar__lista {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.sin-usar__lista li {
+  padding: var(--espacio-1) var(--espacio-3);
+  border: var(--borde) dashed var(--color-punteado);
+  border-radius: 999px;
+  font-size: var(--texto-s);
+}

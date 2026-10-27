@@ -70,7 +70,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | --- | --- |
 | `GET /api/salud` | Cualquiera, sin token |
 | `/api/**` | Cuenta autenticada y activa |
-| `/api/curaduria/**` | `CURADOR` o `ADMIN` |
+| `/api/curaduria/**` | Solo `CURADOR`: el catálogo lo edita el curador y el administrador gestiona cuentas (ADR-16) |
 | `/api/admin/**` | `ADMIN` |
 | Todo lo demás | Nadie |
 
@@ -80,12 +80,13 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | --- | --- |
 | `GET /api/salud` | Comprobación de salud. Público. Devuelve estado, versión y hora UTC. |
 | `GET /api/yo` | Devuelve la cuenta autenticada: `id`, `correo`, `rol` y `perfilCompleto`. |
-| `GET /api/curaduria/productos` | Lista los productos activos del catálogo, ordenados por categoría y nombre. `CURADOR` o `ADMIN`. |
+| `GET /api/curaduria/productos` | Lista los productos activos del catálogo, ordenados por categoría y nombre. Solo `CURADOR`. |
 | `GET /api/curaduria/productos/{id}` | Devuelve un producto. 404 si no existe. |
 | `POST /api/curaduria/productos` | Crea un producto del catálogo global. Responde 201 con `Location`. |
 | `PUT /api/curaduria/productos/{id}` | Actualiza un producto. Si no cambia ningún campo, no se modifica el responsable ni se audita. |
 | `DELETE /api/curaduria/productos/{id}` | Desactiva el producto (no lo borra). Responde 204; repetirlo no tiene efecto. |
 | `GET /api/admin/cuentas` | Lista las cuentas con su rol y si están activas. Solo `ADMIN`. |
+| `GET /api/admin/analisis` | (ADMIN) Análisis del uso y los indicadores del Plan de Calidad (KAN-54): `uso` (usuarias, hogares activos, planes, recetas cocinadas, modo rescate), `indicadores` por proceso con `valor`, `meta`, `cumple` y `muestra`, recetas más cocinadas y planeadas y las que no se usan. Eventos de los últimos 30 días; planes de las últimas 8 semanas. Ver `docs/calidad/indicadores.md`. |
 | `PUT /api/admin/cuentas/{id}` | Cambia el `rol` (`USUARIA`, `CURADOR`, `ADMIN`) o `activo` de otra cuenta. Un administrador no puede cambiarse a sí mismo (409 `ADMIN_CUENTA_PROPIA`). |
 | `GET /api/items-despensa` | Lista la despensa del hogar de la usuaria. Parámetros opcionales: `filtro` (`TODO`, `POR_VENCER`, `BAJO_MINIMO`) y `buscar`. |
 | `GET /api/items-despensa/resumen` | Totales para la pantalla de inicio: `total`, `porVencer` y `bajoMinimo`. |
@@ -106,7 +107,7 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `POST /api/tiendas` | Cuerpo `{ "nombre": "Tienda de don Jorge", "whatsapp": "300 123 4567" }`. Acepta el celular con o sin `+57`, espacios o guiones, y lo guarda como `573001234567`. Responde 201. 400 `TIENDA_DATOS_INVALIDOS`; 409 `TIENDA_REPETIDA` (ya hay una con ese número) o `TIENDAS_MAXIMO` (hasta 5 por hogar). |
 | `DELETE /api/tiendas/{id}` | Quita la tienda. 204. 404 si es de otro hogar. |
 | `PUT /api/planes-semanales/{planId}/lista-compras/items/{itemId}/costo` | Cuerpo `{ "costoReal": 12500 }`: lo que la usuaria pagó de verdad (KAN-26). `{ "costoReal": null }` vuelve al estimado. Devuelve la lista con `costoTotal` ajustado (lo pagado donde se corrigió, el estimado en lo demás); cada ítem trae `costoEstimado` y `costoReal`. 400 `LISTA_COSTO_INVALIDO` si es negativo. 404 si el plan o el ítem no son del hogar. |
-| `GET /api/planes-semanales/{planId}/costo` | Costo acumulado del plan por día (índice 0 = lunes), presupuesto semanal del hogar (ADR-14) y `excedePresupuesto`. El hogar sale de la usuaria autenticada. 404 si el plan no existe o es de otro hogar. |
+| `GET /api/planes-semanales/{planId}/costo` | Costo acumulado del plan por día (índice 0 = lunes), presupuesto semanal del hogar (ADR-14) y `excedePresupuesto`. Incluye lo extra por alergias (reemplazo o plato aparte) y lo informa en `costoAlergias` (KAN-24). El hogar sale de la usuaria autenticada. 404 si el plan no existe o es de otro hogar. |
 | `POST /api/planes-semanales/{planId}/generar` | "Armar mi semana" (ADR-24): llena los huecos vacíos de almuerzo y cena con recetas aptas para las alergias del hogar, rápidas en los días sin tiempo, con lo que hay en la despensa (primero lo por vencer) y dentro del presupuesto. Cuerpo opcional `{ "comidas": ["ALMUERZO","CENA"] }`. Si en el hogar hay niños (12 años o menos), prefiere las recetas marcadas `gusta_a_ninos`. Devuelve el plan, los `cambios`, `costoEstimado`, `presupuestoSemanal`, `excedePresupuesto`, `aprovecha` (productos por vencer que usa), `paraNinos` (comidas que suelen gustarles a los niños) y `diasDespuesDelPago` (KAN-25: los días de la semana en que recién le pagan, donde quedaron las comidas más costosas). |
 | `POST /api/planes-semanales/{planId}/comidas/{comidaId}/otra-opcion` | Cambia la receta de una comida por la siguiente mejor. Cuerpo opcional `{ "excluir": [ids] }` con las que ya se descartaron. 409 `PLAN_SIN_ALTERNATIVAS` si no quedan; 409 `PLAN_COMIDA_PREPARADA` si ya está preparada. |
 | `POST /api/planes-semanales/{planId}/ajustar-presupuesto` | Cambia las comidas no preparadas más caras por otras más baratas hasta que el plan quepa en el presupuesto. Misma respuesta que `/generar`. |
@@ -124,3 +125,4 @@ Siempre en el backend (ADR-16). El frontend puede esconder botones, pero lo que 
 | `GET /api/curaduria/recetas` | (CURADOR) Recetas activas con su video y `maximoSegundos` (la mitad del tiempo de la receta, ADR-25). |
 | `PUT /api/curaduria/recetas/{id}/video` | (CURADOR) Cuerpo `{ "enlace": "https://youtu.be/…", "inicioSeg": 30, "finSeg": 210 }`. Acepta enlaces de `watch`, `youtu.be`, `shorts`, `embed` y `live`. 400 `RECETA_VIDEO_ENLACE_INVALIDO`, `RECETA_VIDEO_FRAGMENTO_INVALIDO` o `RECETA_VIDEO_MUY_LARGO`. Queda en la auditoría del catálogo. |
 | `DELETE /api/curaduria/recetas/{id}/video` | (CURADOR) Quita el video. Idempotente. |
+| `PUT /api/curaduria/recetas/{id}/etiquetas` | (CURADOR) Cuerpo `{ "platoFuerte": true, "gustaANinos": false }`; lo que no se envía no cambia (KAN-17). "Armar mi semana" solo usa platos fuertes y prefiere los que les gustan a los niños (ADR-24). 400 `RECETA_SIN_CAMBIOS` sin campos. Queda en la auditoría del catálogo. `GET /api/curaduria/recetas` trae `platoFuerte` y `gustaANinos`. |

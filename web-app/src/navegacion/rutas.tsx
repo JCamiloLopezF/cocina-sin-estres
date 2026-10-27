@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router'
 import { PantallaAdmin } from '../features/admin/PantallaAdmin'
+import { PantallaAnalisis } from '../features/admin/PantallaAnalisis'
 import { PantallaBienvenida } from '../features/auth/PantallaBienvenida'
 import { PantallaAvisos } from '../features/avisos/PantallaAvisos'
 import { PantallaEntrar } from '../features/auth/PantallaEntrar'
@@ -29,6 +30,7 @@ import { DisenoOperativo } from './DisenoOperativo'
 import { DisenoUsuaria } from './DisenoUsuaria'
 import { RequiereRol, RutaPrivada, RutaPublica } from './guardas'
 import { PantallaNoEncontrada } from './PantallaNoEncontrada'
+import { PantallaPrivacidad } from '../features/legal/PantallaPrivacidad'
 
 /**
  * Mapa de pantallas. Cada rol tiene su propia zona (ADR-16); el backend vuelve a
@@ -94,10 +96,20 @@ export function crearRutas({ modoDev }: { modoDev: boolean }): RouteObject[] {
         },
         {
           element: <RequiereRol roles={['ADMIN']} />,
-          children: [{ element: <DisenoOperativo />, children: [{ path: '/admin', element: <PantallaAdmin /> }] }],
+          children: [
+            {
+              element: <DisenoOperativo />,
+              children: [
+                { path: '/admin', element: <PantallaAdmin /> },
+                { path: '/admin/analisis', element: <PantallaAnalisis /> },
+              ],
+            },
+          ],
         },
       ],
     },
+    // Se abre con o sin sesión: la bienvenida y el registro la enlazan (Ley 1581).
+    { path: '/privacidad', element: <PantallaPrivacidad /> },
     { path: '*', element: <PantallaNoEncontrada /> },
   ]
 }

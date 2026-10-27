@@ -10,6 +10,8 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -120,6 +122,24 @@ public class AlmacenAvisosJdbc implements AlmacenAvisos {
             .param("tipo", tipo.name())
             .param("activo", activo)
             .update();
+    }
+
+    @Override
+    public void registrarApertura(Long hogarId, int vigentes, int mostrados, int reglas, long duracionMs) {
+        try {
+            jdbc.sql("""
+                    INSERT INTO apertura_app (hogar_id, avisos_vigentes, avisos_mostrados, reglas_evaluadas, duracion_ms)
+                    VALUES (:hogar, :vigentes, :mostrados, :reglas, :ms)
+                    """)
+                .param("hogar", hogarId)
+                .param("vigentes", vigentes)
+                .param("mostrados", mostrados)
+                .param("reglas", reglas)
+                .param("ms", Math.max(0, duracionMs))
+                .update();
+        } catch (DataAccessException e) {
+            LoggerFactory.getLogger(AlmacenAvisosJdbc.class).warn("No se pudo registrar la apertura: hogarId={}", hogarId, e);
+        }
     }
 
     private static AvisoGuardado leer(ResultSet rs, int fila) throws SQLException {

@@ -39,7 +39,7 @@ En la sustentación el profesor observó que la aplicación era "muy CRUD": la u
   - La respuesta trae `diasDespuesDelPago` y la pantalla lo cuenta: "Dejamos las comidas más costosas para el viernes y el sábado, cuando recién te pagan".
 - **Empates.** Gana la receta más barata y luego la de menor id. Con los mismos datos el plan sale igual, lo que hace las pruebas repetibles.
 - **Costo.** Se calcula con la fórmula del costo del plan (`cantidad / cantidadUnidadCompra × precio`, solo ingredientes obligatorios). Así el resultado coincide con la barra de presupuesto.
-- **Plato fuerte.** Solo las recetas con `receta.es_plato_fuerte` (V7) van al almuerzo o la cena. Un batido o una ensalada de frutas no son una comida.
+- **Plato fuerte.** Solo las recetas con `receta.es_plato_fuerte` (V7) van al almuerzo o la cena. Un batido o una ensalada de frutas no son una comida. El curador cambia esta marca y la de `gusta_a_ninos` en **Recetas** (`PUT /api/curaduria/recetas/{id}/etiquetas`, KAN-17), sin tocar código ni migraciones.
 - **Edad de las personas.** El perfil ya pide la edad de cada persona (ADR-13). `ResumenHogarService` la usa para saber si hay niños, sin exponer quién es.
 - El generador lee el catálogo con su propio puerto (`CatalogoParaPlan`). El perfil le entrega las restricciones ya descifradas mediante `ResumenHogarService` (RNF-26, ADR-20).
 
@@ -123,7 +123,7 @@ El aviso «Aprovechar lo que tienes» (ADR-17) es la primera opción del modo re
 - La migración V7 agrega `receta.es_plato_fuerte` (por defecto sí) y `receta.gusta_a_ninos` (por defecto no). Falta exponer los dos campos en la pantalla de curaduría para que el curador los marque en recetas nuevas.
 - El generador lee el catálogo completo en cada llamada. Si el catálogo crece a cientos de recetas, habrá que ponerle caché.
 - No escala las cantidades por número de personas: usa las porciones de la receta, igual que el costo y la lista de compras actuales. Cambiarlo afecta las tres cosas a la vez.
-- La lista de compras ya suma el reemplazo y el plato aparte de quien tiene alergia (pieza 2). El **costo del plan** (`/costo`) todavía no los suma: sigue siendo el costo de las recetas, igual que la barra de presupuesto.
+- La lista de compras suma el reemplazo y el plato aparte de quien tiene alergia (pieza 2). El **costo del plan** (`/costo`, la barra de presupuesto y el costo que reporta "Armar mi semana") también los suma desde KAN-24 (`CostoPorAlergias`), con todo lo que pide la receta aunque ya esté en la despensa, como el resto del costo; `costoAlergias` dice cuánto es y la pantalla lo muestra debajo de la barra. "Ajustar al presupuesto" cambia recetas comparando solo su costo propio.
 - El vencimiento de lo comprado es una estimación: si el empaque dice otra fecha, la usuaria la corrige en la despensa.
 - Qué alérgeno tiene cada producto (`producto_restriccion`) solo se carga por migración: la pantalla del curador todavía no lo edita. Tampoco hay editor de recetas, así que `es_principal` solo se cambia por migración.
 - La Definición y el C4 deben mencionar la automatización y retirar "recomendación automática" de lo que está fuera de alcance.

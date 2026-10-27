@@ -12,6 +12,7 @@ import co.edu.uniquindio.cocinasinestres.planificador.domain.CatalogoParaPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.ContextoPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.GeneradorPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.Hueco;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.RegistroUso;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.CambioPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.ComidaPlanResponse;
 import co.edu.uniquindio.cocinasinestres.planificador.dto.GenerarPlanRequest;
@@ -58,6 +59,8 @@ public class GeneradorPlanService {
     private final ContextoPlanFactory contextos;
     private final CatalogoParaPlan catalogo;
     private final ListaComprasService listaComprasService;
+    private final RegistroUso registroUso;
+    private final CostoPorAlergias costoPorAlergias;
     private final GeneradorPlan generador = new GeneradorPlan();
 
     public GeneradorPlanService(
@@ -67,7 +70,9 @@ public class GeneradorPlanService {
         UsuarioActualService usuarioActualService,
         ContextoPlanFactory contextos,
         CatalogoParaPlan catalogo,
-        ListaComprasService listaComprasService) {
+        ListaComprasService listaComprasService,
+        RegistroUso registroUso,
+        CostoPorAlergias costoPorAlergias) {
         this.planSemanalRepository = planSemanalRepository;
         this.comidaPlanRepository = comidaPlanRepository;
         this.hogarRepository = hogarRepository;
@@ -75,6 +80,8 @@ public class GeneradorPlanService {
         this.contextos = contextos;
         this.catalogo = catalogo;
         this.listaComprasService = listaComprasService;
+        this.registroUso = registroUso;
+        this.costoPorAlergias = costoPorAlergias;
     }
 
     /** Llena los huecos vacíos del almuerzo y la cena (o las comidas pedidas). */
@@ -99,6 +106,8 @@ public class GeneradorPlanService {
             cambios.add(new CambioPlanResponse(hueco.dia(), hueco.tipoComida(), receta, null));
         });
         log.info("Plan generado: planId={} comidasNuevas={}", planId, nuevas.size());
+        // Tiempo para armar la semana (KAN-54): se anota la primera vez que queda completa.
+        registroUso.revisarPlanCompleto(planId);
         return terminar(plan, contexto, cambios);
     }
 
@@ -212,7 +221,10 @@ public class GeneradorPlanService {
         Map<Hueco, Long> comoQuedo = new HashMap<>();
         finales.forEach(c -> comoQuedo.put(new Hueco(c.getDia(), c.getTipoComida()), c.getRecetaId()));
 
-        BigDecimal costo = generador.costo(contexto.plan(), comoQuedo).setScale(2, RoundingMode.HALF_UP);
+        // Igual que la barra de presupuesto: recetas más lo extra por alergias (KAN-24).
+        BigDecimal costo = generador.costo(contexto.plan(), comoQuedo)
+            .add(costoPorAlergias.total(plan.getHogar(), finales))
+            .setScale(2, RoundingMode.HALF_UP);
         BigDecimal presupuesto = contexto.plan().presupuestoSemanal();
         Set<String> aprovecha = new LinkedHashSet<>();
         generador.aprovechados(contexto.plan(), comoQuedo.values())

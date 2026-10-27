@@ -58,6 +58,9 @@ class PlanificadorServiceImplTest {
     @Mock
     private MovimientosDespensa movimientosDespensa;
 
+    @Mock
+    private co.edu.uniquindio.cocinasinestres.planificador.domain.RegistroUso registroUso;
+
     @InjectMocks
     private PlanificadorServiceImpl service;
 
@@ -229,6 +232,8 @@ class PlanificadorServiceImplTest {
 
         verify(movimientosDespensa, times(1)).descontarReceta(10L, 4L);
         assertTrue(comida.isPreparada());
+        // Queda una sola preparación para el análisis del administrador (KAN-54).
+        verify(registroUso, times(1)).preparacion(10L, 4L, 70L);
     }
 
     @Test
