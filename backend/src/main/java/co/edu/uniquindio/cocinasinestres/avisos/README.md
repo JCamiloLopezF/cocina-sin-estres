@@ -7,7 +7,7 @@ Motor de reglas y centro de avisos (Proceso 4, ADR-17, KAN-27).
 1. Al abrir la app, el frontend pide `GET /api/avisos`.
 2. `AvisosService` lee la despensa, el plan y las preferencias del hogar (`FuenteAvisos`) y corre las cinco reglas de `domain/ReglasAviso`:
    - `BAJO_MINIMO`: productos en su mínimo o por debajo.
-   - `POR_VENCER`: vencen hoy o en los próximos 3 días.
+   - `POR_VENCER`: vencen hoy o en los próximos 3 días, o vencieron en los últimos 7.
    - `PREPARACION_PREVIA`: una comida de mañana pide alistar algo desde hoy.
    - `SEMANA_SIN_PLANIFICAR`: desde el viernes, la semana siguiente sin comidas. Antes de avisar, `BorradorSemanaService` (planificador) intenta dejarla armada como borrador.
    - `APROVECHAR_PRODUCTO`: la primera opción del modo rescate que salva algo por vencer.

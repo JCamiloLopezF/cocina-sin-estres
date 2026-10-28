@@ -35,10 +35,13 @@ public class MovimientosDespensaJdbc implements MovimientosDespensa {
             cantidad = item_despensa.cantidad + nuevo.cantidad
         """;
 
+    /** Lo que gasta la receta para las personas del hogar (personas / porciones). */
     private static final String SQL_DESCONTAR_RECETA = """
         UPDATE item_despensa i
         JOIN ingrediente_receta ir ON ir.producto_id = i.producto_id
-        SET i.cantidad = GREATEST(i.cantidad - ir.cantidad, 0)
+        JOIN receta r ON r.id = ir.receta_id
+        SET i.cantidad = GREATEST(i.cantidad - ir.cantidad * COALESCE(
+                NULLIF((SELECT COUNT(*) FROM persona pe WHERE pe.hogar_id = :hogar), 0), r.porciones) / r.porciones, 0)
         WHERE i.hogar_id = :hogar
           AND ir.receta_id = :receta
           AND ir.opcional = FALSE
@@ -89,6 +92,14 @@ public class MovimientosDespensaJdbc implements MovimientosDespensa {
             .param("hogar", hogarId)
             .param("producto", productoId)
             .update();
+    }
+
+    @Override
+    public boolean recetaActiva(Long recetaId) {
+        return jdbc.sql("SELECT COUNT(*) FROM receta WHERE id = :id AND activa = TRUE")
+            .param("id", recetaId)
+            .query(Long.class)
+            .single() > 0;
     }
 
     @Override

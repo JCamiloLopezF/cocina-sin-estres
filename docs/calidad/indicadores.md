@@ -11,12 +11,12 @@ El administrador ve en **Análisis** (`/admin/analisis`) los indicadores del Pla
 | Proceso | Indicador | Cálculo en la app | Meta del plan |
 | --- | --- | --- | --- |
 | Usuario | Completitud de perfil del hogar | Cuentas USUARIA activas con `perfil_completo` / cuentas USUARIA activas | > 90 % |
-| Usuario | Éxito de autenticación | No se mide en la app: Firebase Authentication registra los intentos. Se consulta en la consola de Firebase | > 95 % |
-| Usuario | Tiempo de respuesta de login | No se mide en la app: se toma con las herramientas del navegador | < 1500 ms |
+| Usuario | Éxito de autenticación | Lo mide la web (`inicio_sesion`, V16): inicios exitosos / (exitosos + intentos fallidos previos en ese navegador). Un intento fallido de alguien que nunca entra no se cuenta | > 95 % |
+| Usuario | Tiempo de respuesta de login | Lo mide la web (`inicio_sesion.duracion_ms`, V16): milisegundos desde «Entrar» hasta que `GET /api/yo` reconoce la cuenta | < 1500 ms |
 | Despensa | Actualidad del inventario | Promedio, por hogar, de días desde el último cambio en `item_despensa` | < 7 días |
 | Despensa | Adopción del catálogo predefinido | Productos de la despensa del catálogo global (`producto.hogar_id IS NULL`) / todos | > 80 % |
-| Despensa | Exactitud de existencias | Se verifica con las pruebas automáticas del descuento al preparar (CI) | > 98 % |
-| Planificador | Tiempo de planificación semanal | Promedio de minutos entre crear el plan y tener almuerzo y cena los 7 días (`plan_semanal.completado_en`, V15). Solo planes completados en menos de un día | < 3 min |
+| Despensa | Exactitud de existencias | Se verifica en CI con `ExactitudExistenciasIntegracionTest`: cada receta del catálogo para 1 a 4 personas (21 casos), 0 desviaciones (RNF-05) | > 98 % |
+| Planificador | Tiempo de planificación semanal | Lo mide la web (`plan_semanal.segundos_planificacion`, V16): desde que la usuaria abre la semana sin completar hasta que tiene almuerzo y cena los 7 días, solo la primera vez. Solo planes completados en menos de un día | < 3 min |
 | Planificador | Cumplimiento del presupuesto | Planes con costo ≤ presupuesto semanal del hogar (ADR-14) / planes con comidas | > 85 % |
 | Planificador | Aprovechamiento de la despensa | Productos con existencias que pide alguna receta del plan de esta semana / productos con existencias | > 60 % |
 | Planificador | Uso del modo rescate | Semanas planeadas en que el hogar abrió el modo rescate (`uso_rescate`, V15) / semanas planeadas | Seguimiento |

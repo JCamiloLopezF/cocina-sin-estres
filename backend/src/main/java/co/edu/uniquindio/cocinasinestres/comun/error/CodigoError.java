@@ -33,6 +33,12 @@ public final class CodigoError {
     /** No existe, o es de otro hogar (RNF-22: no se confirma que exista). */
     public static final String RECURSO_NO_ENCONTRADO = "RECURSO_NO_ENCONTRADO";
 
+    /** Demasiadas peticiones en poco tiempo; la respuesta trae {@code Retry-After}. */
+    public static final String LIMITE_PETICIONES = "LIMITE_PETICIONES";
+
+    /** El cuerpo de la petición pasa del tamaño máximo. */
+    public static final String CUERPO_DEMASIADO_GRANDE = "CUERPO_DEMASIADO_GRANDE";
+
     /** Error no previsto. El detalle útil queda en el log, no en la respuesta. */
     public static final String ERROR_INTERNO = "ERROR_INTERNO";
 

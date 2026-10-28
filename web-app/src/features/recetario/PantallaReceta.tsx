@@ -7,7 +7,7 @@ import { mensajePlan } from '../planificador/mensajesPlan'
 import { diaDe } from '../planificador/semana'
 import { obtenerAdaptaciones, textoCambio, type Adaptacion } from './adaptaciones'
 import { obtenerReceta } from './apiRecetario'
-import { analizarReceta, cargarCocina, type Cocina } from './cocina'
+import { analizarReceta, avisoAntesDeCocinar, cargarCocina, porcionesDelHogar, type Cocina } from './cocina'
 import type { RecetaDetalle } from './tipos'
 import './recetario.css'
 
@@ -65,7 +65,7 @@ export function PantallaReceta() {
   }
 
   const { receta, cocina, adaptacion } = estado
-  const elegidas = porciones ?? receta.porciones
+  const elegidas = porciones ?? porcionesDelHogar(receta, cocina)
   const vista = analizarReceta(receta, cocina, elegidas)
   const hoy = new URLSearchParams(parametros)
   hoy.set('dia', String(hoyDia))
@@ -158,7 +158,7 @@ export function PantallaReceta() {
               )}
             </span>
             <span className="receta__estado">
-              {ing.enDespensa ? 'en despensa' : ing.opcional ? 'opcional' : 'falta'}
+              {ing.enDespensa ? 'en despensa' : ing.opcional ? 'opcional' : ing.vencido ? 'vencido' : 'falta'}
             </span>
           </li>
         ))}
@@ -184,6 +184,11 @@ export function PantallaReceta() {
         ))}
       </ol>
 
+      {avisoAntesDeCocinar(vista) && (
+        <Alerta tono="info">
+          {avisoAntesDeCocinar(vista)} Puedes cocinar igual con lo que consigas; al tocar «La preparé» descontamos lo que haya.
+        </Alerta>
+      )}
       <Link className="boton boton--primario boton--ancho receta__cocinar" to={`/recetas/${receta.id}/cocinar?porciones=${elegidas}`}>
         👩‍🍳 Cocinar ahora, paso a paso
       </Link>

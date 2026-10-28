@@ -3,6 +3,7 @@ package co.edu.uniquindio.cocinasinestres.admin.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import co.edu.uniquindio.cocinasinestres.admin.domain.DatosAnalisis;
+import co.edu.uniquindio.cocinasinestres.admin.domain.DatosLogin;
 import co.edu.uniquindio.cocinasinestres.admin.domain.FuenteAnalisis;
 import co.edu.uniquindio.cocinasinestres.avisos.domain.AlmacenAvisos;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.RegistroUso;
@@ -98,6 +99,11 @@ class AnalisisJdbcIntegracionTest {
         registroUso.rescate(hogarId, 4);
         almacenAvisos.registrarApertura(hogarId, 3, 2, 5, 140);
         almacenAvisos.registrarApertura(hogarId, 1, 1, 4, 60);
+        // Lo que mide la web (V16): tiempo para dejar la semana completa e inicios de sesión.
+        jdbcTemplate.update("UPDATE plan_semanal SET segundos_planificacion = 150 WHERE id = ?", planId);
+        jdbcTemplate.update(
+            "INSERT INTO inicio_sesion (usuario_id, duracion_ms, fallidos_previos) VALUES (?, 900, 1), (?, 700, 0)",
+            usuarioId, usuarioId);
 
         DatosAnalisis datos = fuente.leer(30, lunes, lunes.minusWeeks(7));
 
@@ -116,6 +122,7 @@ class AnalisisJdbcIntegracionTest {
         assertThat(datos.itemsDespensa()).isEqualTo(6);
         assertThat(datos.itemsDelCatalogo()).isEqualTo(6);
         assertThat(datos.planesCompletados()).isEqualTo(1);
+        assertThat(datos.minutosParaArmar()).isEqualTo(2.5);
         assertThat(datos.planes()).singleElement()
             .satisfies(p -> assertThat(p.costo().signum()).isPositive());
         assertThat(datos.productosDisponibles()).isEqualTo(6);
@@ -124,6 +131,11 @@ class AnalisisJdbcIntegracionTest {
         assertThat(datos.masPreparadas().get(0).veces()).isEqualTo(2);
         assertThat(datos.masPlaneadas()).isNotEmpty();
         assertThat(datos.sinUsar()).isNotEmpty();
+
+        DatosLogin login = fuente.login(30);
+        assertThat(login.exitosos()).isEqualTo(2);
+        assertThat(login.fallidos()).isEqualTo(1);
+        assertThat(login.msPromedio()).isEqualTo(800.0);
     }
 
     private Integer completado(Long planId) {

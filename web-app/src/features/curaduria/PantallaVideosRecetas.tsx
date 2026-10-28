@@ -79,10 +79,10 @@ export function PantallaVideosRecetas() {
   return (
     <>
       <EncabezadoPagina
-        titulo="Recetas"
+        titulo="Videos y etiquetas"
         detalle="Un video corto por receta (máximo la mitad de su tiempo) y cómo la usa «Armar mi semana»."
         detalleAbajo
-        volver={{ ruta: '/curaduria', etiqueta: 'Volver al catálogo' }}
+        volver={{ ruta: '/curaduria/recetas', etiqueta: 'Volver a las recetas' }}
       />
       {aviso && <Alerta tono="exito">{aviso}</Alerta>}
       {errorEtiqueta && <Alerta tono="error">{errorEtiqueta}</Alerta>}

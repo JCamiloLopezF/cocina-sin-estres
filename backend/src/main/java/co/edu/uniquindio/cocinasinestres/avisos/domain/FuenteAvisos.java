@@ -26,8 +26,8 @@ public interface FuenteAvisos {
      */
     List<ProductoAviso> bajoMinimo(Long hogarId);
 
-    /** Productos con cantidad que vencen entre {@code hoy} y {@code hasta}, inclusive. */
-    List<ProductoAviso> porVencer(Long hogarId, LocalDate hoy, LocalDate hasta);
+    /** Productos con cantidad que vencen entre {@code desde} y {@code hasta}, inclusive. */
+    List<ProductoAviso> porVencer(Long hogarId, LocalDate desde, LocalDate hasta);
 
     /** Comidas no preparadas de esa fecha cuya receta pide alistar algo desde antes. */
     List<PreparacionPendiente> preparacionesPara(Long hogarId, LocalDate fecha);

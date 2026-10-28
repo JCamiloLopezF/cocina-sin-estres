@@ -23,17 +23,24 @@ public final class IndicadoresCalidad {
     private IndicadoresCalidad() {
     }
 
+    /** Los indicadores sin mediciones de inicio de sesión. */
     public static List<Indicador> calcular(DatosAnalisis d) {
+        return calcular(d, DatosLogin.SIN_DATOS);
+    }
+
+    public static List<Indicador> calcular(DatosAnalisis d, DatosLogin login) {
         List<Indicador> lista = new ArrayList<>();
 
         // Proceso 1
         lista.add(porcentajeMayor(USUARIO, "Completitud de perfil del hogar",
             "(Perfiles completos / cuentas de usuaria activas) %", d.perfilesCompletos(), d.usuarias(), 90,
             "Cuentas con rol USUARIA."));
-        lista.add(fueraDeLaApp(USUARIO, "Éxito de autenticación", "(Inicios de sesión exitosos / intentos) %",
-            "> 95 %", "Lo registra Firebase Authentication: la app no ve los intentos fallidos. Se consulta en la consola de Firebase."));
-        lista.add(fueraDeLaApp(USUARIO, "Tiempo de respuesta de login", "Tiempo promedio en milisegundos",
-            "< 1500 ms", "Lo mide Firebase Authentication en el navegador; se toma con las herramientas del navegador."));
+        lista.add(porcentajeMayor(USUARIO, "Éxito de autenticación", "(Inicios de sesión exitosos / intentos) %",
+            login.exitosos(), login.exitosos() + login.fallidos(), 95,
+            "Lo mide la web: los intentos fallidos se cuentan cuando la persona por fin entra en ese navegador."));
+        lista.add(menor(USUARIO, "Tiempo de respuesta de login",
+            "Milisegundos promedio desde «Entrar» hasta que la API reconoce la cuenta",
+            login.msPromedio(), "ms", 1500, login.exitosos(), "Medido en el navegador de cada usuaria."));
 
         // Proceso 2
         lista.add(menor(DESPENSA, "Actualidad del inventario", "Días desde la última actualización de la despensa (promedio por hogar)",
@@ -42,12 +49,13 @@ public final class IndicadoresCalidad {
             "(Productos desde el catálogo / total registrados) %", d.itemsDelCatalogo(), d.itemsDespensa(), 80,
             "Productos de todas las despensas."));
         lista.add(fueraDeLaApp(DESPENSA, "Exactitud de existencias", "(Descuentos correctos / total) %", "> 98 %",
-            "Se verifica con las pruebas automáticas del descuento al preparar (CI)."));
+            "Se verifica en CI (ExactitudExistenciasIntegracionTest): cada receta del catálogo para 1 a 4 personas, "
+                + "0 desviaciones en más de 20 casos (RNF-05)."));
 
         // Proceso 3
         lista.add(menor(PLANIFICADOR, "Tiempo de planificación semanal",
-            "Minutos entre crear el plan y tener almuerzo y cena los 7 días (promedio)",
-            d.minutosParaArmar(), "min", 3, d.planesCompletados(), "Planes completados en menos de un día."));
+            "Minutos desde que la usuaria abre la semana sin completar hasta tener almuerzo y cena los 7 días (promedio)",
+            d.minutosParaArmar(), "min", 3, d.planesCompletados(), "Medido en la web; planes completados en menos de un día."));
         lista.add(cumplimientoPresupuesto(d.planes()));
         lista.add(porcentajeMayor(PLANIFICADOR, "Aprovechamiento de la despensa",
             "(Productos de la despensa que usa el plan / productos disponibles) %", d.productosUsados(),

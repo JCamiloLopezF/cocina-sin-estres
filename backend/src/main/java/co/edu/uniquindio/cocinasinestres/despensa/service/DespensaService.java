@@ -1,6 +1,7 @@
 package co.edu.uniquindio.cocinasinestres.despensa.service;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.ConflictoException;
+import co.edu.uniquindio.cocinasinestres.curaduria.domain.CategoriaProducto;
 import co.edu.uniquindio.cocinasinestres.curaduria.domain.TipoCantidad;
 import co.edu.uniquindio.cocinasinestres.curaduria.domain.UnidadBase;
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
@@ -54,7 +55,6 @@ public class DespensaService {
     static final String CATEGORIA_ADICIONAL = "OTROS";
 
     private static final int LARGO_MAXIMO_NOMBRE = 120;
-    private static final int LARGO_MAXIMO_CATEGORIA = 60;
     private static final BigDecimal CAPACIDAD_ADICIONAL_GRANEL = new BigDecimal("1000");
 
     private final ItemDespensaRepository itemRepository;
@@ -182,13 +182,21 @@ public class DespensaService {
             .orElseThrow(() ->
                 new RecursoNoEncontradoException("No encontramos ese producto en el catálogo."));
 
+        // Sin fecha, se estima con la vida útil del producto: así lo perecedero de la carga
+        // rápida (pollo, leche) también avisa cuando está por vencer (KAN-27).
+        LocalDate venceEn = request.fechaVencimiento() != null
+            ? request.fechaVencimiento()
+            : catalogo.vidaUtilDias(producto.id())
+                .map(dias -> LocalDate.now(reloj).plusDays(dias))
+                .orElse(null);
+
         DatosItemDespensa datos = ValidadorItemDespensa.validar(
             producto,
             request.cantidad(),
             request.nivel(),
             request.cantidadMinima(),
             request.nivelMinimo(),
-            request.fechaVencimiento(),
+            venceEn,
             request.ubicacion()
         );
 
@@ -244,10 +252,9 @@ public class DespensaService {
                 "Lo que se cuenta va en unidades; lo que va a granel, en gramos o mililitros.");
         }
 
-        String categoria = request.categoria() == null || request.categoria().isBlank()
-            ? CATEGORIA_ADICIONAL
-            : request.categoria().trim().toUpperCase(Locale.ROOT);
-        if (categoria.length() > LARGO_MAXIMO_CATEGORIA) {
+        // Una categoría que no es de la lista (V17) queda en OTROS.
+        String categoria = CategoriaProducto.normalizar(request.categoria());
+        if (categoria == null) {
             categoria = CATEGORIA_ADICIONAL;
         }
 

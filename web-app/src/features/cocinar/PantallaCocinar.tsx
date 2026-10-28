@@ -8,7 +8,7 @@ import { marcarPreparada } from '../planificador/apiPlanificador'
 import { mensajePlan } from '../planificador/mensajesPlan'
 import { obtenerAdaptaciones, textoCambio, type Adaptacion } from '../recetario/adaptaciones'
 import { obtenerReceta } from '../recetario/apiRecetario'
-import { analizarReceta, cargarCocina, type RecetaVista } from '../recetario/cocina'
+import { analizarReceta, avisoAntesDeCocinar, cargarCocina, porcionesDelHogar, type RecetaVista } from '../recetario/cocina'
 import { nuevoTemporizador, sonarAlarma, type EstadoTemporizador } from './cuentaRegresiva'
 import { escuchaDisponible, useEscucha } from './escucha'
 import { animo, fraseDelPaso, minutosDelPaso, minutosEnPalabras, primerNombre, type Comando } from './guion'
@@ -124,7 +124,7 @@ export function PantallaCocinar() {
       .then(([receta, cocina, adaptaciones]) =>
         setCarga({
           tipo: 'listo',
-          vista: analizarReceta(receta, cocina, porciones ?? receta.porciones),
+          vista: analizarReceta(receta, cocina, porciones ?? porcionesDelHogar(receta, cocina)),
           adaptacion: adaptaciones.get(Number(id)),
         }),
       )
@@ -380,6 +380,7 @@ export function PantallaCocinar() {
               <strong>Antes de empezar:</strong> {vista.receta.preparacionPrevia}
             </p>
           )}
+          {avisoAntesDeCocinar(vista) && <Alerta tono="error">{avisoAntesDeCocinar(vista)}</Alerta>}
           {ajustes.length > 0 && (
             <ul className="cocinar__ajustes" aria-label="Ajustes por alergias">
               {ajustes.map((cambio, i) => (
@@ -461,6 +462,9 @@ export function PantallaCocinar() {
             </>
           ) : (
             <>
+              {temporizadores.some((t) => !t.terminado) && (
+                <Alerta tono="info">Todavía tienes un temporizador corriendo. Revisa esa olla antes de servir.</Alerta>
+              )}
               <p>Cuando sirvas, toca «La preparé» y descuento de tu despensa lo que usaste.</p>
               {errorPreparar !== undefined && <Alerta tono="error">{mensajePlan(errorPreparar)}</Alerta>}
               <Boton ancho cargando={preparando} onClick={() => void laPrepare()}>

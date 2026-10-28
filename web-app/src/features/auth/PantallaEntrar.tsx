@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { Alerta, Boton, CampoTexto } from '../../shared/componentes'
 import { DisenoAcceso } from './DisenoAcceso'
 import { enfocarPrimerError } from './enfocarPrimerError'
+import { empezarIntento, intentoFallido } from './medicionLogin'
 import { mensajeDeErrorAuth } from './mensajesAuth'
 import { useSesion } from './contextoSesion'
 import { validarCorreo } from './validaciones'
@@ -36,10 +37,12 @@ export function PantallaEntrar({ modoDev = false }: { modoDev?: boolean }) {
     }
 
     setEnviando(true)
+    empezarIntento()
     try {
       // Si sale bien, la sesión cambia y la ruta lleva al inicio.
       await servicio.entrar(correo.trim(), contrasena)
     } catch (error) {
+      intentoFallido()
       setErrorGeneral(mensajeDeErrorAuth(error))
       setEnviando(false)
     }

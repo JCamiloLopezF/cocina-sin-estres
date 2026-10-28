@@ -59,7 +59,7 @@ describe('Despensa', () => {
     entrar('/despensa')
     const usuario = userEvent.setup()
 
-    expect(await screen.findByRole('heading', { level: 2, name: 'Granos y básicos' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 2, name: 'Arroz, pasta y granos' })).toBeInTheDocument()
     expect(screen.getByText('2 productos')).toBeInTheDocument()
     expect(screen.getByText('Nivel: poco · bajo el mínimo')).toBeInTheDocument()
     expect(screen.getByText('6 unidades · vence en 2 días')).toBeInTheDocument()

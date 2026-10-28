@@ -14,6 +14,8 @@ const MENSAJES: Record<string, string> = {
   PETICION_MAL_FORMADA: 'No pudimos leer los datos enviados. Recarga la página e inténtalo de nuevo.',
   PETICION_NO_SOPORTADA: 'Esta acción no está disponible. Recarga la página.',
   RECURSO_NO_ENCONTRADO: 'No encontramos lo que buscabas.',
+  LIMITE_PETICIONES: 'Vas muy rápido. Espera un minuto y vuelve a intentarlo.',
+  CUERPO_DEMASIADO_GRANDE: 'Lo que enviaste es demasiado grande. Revisa los datos e inténtalo de nuevo.',
   ERROR_INTERNO: 'Algo falló de nuestro lado. Inténtalo de nuevo en un momento.',
 }
 

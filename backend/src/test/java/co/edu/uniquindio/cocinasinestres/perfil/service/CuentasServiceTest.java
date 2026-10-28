@@ -29,6 +29,7 @@ class CuentasServiceTest {
 
     private static final long ADMIN = 1L;
     private static final long LUISA = 7L;
+    private static final long SISTEMA = 2L;
 
     private UsuarioRepository usuarioRepository;
     private CuentasService servicio;
@@ -104,5 +105,24 @@ class CuentasServiceTest {
 
         assertThatThrownBy(() -> servicio.cambiar(99L, "CURADOR", null, ADMIN))
                 .isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    void noListaLaCuentaDeSistema() {
+        when(usuarioRepository.findAll(any(Sort.class))).thenReturn(List.of(
+                UsuarioDePrueba.conId(SISTEMA, Usuario.UID_SISTEMA, "sistema@cocinasinestres.local", Rol.USUARIA),
+                UsuarioDePrueba.conId(LUISA, "uid-luisa", "luisa@ejemplo.com", Rol.USUARIA)));
+
+        assertThat(servicio.listar()).extracting(CuentaResumen::id).containsExactly(LUISA);
+    }
+
+    @Test
+    void laCuentaDeSistemaNoSePuedeCambiar() {
+        when(usuarioRepository.findById(SISTEMA)).thenReturn(Optional.of(
+                UsuarioDePrueba.conId(SISTEMA, Usuario.UID_SISTEMA, "sistema@cocinasinestres.local", Rol.USUARIA)));
+
+        assertThatThrownBy(() -> servicio.cambiar(SISTEMA, "ADMIN", null, ADMIN))
+                .isInstanceOf(RecursoNoEncontradoException.class);
+        verify(usuarioRepository, never()).save(any(Usuario.class));
     }
 }

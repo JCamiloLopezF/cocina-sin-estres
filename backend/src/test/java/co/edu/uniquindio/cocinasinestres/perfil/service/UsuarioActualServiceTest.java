@@ -55,7 +55,7 @@ class UsuarioActualServiceTest {
         when(usuarioRepository.save(any(Usuario.class)))
                 .thenReturn(UsuarioDePrueba.conId(7L, UID, CORREO, Rol.USUARIA));
 
-        UsuarioAutenticado resultado = servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO);
+        UsuarioAutenticado resultado = servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO, true);
 
         ArgumentCaptor<Usuario> guardado = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(guardado.capture());
@@ -74,7 +74,7 @@ class UsuarioActualServiceTest {
         when(usuarioRepository.findByFirebaseUid(UID))
                 .thenReturn(Optional.of(UsuarioDePrueba.conId(7L, UID, CORREO, Rol.CURADOR)));
 
-        UsuarioAutenticado resultado = servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO);
+        UsuarioAutenticado resultado = servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO, true);
 
         verify(usuarioRepository, never()).save(any(Usuario.class));
         assertThat(resultado.rol()).isEqualTo(Rol.CURADOR);
@@ -87,11 +87,39 @@ class UsuarioActualServiceTest {
                 .thenReturn(UsuarioDePrueba.conId(1L, UID, CORREO_ADMIN, Rol.ADMIN));
 
         // En mayúsculas a propósito: los correos no distinguen may./min.
-        servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, "ADMIN@EJEMPLO.COM");
+        servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, "ADMIN@EJEMPLO.COM", true);
 
         ArgumentCaptor<Usuario> guardado = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(guardado.capture());
         assertThat(guardado.getValue().getRol()).isEqualTo(Rol.ADMIN);
+    }
+
+    @Test
+    void noDaRolAdminSiElCorreoNoEstaVerificado() {
+        when(usuarioRepository.findByFirebaseUid(UID)).thenReturn(Optional.empty());
+        when(usuarioRepository.save(any(Usuario.class)))
+                .thenReturn(UsuarioDePrueba.conId(1L, UID, CORREO_ADMIN, Rol.USUARIA));
+
+        // Alguien se registró en Firebase con el correo del admin sin ser su dueño.
+        servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO_ADMIN, false);
+
+        ArgumentCaptor<Usuario> guardado = ArgumentCaptor.forClass(Usuario.class);
+        verify(usuarioRepository).save(guardado.capture());
+        assertThat(guardado.getValue().getRol()).isEqualTo(Rol.USUARIA);
+    }
+
+    @Test
+    void noDaRolAdminSiYaHayUnAdministrador() {
+        when(usuarioRepository.findByFirebaseUid(UID)).thenReturn(Optional.empty());
+        when(usuarioRepository.existsByRol(Rol.ADMIN)).thenReturn(true);
+        when(usuarioRepository.save(any(Usuario.class)))
+                .thenReturn(UsuarioDePrueba.conId(2L, UID, CORREO_ADMIN, Rol.USUARIA));
+
+        servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO_ADMIN, true);
+
+        ArgumentCaptor<Usuario> guardado = ArgumentCaptor.forClass(Usuario.class);
+        verify(usuarioRepository).save(guardado.capture());
+        assertThat(guardado.getValue().getRol()).isEqualTo(Rol.USUARIA);
     }
 
     @Test
@@ -100,7 +128,7 @@ class UsuarioActualServiceTest {
         when(usuarioRepository.save(any(Usuario.class)))
                 .thenReturn(UsuarioDePrueba.conId(1L, UID, CORREO, Rol.USUARIA));
 
-        servicioConAdmin("").registrarSiNoExiste(UID, CORREO);
+        servicioConAdmin("").registrarSiNoExiste(UID, CORREO, true);
 
         ArgumentCaptor<Usuario> guardado = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(guardado.capture());
@@ -115,7 +143,7 @@ class UsuarioActualServiceTest {
         when(usuarioRepository.save(any(Usuario.class)))
                 .thenThrow(new DataIntegrityViolationException("uk_usuario_firebase_uid"));
 
-        UsuarioAutenticado resultado = servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO);
+        UsuarioAutenticado resultado = servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO, true);
 
         assertThat(resultado.id()).isEqualTo(9L);
     }
@@ -125,7 +153,7 @@ class UsuarioActualServiceTest {
         when(usuarioRepository.findByFirebaseUid(UID))
                 .thenReturn(Optional.of(UsuarioDePrueba.inactiva(7L, UID, CORREO)));
 
-        assertThatThrownBy(() -> servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO))
+        assertThatThrownBy(() -> servicioConAdmin(CORREO_ADMIN).registrarSiNoExiste(UID, CORREO, true))
                 .isInstanceOf(NoAutenticadoException.class)
                 .extracting(error -> ((NoAutenticadoException) error).getCodigo())
                 .isEqualTo(CodigoError.AUTH_CUENTA_INACTIVA);
@@ -135,9 +163,9 @@ class UsuarioActualServiceTest {
     void rechazaUnTokenSinUidOSinCorreo() {
         UsuarioActualService servicio = servicioConAdmin(CORREO_ADMIN);
 
-        assertThatThrownBy(() -> servicio.registrarSiNoExiste("  ", CORREO))
+        assertThatThrownBy(() -> servicio.registrarSiNoExiste("  ", CORREO, true))
                 .isInstanceOf(NoAutenticadoException.class);
-        assertThatThrownBy(() -> servicio.registrarSiNoExiste(UID, null))
+        assertThatThrownBy(() -> servicio.registrarSiNoExiste(UID, null, true))
                 .isInstanceOf(NoAutenticadoException.class);
         verify(usuarioRepository, never()).save(any(Usuario.class));
     }

@@ -29,6 +29,12 @@ public class RecetaController {
         return recetaService.listar();
     }
 
+    /** Todas las recetas activas con su detalle, para el recetario (una sola petición). */
+    @GetMapping("/detalle")
+    public List<RecetaDetalleResponse> listarConDetalle() {
+        return recetaService.listarConDetalle();
+    }
+
     /** Devuelve el detalle de una receta. 404 si no existe o está desactivada. */
     @GetMapping("/{id}")
     public RecetaDetalleResponse obtenerPorId(@PathVariable Long id) {

@@ -7,7 +7,7 @@ const MENSAJES: Record<string, string> = {
   DESPENSA_PRODUCTO_REQUERIDO: 'Elige el producto que quieres agregar.',
   DESPENSA_PRODUCTO_REPETIDO: 'Ya tienes este producto en tu despensa. Puedes editar su cantidad.',
   DESPENSA_CANTIDAD_REQUERIDA: 'Indica cuánto tienes de este producto.',
-  DESPENSA_CANTIDAD_INVALIDA: 'La cantidad no puede ser negativa y admite hasta 3 decimales.',
+  DESPENSA_CANTIDAD_INVALIDA: 'Revisa la cantidad: no puede ser negativa ni tan grande, y admite hasta 3 decimales.',
   DESPENSA_NIVEL_REQUERIDO: 'Elige cuánto te queda: Poco, Medio o Lleno.',
   DESPENSA_MINIMO_INVALIDO: 'El mínimo no puede ser negativo y admite hasta 3 decimales.',
   DESPENSA_NIVEL_MINIMO_INVALIDO: 'El nivel mínimo no puede ser Lleno; elige Poco o Medio.',

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { configurarCliente, pedir } from '../../api/cliente'
+import { configurarCliente, limpiarRespaldos, pedir } from '../../api/cliente'
 import { Contexto, type Cuenta, type EstadoSesion } from './contextoSesion'
 import type { ServicioAuth, SesionAuth } from './servicioAuth'
+import { limpiarPendientes } from '../planificador/sinConexion'
+import { reportarInicioSesion } from './medicionLogin'
 
 interface Props {
   servicio: ServicioAuth
@@ -27,6 +29,8 @@ export function ProveedorSesion({ servicio, urlApi, children }: Props) {
   const cargarCuenta = useCallback(async (sesion: SesionAuth) => {
     try {
       const cuenta = await pedir<Cuenta>('/yo')
+      // Éxito y tiempo del inicio de sesión (KAN-54); solo si vino de «Entrar».
+      void reportarInicioSesion()
       if (sesionActual.current?.uid === sesion.uid) {
         setEstado({ tipo: 'con-sesion', sesion, cuenta })
       }
@@ -62,7 +66,12 @@ export function ProveedorSesion({ servicio, urlApi, children }: Props) {
     }
   }, [cargarCuenta])
 
-  const salir = useCallback(() => servicio.salir(), [servicio])
+  const salir = useCallback(() => {
+    // Lo guardado para usar sin conexión es de esta cuenta (RNF-17): no queda para la siguiente.
+    limpiarRespaldos()
+    limpiarPendientes()
+    return servicio.salir()
+  }, [servicio])
 
   const valor = useMemo(
     () => ({ estado, servicio, recargarCuenta, salir }),

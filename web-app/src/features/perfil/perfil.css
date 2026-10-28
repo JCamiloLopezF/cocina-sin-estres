@@ -195,10 +195,12 @@
 .listo__ilustracion {
   display: grid;
   place-items: center;
+  width: 9rem;
   height: 9rem;
-  border: var(--borde) dashed var(--color-punteado);
-  border-radius: var(--radio-tarjeta);
-  background: var(--color-beige);
+  margin-inline: auto;
+  border: var(--borde) solid var(--color-primario-hondo);
+  border-radius: 50%;
+  background: var(--color-crema);
 }
 
 .listo__ilustracion svg {

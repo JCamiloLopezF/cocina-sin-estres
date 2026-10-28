@@ -127,7 +127,7 @@ public final class ValidadorItemDespensa {
             if (esInvalida(cantidad)) {
                 throw new DatosInvalidosException(
                     CodigoDespensa.CANTIDAD_INVALIDA,
-                    "La cantidad no puede ser negativa y admite hasta "
+                    "Revisa la cantidad: no puede ser negativa ni tan grande, y admite hasta "
                         + DECIMALES_CANTIDAD + " decimales."
                 );
             }
@@ -135,7 +135,7 @@ public final class ValidadorItemDespensa {
             if (cantidadMinima != null && esInvalida(cantidadMinima)) {
                 throw new DatosInvalidosException(
                     CodigoDespensa.MINIMO_INVALIDO,
-                    "El mínimo no puede ser negativo y admite hasta "
+                    "Revisa el mínimo: no puede ser negativo ni tan grande, y admite hasta "
                         + DECIMALES_CANTIDAD + " decimales."
                 );
             }

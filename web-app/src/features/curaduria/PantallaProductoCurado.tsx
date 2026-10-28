@@ -192,7 +192,8 @@ export function PantallaProductoCurado() {
             setFormulario((f) => ({
               ...f,
               tipoCantidad: tipo,
-              unidadBase: tipo === 'GRANEL' && f.unidadBase === 'unidad' ? 'g' : f.unidadBase,
+              // Lo contable va en unidades; lo que va a granel, en gramos o mililitros.
+              unidadBase: tipo === 'CONTABLE' ? 'unidad' : f.unidadBase === 'unidad' ? 'g' : f.unidadBase,
             }))
           }
         />
@@ -305,7 +306,12 @@ function positivo(texto: string, entero = false): boolean {
 function validar(f: Formulario): Errores {
   return {
     nombre: !f.nombre.trim() ? 'Escribe el nombre.' : f.nombre.trim().length > 120 ? 'Máximo 120 caracteres.' : undefined,
-    unidadBase: f.tipoCantidad === 'GRANEL' && f.unidadBase === 'unidad' ? 'A granel se mide en gramos o mililitros.' : undefined,
+    unidadBase:
+      f.tipoCantidad === 'GRANEL' && f.unidadBase === 'unidad'
+        ? 'A granel se mide en gramos o mililitros.'
+        : f.tipoCantidad === 'CONTABLE' && f.unidadBase !== 'unidad'
+          ? 'Lo contable se cuenta en unidades.'
+          : undefined,
     capacidadReferencia:
       f.tipoCantidad === 'GRANEL' && !positivo(f.capacidadReferencia) ? 'Indica cuánto es «Lleno», mayor que cero.' : undefined,
     unidadCompra: f.unidadCompra.trim() ? undefined : 'Escribe la presentación de compra.',

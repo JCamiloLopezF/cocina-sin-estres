@@ -5,6 +5,9 @@ import { NOMBRE_NIVEL } from './formato'
 import { mensajeDespensa } from './mensajesDespensa'
 import type { DatosItem, Nivel, TipoCantidad, UnidadBase } from './tipos'
 
+/** Tope de una cantidad en la despensa: un millón de unidades, gramos o mililitros (la base admite más). */
+const CANTIDAD_MAXIMA = 1_000_000
+
 const UNIDAD: Record<UnidadBase, string> = { g: 'gramos', ml: 'mililitros', unidad: 'unidades' }
 const MINIMOS: { valor: OpcionMinimo; texto: string }[] = [
   { valor: 'SIN_MINIMO', texto: 'No avisarme' },
@@ -21,6 +24,8 @@ interface Props {
   /** En edición se puede marcar "Agotado"; al agregar no tiene sentido. */
   permitirAgotado?: boolean
   textoEnviar: string
+  /** Texto de ayuda bajo la fecha de vencimiento. */
+  ayudaVence?: string
   alEnviar: (datos: DatosItem) => Promise<void>
   alCancelar: () => void
 }
@@ -39,7 +44,7 @@ interface Errores {
  * granel se registra por nivel. Lo valida aquí para dar el error al lado del campo; el
  * backend lo vuelve a validar.
  */
-export function FormularioItem({ producto, inicial, permitirAgotado = false, textoEnviar, alEnviar, alCancelar }: Props) {
+export function FormularioItem({ producto, inicial, permitirAgotado = false, textoEnviar, ayudaVence, alEnviar, alCancelar }: Props) {
   const esGranel = producto.tipoCantidad === 'GRANEL'
   const formulario = useRef<HTMLFormElement>(null)
   const [cantidad, setCantidad] = useState(inicial?.cantidad?.toString() ?? (esGranel ? '' : '1'))
@@ -81,12 +86,16 @@ export function FormularioItem({ producto, inicial, permitirAgotado = false, tex
       const valor = Number(cantidad.replace(',', '.'))
       if (cantidad.trim() === '' || Number.isNaN(valor) || valor < 0) {
         nuevos.cantidad = 'Escribe cuánto tienes; puede ser 0.'
+      } else if (valor > CANTIDAD_MAXIMA) {
+        nuevos.cantidad = 'Esa cantidad es demasiado grande. Revisa la cifra.'
       }
       datos.cantidad = valor
       if (cantidadMinima.trim() !== '') {
         const minimo = Number(cantidadMinima.replace(',', '.'))
         if (Number.isNaN(minimo) || minimo < 0) {
           nuevos.cantidadMinima = 'El mínimo debe ser 0 o más.'
+        } else if (minimo > CANTIDAD_MAXIMA) {
+          nuevos.cantidadMinima = 'Ese mínimo es demasiado grande. Revisa la cifra.'
         }
         datos.cantidadMinima = minimo
       }
@@ -114,6 +123,7 @@ export function FormularioItem({ producto, inicial, permitirAgotado = false, tex
   const campoFecha = (
     <CampoTexto
       etiqueta="Fecha de vencimiento (opcional)"
+      ayuda={ayudaVence}
       type="date"
       name="vence"
       value={vence}
@@ -124,7 +134,7 @@ export function FormularioItem({ producto, inicial, permitirAgotado = false, tex
   return (
     <form ref={formulario} className="formulario-item" onSubmit={enviar} noValidate>
       <p className="rotulo">
-        {esGranel ? 'Producto a granel · por nivel' : `Producto contable · ${UNIDAD[producto.unidadBase]}`}
+        {esGranel ? 'Se mide a ojo: cuánto queda' : `Se cuenta en ${UNIDAD[producto.unidadBase]}`}
       </p>
       {errorGeneral && <Alerta tono="error">{errorGeneral}</Alerta>}
 

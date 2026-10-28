@@ -9,12 +9,15 @@ import co.edu.uniquindio.cocinasinestres.planificador.domain.Comensal;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.ContextoPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.GeneradorPlan;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.Hueco;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.Porciones;
+import co.edu.uniquindio.cocinasinestres.planificador.domain.RecetaCandidata;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.ReglasAlergia;
 import co.edu.uniquindio.cocinasinestres.planificador.domain.StockEnDespensa;
 import co.edu.uniquindio.cocinasinestres.planificador.model.ComidaPlan;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
@@ -28,10 +31,11 @@ import org.springframework.stereotype.Component;
 public class ContextoPlanFactory {
 
     /**
-     * @param plan      el contexto para el dominio
+     * @param plan      el contexto para el dominio, con las recetas ya calculadas para el hogar
      * @param porVencer nombre de cada producto que vence pronto (para contárselo a la usuaria)
+     * @param personas  quienes comen en casa; 0 si el perfil no los trae
      */
-    public record Contexto(ContextoPlan plan, Map<Long, String> porVencer) {
+    public record Contexto(ContextoPlan plan, Map<Long, String> porVencer, int personas) {
     }
 
     private final ResumenHogarService resumenHogarService;
@@ -62,7 +66,8 @@ public class ContextoPlanFactory {
         }
         CicloIngreso ciclo = new CicloIngreso(
             entidad.getPeriodicidadIngreso(), entidad.getDiaPago1(), entidad.getDiaPago2());
-        return new Contexto(contexto.plan().conIngreso(ciclo.diasDesdeElPagoEnLaSemana(lunes)), contexto.porVencer());
+        return new Contexto(
+            contexto.plan().conIngreso(ciclo.diasDesdeElPagoEnLaSemana(lunes)), contexto.porVencer(), contexto.personas());
     }
 
     public Contexto construir(Hogar entidad, List<ComidaPlan> actuales) {
@@ -74,8 +79,16 @@ public class ContextoPlanFactory {
         Map<Hueco, Long> fijas = new HashMap<>();
         actuales.forEach(c -> fijas.put(new Hueco(c.getDia(), c.getTipoComida()), c.getRecetaId()));
 
+        // Cada receta, para las personas del hogar: el costo, la lista y la despensa salen
+        // de estas cantidades.
+        int personas = hogar.personas().size();
+        Map<Long, Integer> porciones = personas > 0 ? catalogo.porciones() : Map.of();
+        Map<Long, RecetaCandidata> recetas = new LinkedHashMap<>();
+        catalogo.recetas().forEach((id, receta) ->
+            recetas.put(id, receta.escalada(Porciones.factor(personas, porciones.get(id)))));
+
         ContextoPlan contexto = new ContextoPlan(
-            catalogo.recetas(),
+            recetas,
             hogar.restricciones(),
             hogar.diasSinTiempo(),
             hogar.presupuestoSemanal(),
@@ -89,6 +102,11 @@ public class ContextoPlanFactory {
                     .toList(),
                 catalogo.alergenos(),
                 catalogo.reemplazos()));
-        return new Contexto(contexto, porVencer);
+        return new Contexto(contexto, porVencer, personas);
+    }
+
+    /** Hoy, en la zona horaria de las usuarias. */
+    public LocalDate hoy() {
+        return LocalDate.now(reloj);
     }
 }

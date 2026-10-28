@@ -69,7 +69,10 @@ describe('Catálogo del curador (pantallas 43 y 44)', () => {
 
     await usuario.type(screen.getByLabelText('Nombre'), 'Queso campesino')
     await usuario.selectOptions(screen.getByLabelText('Categoría'), 'LACTEOS')
-    await usuario.click(screen.getByRole('radio', { name: 'Gramos' }))
+    // Un contable en gramos no tiene sentido (auditoría): al elegir granel pasa a gramos solo.
+    await usuario.click(screen.getByRole('radio', { name: 'A granel' }))
+    expect(screen.getByRole('radio', { name: 'Gramos' })).toBeChecked()
+    await usuario.type(screen.getByLabelText('Cantidad que equivale a «Lleno»'), '500')
     await usuario.type(screen.getByLabelText('Presentación de compra'), 'Libra')
     await usuario.type(screen.getByLabelText('Cuánto trae'), '500')
     await usuario.type(screen.getByLabelText('Precio'), '6500')
@@ -81,8 +84,9 @@ describe('Catálogo del curador (pantallas 43 y 44)', () => {
     expect(llamadas.find((l) => l.metodo === 'POST')?.cuerpo).toEqual({
       nombre: 'Queso campesino',
       categoria: 'LACTEOS',
-      tipoCantidad: 'CONTABLE',
+      tipoCantidad: 'GRANEL',
       unidadBase: 'g',
+      capacidadReferencia: 500,
       unidadCompra: 'Libra',
       cantidadUnidadCompra: 500,
       precioUnidadCompra: 6500,

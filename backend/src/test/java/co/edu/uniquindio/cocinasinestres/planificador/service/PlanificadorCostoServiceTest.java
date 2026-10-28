@@ -56,6 +56,9 @@ class PlanificadorCostoServiceTest {
     @Mock
     private CostoPorAlergias costoPorAlergias;
 
+    @Mock
+    private ListaComprasService listaComprasService;
+
     private PlanificadorCostoService service;
 
     /** Hogar de la usuaria autenticada: id 10, presupuesto semanal de $5000. */
@@ -65,7 +68,7 @@ class PlanificadorCostoServiceTest {
     void setUp() {
         service = new PlanificadorCostoService(
             planSemanalRepository, hogarRepository, usuarioActualService, jdbcTemplate,
-            comidaPlanRepository, costoPorAlergias);
+            comidaPlanRepository, costoPorAlergias, listaComprasService);
 
         hogar = mock(Hogar.class);
         lenient().when(hogar.getId()).thenReturn(10L);
@@ -102,17 +105,34 @@ class PlanificadorCostoServiceTest {
     }
 
     @Test
-    @DisplayName("marca excedePresupuesto cuando el total de la semana lo supera")
+    @DisplayName("marca excedePresupuesto cuando lo que falta comprar lo supera (RNF-02)")
     void marcaCuandoExcedeElPresupuesto() {
         when(planSemanalRepository.findById(500L)).thenReturn(Optional.of(planDePrueba()));
         when(jdbcTemplate.queryForList(anyString(), eq(500L))).thenReturn(List.of(
             Map.of("dia", 2, "costo", new BigDecimal("6000.00"))));
+        when(listaComprasService.costoPorComprar(500L)).thenReturn(new BigDecimal("5500"));
 
         PlanCostoResponse respuesta = service.calcularCosto(500L);
 
         assertEquals(0, respuesta.costoAcumuladoPorDia().get(6)
             .compareTo(new BigDecimal("6000.00")));
+        assertEquals(0, respuesta.costoPorComprar().compareTo(new BigDecimal("5500.00")));
         assertTrue(respuesta.excedePresupuesto());
+    }
+
+    @Test
+    @DisplayName("si la despensa cubre parte del plan, el costo del plan es lo que falta comprar y no excede")
+    void laDespensaBajaElCosto() {
+        when(planSemanalRepository.findById(500L)).thenReturn(Optional.of(planDePrueba()));
+        when(jdbcTemplate.queryForList(anyString(), eq(500L))).thenReturn(List.of(
+            Map.of("dia", 2, "costo", new BigDecimal("6000.00"))));
+        when(listaComprasService.costoPorComprar(500L)).thenReturn(new BigDecimal("1800"));
+
+        PlanCostoResponse respuesta = service.calcularCosto(500L);
+
+        assertEquals(0, respuesta.costoAcumuladoPorDia().get(6).compareTo(new BigDecimal("6000.00")));
+        assertEquals(0, respuesta.costoPorComprar().compareTo(new BigDecimal("1800.00")));
+        assertFalse(respuesta.excedePresupuesto());
     }
 
     @Test

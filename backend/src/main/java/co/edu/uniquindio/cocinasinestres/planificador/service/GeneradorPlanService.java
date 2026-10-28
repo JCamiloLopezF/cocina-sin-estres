@@ -26,6 +26,7 @@ import co.edu.uniquindio.cocinasinestres.planificador.repository.ComidaPlanRepos
 import co.edu.uniquindio.cocinasinestres.planificador.repository.PlanSemanalRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -93,7 +94,7 @@ public class GeneradorPlanService {
         Contexto contexto = contexto(plan, actuales);
 
         List<Hueco> huecos = new ArrayList<>();
-        for (int dia = 1; dia <= 7; dia++) {
+        for (int dia = primerDiaPorPlanear(plan); dia <= 7; dia++) {
             for (String comida : comidas) {
                 huecos.add(new Hueco(dia, comida));
             }
@@ -226,6 +227,9 @@ public class GeneradorPlanService {
             .add(costoPorAlergias.total(plan.getHogar(), finales))
             .setScale(2, RoundingMode.HALF_UP);
         BigDecimal presupuesto = contexto.plan().presupuestoSemanal();
+        // RNF-02: lo que se compara con el presupuesto es lo que falta comprar.
+        BigDecimal porComprar = listaComprasService.costoPorComprar(plan.getId());
+        porComprar = porComprar == null ? costo : porComprar.setScale(2, RoundingMode.HALF_UP);
         Set<String> aprovecha = new LinkedHashSet<>();
         generador.aprovechados(contexto.plan(), comoQuedo.values())
             .forEach(id -> aprovecha.add(contexto.porVencer().get(id)));
@@ -239,14 +243,15 @@ public class GeneradorPlanService {
             cambios,
             costo,
             presupuesto,
-            presupuesto.signum() > 0 && costo.compareTo(presupuesto) > 0,
+            presupuesto.signum() > 0 && porComprar.compareTo(presupuesto) > 0,
             List.copyOf(aprovecha),
             contexto.plan().hayNinos() ? (int) generador.paraNinos(contexto.plan(), comoQuedo.values()) : 0,
             (int) comoQuedo.values().stream()
                 .map(id -> generador.adaptar(contexto.plan(), id).estado())
                 .filter(e -> e == AdaptacionReceta.Estado.ADAPTADA || e == AdaptacionReceta.Estado.PLATO_APARTE)
                 .count(),
-            generador.diasDespuesDelPago(contexto.plan()));
+            generador.diasDespuesDelPago(contexto.plan()),
+            porComprar);
     }
 
     private Hogar hogarDeLaUsuaria() {
@@ -254,6 +259,19 @@ public class GeneradorPlanService {
         return hogarRepository.findByUsuario_Id(usuarioId)
             .orElseThrow(() -> new ConflictoException(
                 "PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de planear la semana."));
+    }
+
+    /**
+     * En la semana en curso no se planean los días que ya pasaron: sumarían al costo y a la
+     * lista de compras comidas que nadie va a cocinar. 1 = lunes … 7 = domingo.
+     */
+    private int primerDiaPorPlanear(PlanSemanal plan) {
+        LocalDate hoy = contextos.hoy();
+        LocalDate lunes = plan.getSemanaInicio();
+        if (lunes == null || hoy.isBefore(lunes) || hoy.isAfter(lunes.plusDays(6))) {
+            return 1;
+        }
+        return hoy.getDayOfWeek().getValue();
     }
 
     private PlanSemanal planDeLaUsuaria(Long planId) {

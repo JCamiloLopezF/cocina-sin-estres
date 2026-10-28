@@ -44,7 +44,7 @@ public class AnalisisService {
             new AnalisisResponse.Uso(
                 d.usuarias(), d.hogares(), d.activas7Dias(), d.aperturas(), d.planesEstaSemana(),
                 d.preparaciones(), d.preparacionesFuera(), d.usosRescate()),
-            IndicadoresCalidad.calcular(d),
+            IndicadoresCalidad.calcular(d, fuente.login(DIAS)),
             d.masPreparadas(),
             d.masPlaneadas(),
             d.sinUsar());

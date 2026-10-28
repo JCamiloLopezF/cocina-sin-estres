@@ -22,7 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Consulta el costo acumulado del plan semanal frente al presupuesto del hogar (ADR-14).
+ * Consulta el costo del plan semanal frente al presupuesto del hogar (ADR-14, RNF-02).
+ *
+ * <p>Da dos cifras: lo que falta comprar (el costo del plan según RNF-02, que se compara con
+ * el presupuesto) y el valor de todas las comidas día a día, aunque parte ya esté en la
+ * despensa.</p>
  *
  * <p>El costo por día sale de una sola consulta SQL sobre las comidas del plan y solo
  * cuenta los ingredientes obligatorios; no usa los repositorios de curaduría ni de
@@ -40,10 +44,19 @@ public class PlanificadorCostoService {
      * {@code cantidad / cantidadUnidadCompra * precioUnidadCompra}, igual que en
      * la lista de compras.
      */
+    /**
+     * Cada receta, para las personas del hogar (personas / porciones de la receta): un hogar
+     * de una persona no paga cuatro porciones. Sin personas registradas, la receta completa.
+     */
     private static final String SQL_COSTO_POR_DIA = """
         SELECT cp.dia,
-               SUM(ir.cantidad / p.cantidad_unidad_compra * p.precio_unidad_compra) AS costo
+               SUM(ir.cantidad * COALESCE(NULLIF(pe.personas, 0), r.porciones) / r.porciones
+                   / p.cantidad_unidad_compra * p.precio_unidad_compra) AS costo
         FROM comida_plan cp
+        JOIN plan_semanal pl ON pl.id = cp.plan_semanal_id
+        JOIN receta r ON r.id = cp.receta_id
+        LEFT JOIN (SELECT hogar_id, COUNT(*) AS personas FROM persona GROUP BY hogar_id) pe
+               ON pe.hogar_id = pl.hogar_id
         JOIN ingrediente_receta ir ON ir.receta_id = cp.receta_id AND ir.opcional = FALSE
         JOIN producto p ON p.id = ir.producto_id
         WHERE cp.plan_semanal_id = ?
@@ -56,6 +69,7 @@ public class PlanificadorCostoService {
     private final JdbcTemplate jdbcTemplate;
     private final ComidaPlanRepository comidaPlanRepository;
     private final CostoPorAlergias costoPorAlergias;
+    private final ListaComprasService listaComprasService;
 
     public PlanificadorCostoService(
         PlanSemanalRepository planSemanalRepository,
@@ -63,13 +77,15 @@ public class PlanificadorCostoService {
         UsuarioActualService usuarioActualService,
         JdbcTemplate jdbcTemplate,
         ComidaPlanRepository comidaPlanRepository,
-        CostoPorAlergias costoPorAlergias) {
+        CostoPorAlergias costoPorAlergias,
+        ListaComprasService listaComprasService) {
         this.planSemanalRepository = planSemanalRepository;
         this.hogarRepository = hogarRepository;
         this.usuarioActualService = usuarioActualService;
         this.jdbcTemplate = jdbcTemplate;
         this.comidaPlanRepository = comidaPlanRepository;
         this.costoPorAlergias = costoPorAlergias;
+        this.listaComprasService = listaComprasService;
     }
 
     /**
@@ -132,8 +148,12 @@ public class PlanificadorCostoService {
             acumulado.add(acumuladoHastaAhora);
         }
 
-        boolean excede = acumuladoHastaAhora.compareTo(presupuestoSemanal) > 0;
+        // RNF-02: el costo del plan es lo que falta comprar; eso es lo que se compara con el presupuesto.
+        BigDecimal porComprar = listaComprasService.costoPorComprar(planId);
+        porComprar = (porComprar == null ? BigDecimal.ZERO : porComprar).setScale(2, RoundingMode.HALF_UP);
+        boolean excede = porComprar.compareTo(presupuestoSemanal) > 0;
 
-        return new PlanCostoResponse(acumulado, presupuestoSemanal, excede, costoAlergias.setScale(2, RoundingMode.HALF_UP));
+        return new PlanCostoResponse(
+            acumulado, presupuestoSemanal, excede, costoAlergias.setScale(2, RoundingMode.HALF_UP), porComprar);
     }
 }

@@ -54,6 +54,14 @@ public class CatalogoProductosJdbc implements CatalogoProductos {
     }
 
     @Override
+    public Optional<Integer> vidaUtilDias(Long productoId) {
+        return jdbc.sql("SELECT vida_util_dias FROM producto WHERE id = :productoId AND vida_util_dias IS NOT NULL")
+            .param("productoId", productoId)
+            .query(Integer.class)
+            .optional();
+    }
+
+    @Override
     public Map<Long, ProductoCatalogo> buscarPorIds(Collection<Long> productoIds) {
         Map<Long, ProductoCatalogo> resultado = new LinkedHashMap<>();
 

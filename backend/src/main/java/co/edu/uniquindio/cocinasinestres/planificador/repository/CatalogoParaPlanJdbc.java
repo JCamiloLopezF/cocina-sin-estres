@@ -7,6 +7,7 @@ import java.math.MathContext;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -23,7 +24,8 @@ import org.springframework.stereotype.Repository;
 public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
 
     private static final String SQL_RECETAS = """
-        SELECT id, tiempo_minutos, activa, es_plato_fuerte, gusta_a_ninos
+        SELECT id, tiempo_minutos, activa, es_plato_fuerte, gusta_a_ninos,
+               para_desayuno, para_almuerzo, para_cena
         FROM receta
         """;
 
@@ -59,7 +61,8 @@ public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
                 rs.getInt("tiempo_minutos"),
                 rs.getBoolean("activa"),
                 rs.getBoolean("es_plato_fuerte"),
-                rs.getBoolean("gusta_a_ninos")))
+                rs.getBoolean("gusta_a_ninos"),
+                momentos(rs.getBoolean("para_desayuno"), rs.getBoolean("para_almuerzo"), rs.getBoolean("para_cena"))))
             .list()
             .forEach(f -> filas.put(f.id, f));
 
@@ -95,7 +98,7 @@ public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
         Map<Long, RecetaCandidata> recetas = new LinkedHashMap<>();
         filas.values().forEach(f -> recetas.put(f.id, new RecetaCandidata(
             f.id, f.tiempoMinutos, f.costo, f.ingredientes, f.alergias, f.condiciones, f.activa, f.platoFuerte, f.gustaANinos,
-            f.principales)));
+            f.principales, f.momentos)));
         return recetas;
     }
 
@@ -170,6 +173,21 @@ public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
         return nombres;
     }
 
+    /** Comidas en que va la receta (V17), en el orden del día. */
+    static Set<String> momentos(boolean desayuno, boolean almuerzo, boolean cena) {
+        Set<String> momentos = new LinkedHashSet<>();
+        if (desayuno) {
+            momentos.add("DESAYUNO");
+        }
+        if (almuerzo) {
+            momentos.add("ALMUERZO");
+        }
+        if (cena) {
+            momentos.add("CENA");
+        }
+        return momentos;
+    }
+
     /** {@code cantidad / cantidadUnidadCompra * precioUnidadCompra}; sin precio de referencia no suma. */
     private static BigDecimal costo(BigDecimal cantidad, BigDecimal cantidadCompra, BigDecimal precio) {
         if (cantidad == null || cantidadCompra == null || precio == null || cantidadCompra.signum() <= 0) {
@@ -184,18 +202,21 @@ public class CatalogoParaPlanJdbc implements CatalogoParaPlan {
         private final boolean activa;
         private final boolean platoFuerte;
         private final boolean gustaANinos;
+        private final Set<String> momentos;
         private final Map<Long, BigDecimal> ingredientes = new HashMap<>();
         private final Set<String> alergias = new HashSet<>();
         private final Set<String> condiciones = new HashSet<>();
         private final Set<Long> principales = new HashSet<>();
         private BigDecimal costo = BigDecimal.ZERO;
 
-        private Fila(long id, int tiempoMinutos, boolean activa, boolean platoFuerte, boolean gustaANinos) {
+        private Fila(
+            long id, int tiempoMinutos, boolean activa, boolean platoFuerte, boolean gustaANinos, Set<String> momentos) {
             this.id = id;
             this.tiempoMinutos = tiempoMinutos;
             this.activa = activa;
             this.platoFuerte = platoFuerte;
             this.gustaANinos = gustaANinos;
+            this.momentos = momentos;
         }
     }
 }

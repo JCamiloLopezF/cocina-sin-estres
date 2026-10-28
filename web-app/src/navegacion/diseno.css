@@ -105,3 +105,15 @@
 .menu__enlace[aria-current='page']:hover svg {
   background: var(--color-primario-hondo);
 }
+
+/* Aviso para confirmar el correo (AvisoVerificarCorreo). */
+.aviso-correo {
+  margin-bottom: 1rem;
+}
+
+.aviso-correo__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}

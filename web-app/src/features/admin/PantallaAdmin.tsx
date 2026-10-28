@@ -31,6 +31,22 @@ function mensajeAdmin(error: unknown): string {
   return error instanceof ErrorApi && MENSAJES[error.codigo] ? MENSAJES[error.codigo] : mensajeDeError(error)
 }
 
+/** Qué le pasa a la cuenta con el nuevo rol: se le muestra al administrador antes de confirmar. */
+const EFECTO_ROL: Record<Rol, string> = {
+  USUARIA: 'vuelve a tener despensa y plan, y pierde el acceso a la curaduría y a la administración',
+  CURADOR: 'podrá editar el catálogo y las recetas, y deja de ver su despensa y su plan',
+  ADMIN: 'podrá ver y cambiar todas las cuentas y el análisis, y deja de ver su despensa y su plan',
+}
+
+/** Cambio que espera confirmación (auditoría: el rol cambiaba apenas se tocaba la lista). */
+interface CambioPendiente {
+  cuenta: CuentaAdmin
+  cambio: { rol?: Rol; activo?: boolean }
+  pregunta: string
+  confirmar: string
+  hecho: string
+}
+
 type Estado = { tipo: 'cargando' } | { tipo: 'listo'; cuentas: CuentaAdmin[] } | { tipo: 'error'; error: unknown }
 
 /**
@@ -45,6 +61,7 @@ export function PantallaAdmin() {
   const [buscar, setBuscar] = useState('')
   const [ocupada, setOcupada] = useState<number>()
   const [aviso, setAviso] = useState<{ tono: 'exito' | 'error'; texto: string }>()
+  const [pendiente, setPendiente] = useState<CambioPendiente>()
 
   useEffect(() => {
     const control = new AbortController()
@@ -59,6 +76,7 @@ export function PantallaAdmin() {
   }, [version])
 
   async function cambiar(cuenta: CuentaAdmin, cambio: { rol?: Rol; activo?: boolean }, texto: string) {
+    setPendiente(undefined)
     setOcupada(cuenta.id)
     setAviso(undefined)
     try {
@@ -100,7 +118,11 @@ export function PantallaAdmin() {
       <NavAdmin />
       <EncabezadoPagina
         titulo="Cuentas"
-        detalle={`${contar('USUARIA')} usuarias · ${contar('CURADOR')} curadores · ${contar('ADMIN')} administradores`}
+        detalle={[
+          cantidad(contar('USUARIA'), 'usuaria', 'usuarias'),
+          cantidad(contar('CURADOR'), 'curador', 'curadores'),
+          cantidad(contar('ADMIN'), 'administrador', 'administradores'),
+        ].join(' · ')}
         detalleAbajo
       />
       {aviso && <Alerta tono={aviso.tono}>{aviso.texto}</Alerta>}
@@ -137,12 +159,23 @@ export function PantallaAdmin() {
                 <select
                   id={`rol-${cuenta.id}`}
                   className="campo__control campo__control--lista"
-                  value={cuenta.rol}
+                  value={pendiente?.cuenta.id === cuenta.id ? (pendiente.cambio.rol ?? cuenta.rol) : cuenta.rol}
                   disabled={propia || ocupada === cuenta.id}
                   onChange={(e) => {
                     const rol = e.target.value as Rol
+                    if (rol === cuenta.rol) {
+                      setPendiente(undefined)
+                      return
+                    }
                     const nombre = ROLES.find((r) => r.valor === rol)?.texto.toLowerCase()
-                    void cambiar(cuenta, { rol }, `${cuenta.correo} ahora es ${nombre}.`)
+                    setAviso(undefined)
+                    setPendiente({
+                      cuenta,
+                      cambio: { rol },
+                      pregunta: `¿Hacer a ${cuenta.correo} ${nombre}? ${EFECTO_ROL[rol].charAt(0).toUpperCase()}${EFECTO_ROL[rol].slice(1)}.`,
+                      confirmar: 'Sí, cambiar el rol',
+                      hecho: `${cuenta.correo} ahora es ${nombre}.`,
+                    })
                   }}
                 >
                   {ROLES.map((r) => (
@@ -156,18 +189,36 @@ export function PantallaAdmin() {
                     variante="secundario"
                     cargando={ocupada === cuenta.id}
                     aria-label={`${cuenta.activo ? 'Desactivar' : 'Reactivar'} ${cuenta.correo}`}
-                    onClick={() =>
-                      void cambiar(
+                    onClick={() => {
+                      if (!cuenta.activo) {
+                        void cambiar(cuenta, { activo: true }, `${cuenta.correo} puede volver a entrar.`)
+                        return
+                      }
+                      setAviso(undefined)
+                      setPendiente({
                         cuenta,
-                        { activo: !cuenta.activo },
-                        cuenta.activo ? `Desactivamos ${cuenta.correo}: ya no puede entrar.` : `${cuenta.correo} puede volver a entrar.`,
-                      )
-                    }
+                        cambio: { activo: false },
+                        pregunta: `¿Desactivar ${cuenta.correo}? No podrá entrar hasta que la reactives; sus datos se conservan.`,
+                        confirmar: 'Sí, desactivar',
+                        hecho: `Desactivamos ${cuenta.correo}: ya no puede entrar.`,
+                      })
+                    }}
                   >
                     {cuenta.activo ? 'Desactivar' : 'Reactivar'}
                   </Boton>
                 )}
               </div>
+              {pendiente?.cuenta.id === cuenta.id && (
+                <div className="cuenta__confirmar" role="group" aria-label={`Confirmar el cambio de ${cuenta.correo}`}>
+                  <p>{pendiente.pregunta}</p>
+                  <div className="cuenta__acciones">
+                    <Boton onClick={() => void cambiar(cuenta, pendiente.cambio, pendiente.hecho)}>{pendiente.confirmar}</Boton>
+                    <Boton variante="texto" onClick={() => setPendiente(undefined)}>
+                      Cancelar
+                    </Boton>
+                  </div>
+                </div>
+              )}
             </li>
           )
         })}
@@ -179,4 +230,9 @@ export function PantallaAdmin() {
       </p>
     </>
   )
+}
+
+/** "1 curador", "3 curadores". */
+function cantidad(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`
 }

@@ -12,6 +12,11 @@ export interface SesionAuth {
   uid: string
   correo: string
   nombre: string | null
+  /**
+   * `false` si todavía no confirmó el correo con el enlace que le llegó al registrarse
+   * (auditoría del 27 de octubre). Ausente en el modo dev, que no verifica correos.
+   */
+  correoVerificado?: boolean
 }
 
 export interface ServicioAuth {
@@ -25,6 +30,10 @@ export interface ServicioAuth {
   /** Manda el enlace de recuperación al correo registrado (RNF-25). */
   recuperar(correo: string): Promise<void>
   salir(): Promise<void>
+  /** Vuelve a mandar el enlace para confirmar el correo. */
+  reenviarVerificacion?(): Promise<void>
+  /** Pregunta otra vez al proveedor si ya se confirmó el correo y avisa el cambio por `escuchar`. */
+  comprobarVerificacion?(): Promise<void>
   /** Encabezados que identifican la sesión ante el backend. */
   credenciales(): Promise<Record<string, string>>
 }

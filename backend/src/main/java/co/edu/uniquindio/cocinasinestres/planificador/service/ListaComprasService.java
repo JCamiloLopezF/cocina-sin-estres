@@ -21,6 +21,18 @@ public interface ListaComprasService {
     void generarListaCompras(Long planSemanalId);
 
     /**
+     * Lo que falta comprar para cocinar las comidas pendientes del plan, con los precios de
+     * referencia (RNF-02): los ingredientes que no alcanzan con la despensa, más la porción de
+     * quien tiene alergia. No cuenta lo que se repone por estar bajo el mínimo ni guarda nada.
+     *
+     * @param planSemanalId identificador del plan semanal
+     * @return costo en pesos; cero si en la despensa está todo
+     */
+    default BigDecimal costoPorComprar(Long planSemanalId) {
+        return BigDecimal.ZERO;
+    }
+
+    /**
      * Lee la lista de compras ya generada para el plan, con su costo total.
      * Si el plan todavía no tiene comidas, devuelve una lista vacía con costo cero.
      *

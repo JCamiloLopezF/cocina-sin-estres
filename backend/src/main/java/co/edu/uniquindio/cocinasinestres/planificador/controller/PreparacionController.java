@@ -2,6 +2,7 @@ package co.edu.uniquindio.cocinasinestres.planificador.controller;
 
 import co.edu.uniquindio.cocinasinestres.comun.error.ConflictoException;
 import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
+import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
 import co.edu.uniquindio.cocinasinestres.perfil.model.Hogar;
 import co.edu.uniquindio.cocinasinestres.perfil.repository.HogarRepository;
 import co.edu.uniquindio.cocinasinestres.perfil.service.UsuarioActualService;
@@ -51,6 +52,9 @@ public class PreparacionController {
         Hogar hogar = hogarRepository.findByUsuario_Id(usuarioActualService.obtener().id())
             .orElseThrow(() -> new ConflictoException(
                 "PLAN_SIN_PERFIL_HOGAR", "Completa el perfil de tu hogar antes de usar la despensa."));
+        if (!movimientosDespensa.recetaActiva(request.recetaId())) {
+            throw new RecursoNoEncontradoException("Receta no encontrada.");
+        }
         movimientosDespensa.descontarReceta(hogar.getId(), request.recetaId());
         // Recetas más cocinadas (KAN-54): también lo que se cocina fuera del plan.
         registroUso.preparacion(hogar.getId(), request.recetaId(), null);

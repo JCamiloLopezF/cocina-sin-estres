@@ -43,10 +43,11 @@ public class CuentasService {
         this.usuarioRepository = usuarioRepository;
     }
 
-    /** Todas las cuentas, de la más antigua a la más reciente. */
+    /** Todas las cuentas de personas, de la más antigua a la más reciente (sin la de sistema). */
     @Transactional(readOnly = true)
     public List<CuentaResumen> listar() {
         return usuarioRepository.findAll(Sort.by(Sort.Direction.ASC, "id")).stream()
+                .filter(usuario -> !Usuario.UID_SISTEMA.equals(usuario.getFirebaseUid()))
                 .map(CuentasService::aResumen)
                 .toList();
     }
@@ -74,6 +75,8 @@ public class CuentasService {
         }
 
         Usuario cuenta = usuarioRepository.findById(cuentaId)
+                // La cuenta de sistema no se administra: para el administrador no existe.
+                .filter(usuario -> !Usuario.UID_SISTEMA.equals(usuario.getFirebaseUid()))
                 .orElseThrow(() -> new RecursoNoEncontradoException("La cuenta no existe."));
         if (nuevoRol != null) {
             cuenta.setRol(nuevoRol);

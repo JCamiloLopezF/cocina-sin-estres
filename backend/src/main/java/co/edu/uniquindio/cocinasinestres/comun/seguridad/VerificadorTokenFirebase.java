@@ -12,15 +12,16 @@ public interface VerificadorTokenFirebase {
 
     /**
      * @param idToken token que mandó el navegador en {@code Authorization: Bearer}
-     * @return el {@code firebase_uid} y el correo que afirma el token
+     * @return el {@code firebase_uid}, el correo que afirma el token y si está verificado
      * @throws NoAutenticadoException si el token es inválido, está vencido o fue revocado
      */
     Identidad verificar(String idToken);
 
     /**
      * @param firebaseUid identificador de la cuenta en Firebase
-     * @param correo      correo verificado por Firebase
+     * @param correo           correo que trae el token
+     * @param correoVerificado el claim {@code email_verified}: si Firebase confirmó el correo
      */
-    record Identidad(String firebaseUid, String correo) {
+    record Identidad(String firebaseUid, String correo, boolean correoVerificado) {
     }
 }

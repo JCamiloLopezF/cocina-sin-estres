@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina } from '../../shared/componentes'
+import { AvisoSinConexion } from './AvisoSinConexion'
 import { enPesos } from '../despensa/formato'
 import { asignarComida, marcarPreparada, otraOpcion, quitarComida } from './apiPlanificador'
 import { mensajePlan, planSinHogar } from './mensajesPlan'
@@ -138,6 +139,7 @@ export function PantallaDia() {
         </div>
       )}
       {error !== undefined && <Alerta tono="error">{mensajePlan(error)}</Alerta>}
+      <AvisoSinConexion />
 
       {COMIDAS.map((tipo) => {
         const comida = comidas.find((c) => c.tipoComida === tipo)
@@ -216,7 +218,7 @@ function Comida({ semana, comida, dia, deLaSemana, ocupado, confirmando, alPregu
   const nombre = semana.nombres.get(comida.recetaId) ?? 'Receta'
   const detalle = [
     vista && `${vista.receta.tiempoMinutos} min`,
-    vista && `${vista.receta.porciones} porciones`,
+    vista && `${vista.porciones} ${vista.porciones === 1 ? 'porción' : 'porciones'}`,
     vista?.costo !== undefined && enPesos(vista.costo),
   ]
     .filter(Boolean)
@@ -229,7 +231,13 @@ function Comida({ semana, comida, dia, deLaSemana, ocupado, confirmando, alPregu
           <span className="fila__nombre">{nombre}</span>
           {detalle && <span className="fila__detalle">{detalle}</span>}
         </span>
-        {comida.preparada ? <span className="etiqueta">preparada</span> : <span className="fila__flecha" aria-hidden="true">›</span>}
+        {comida.preparada ? (
+          <span className="etiqueta">preparada</span>
+        ) : comida.pendiente ? (
+          <span className="etiqueta">por enviar</span>
+        ) : (
+          <span className="fila__flecha" aria-hidden="true">›</span>
+        )}
       </Link>
 
       {(semana.adaptaciones.get(comida.recetaId)?.cambios.length ?? 0) > 0 && (
@@ -260,7 +268,7 @@ function Comida({ semana, comida, dia, deLaSemana, ocupado, confirmando, alPregu
         </div>
       ) : (
         <div className="hueco__acciones">
-          {!comida.preparada && (
+          {!comida.preparada && !comida.pendiente && (
             <Link
               className="boton boton--primario hueco__cocinar"
               to={`/recetas/${comida.recetaId}/cocinar?plan=${comida.planSemanalId}&comida=${comida.id}`}
@@ -268,7 +276,7 @@ function Comida({ semana, comida, dia, deLaSemana, ocupado, confirmando, alPregu
               👩‍🍳 Cocinar ahora
             </Link>
           )}
-          {!comida.preparada && (
+          {!comida.preparada && !comida.pendiente && (
             <Boton variante="secundario" cargando={ocupado} onClick={alOtraOpcion}>
               Otra opción
             </Boton>
@@ -279,7 +287,7 @@ function Comida({ semana, comida, dia, deLaSemana, ocupado, confirmando, alPregu
           <Boton variante="secundario" cargando={ocupado} onClick={alQuitar}>
             Quitar
           </Boton>
-          {!comida.preparada && (
+          {!comida.preparada && !comida.pendiente && (
             <Boton onClick={alPreguntar} disabled={ocupado}>
               Preparada
             </Boton>

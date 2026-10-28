@@ -55,13 +55,33 @@ public class RecetaService {
         return aDetalle(receta, restricciones);
     }
 
+    /**
+     * Todas las recetas activas con pasos e ingredientes, en una sola respuesta. El
+     * recetario filtra por ingrediente, costo y despensa en el navegador; antes pedía el
+     * detalle de cada receta por separado (una petición por receta).
+     */
+    @Transactional(readOnly = true)
+    public List<RecetaDetalleResponse> listarConDetalle() {
+        List<Receta> recetas = recetaRepository.findConIngredientesByActivaTrueOrderByNombreAsc();
+        Map<Long, List<String>> restricciones = restriccionesDeProductos.codigosPorProducto(
+            recetas.stream()
+                .flatMap(r -> r.getIngredientes().stream())
+                .map(IngredienteReceta::getProductoId)
+                .distinct()
+                .toList());
+        return recetas.stream().map(r -> aDetalle(r, restricciones)).toList();
+    }
+
     private static RecetaResponse aResponse(Receta receta) {
         return new RecetaResponse(
             receta.getId(),
             receta.getNombre(),
             receta.getDescripcion(),
             receta.getTiempoMinutos(),
-            receta.getPorciones()
+            receta.getPorciones(),
+            receta.momentos(),
+            receta.isPlatoFuerte(),
+            receta.isGustaANinos()
         );
     }
 
@@ -95,7 +115,10 @@ public class RecetaService {
             receta.getVideoYoutubeId() == null
                 ? null
                 : new VideoRecetaResponse(
-                    receta.getVideoYoutubeId(), receta.getVideoInicioSeg(), receta.getVideoFinSeg())
+                    receta.getVideoYoutubeId(), receta.getVideoInicioSeg(), receta.getVideoFinSeg()),
+            receta.momentos(),
+            receta.isPlatoFuerte(),
+            receta.isGustaANinos()
         );
     }
 }
