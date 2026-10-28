@@ -3,17 +3,37 @@ import { Link } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina, EstadoVacio } from '../../shared/componentes'
 import { enPesos } from '../despensa/formato'
 import { ajustarPresupuesto, asignarComida, confirmarBorrador, crearPlan, generarPlan, obtenerPlan } from './apiPlanificador'
+import { AvisoSinConexion } from './AvisoSinConexion'
 import { seguirPlanificacion } from './medicionPlan'
 import { mensajePlan, planSinHogar } from './mensajesPlan'
 import { aIso, COMIDAS, conSemana, DIAS, diaDe, fechaDelDia, NOMBRE_COMIDA, NOMBRE_DIA, rangoSemana, tituloDia } from './semana'
-import type { Dia, PlanGenerado } from './tipos'
+import type { Dia, PlanGenerado, TipoComida } from './tipos'
 import { useSemana, type Semana } from './useSemana'
 import './planificador.css'
 
 const NOMBRE_PERIODICIDAD = { SEMANAL: 'semanal', QUINCENAL: 'quincenal', MENSUAL: 'mensual' } as const
 
-/** Comidas que llena "Armar mi semana" (el desayuno es opcional). */
-const COMIDAS_A_LLENAR = ['ALMUERZO', 'CENA'] as const
+/** Comidas que llena "Armar mi semana": el desayuno es opcional y la usuaria lo pide. */
+const SIN_DESAYUNO: TipoComida[] = ['ALMUERZO', 'CENA']
+const CON_DESAYUNO: TipoComida[] = ['DESAYUNO', 'ALMUERZO', 'CENA']
+const CLAVE_DESAYUNOS = 'cocina.plan.desayunos'
+
+/** Si la usuaria quiere que también le propongamos desayunos (se recuerda en este navegador). */
+function leerDesayunos(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_DESAYUNOS) === 'si'
+  } catch {
+    return false
+  }
+}
+
+function guardarDesayunos(valor: boolean) {
+  try {
+    localStorage.setItem(CLAVE_DESAYUNOS, valor ? 'si' : 'no')
+  } catch {
+    // Sin almacenamiento (modo privado): solo dura mientras la pantalla esté abierta.
+  }
+}
 
 type Accion = 'nueva' | 'repetir' | 'vacia' | 'completar' | 'ajustar' | 'confirmar'
 
@@ -26,7 +46,8 @@ function enLista(nombres: string[]): string {
 /** Lo que se le cuenta a la usuaria después de que el sistema armó o ajustó la semana. */
 function contarResultado(resultado: PlanGenerado, accion: 'armar' | 'ajustar'): string {
   const n = resultado.cambios.length
-  const costo = `${enPesos(resultado.costoEstimado)} de ${enPesos(resultado.presupuestoSemanal)}`
+  // RNF-02: el costo del plan es lo que falta comprar con lo que ya hay en la despensa.
+  const costo = `${enPesos(resultado.costoPorComprar ?? resultado.costoEstimado)} por comprar de ${enPesos(resultado.presupuestoSemanal)}`
   if (accion === 'ajustar') {
     if (n === 0) {
       return 'No encontramos recetas más baratas que encajen. Prueba dejando un día libre.'
@@ -72,6 +93,7 @@ function contarResultado(resultado: PlanGenerado, accion: 'armar' | 'ajustar'): 
 export function PantallaPlan() {
   const { estado, recargar, proxima } = useSemana()
   const [armando, setArmando] = useState<Accion>()
+  const [conDesayuno, setConDesayuno] = useState(leerDesayunos)
   const [errorArmar, setErrorArmar] = useState<unknown>()
   const [resultado, setResultado] = useState<string>()
   // "Hoy" solo se marca en la semana actual.
@@ -104,6 +126,20 @@ export function PantallaPlan() {
   const { semana } = estado
   const { plan } = semana
 
+  const comidasALlenar = conDesayuno ? CON_DESAYUNO : SIN_DESAYUNO
+
+  function cambiarDesayunos(valor: boolean) {
+    setConDesayuno(valor)
+    guardarDesayunos(valor)
+  }
+
+  const opcionDesayunos = (
+    <label className="casilla casilla--tarjeta">
+      Proponme también desayunos
+      <input type="checkbox" checked={conDesayuno} onChange={(e) => cambiarDesayunos(e.target.checked)} />
+    </label>
+  )
+
   async function armar(modo: 'nueva' | 'repetir' | 'vacia') {
     setArmando(modo)
     setErrorArmar(undefined)
@@ -119,7 +155,7 @@ export function PantallaPlan() {
         await asignarComida(nuevo.id, comida.dia, comida.tipoComida, comida.recetaId)
       }
       if (modo === 'nueva') {
-        setResultado(contarResultado(await generarPlan(nuevo.id), 'armar'))
+        setResultado(contarResultado(await generarPlan(nuevo.id, comidasALlenar), 'armar'))
       }
       recargar()
     } catch (error) {
@@ -136,7 +172,7 @@ export function PantallaPlan() {
     setErrorArmar(undefined)
     setResultado(undefined)
     try {
-      const respuesta = accion === 'completar' ? await generarPlan(plan.id) : await ajustarPresupuesto(plan.id)
+      const respuesta = accion === 'completar' ? await generarPlan(plan.id, comidasALlenar) : await ajustarPresupuesto(plan.id)
       setResultado(contarResultado(respuesta, accion === 'completar' ? 'armar' : 'ajustar'))
       recargar()
     } catch (error) {
@@ -173,11 +209,13 @@ export function PantallaPlan() {
       <>
         <EncabezadoPagina titulo={titulo} detalle={rangoSemana(semana.lunes)} />
         <SelectorSemana proxima={proxima} />
+        <AvisoSinConexion />
         <EstadoVacio
           titulo={proxima ? 'Todavía no armas la próxima semana' : 'Todavía no armas esta semana'}
-          texto="Te proponemos almuerzo y cena para los siete días según lo que hay en tu despensa, tu presupuesto, las alergias de cada persona y los días en que no tienes tiempo. Después cambias lo que quieras."
+          texto={`Te proponemos ${conDesayuno ? 'desayuno, almuerzo' : 'almuerzo'} y cena para los siete días según lo que hay en tu despensa, tu presupuesto, las alergias de cada persona y los días en que no tienes tiempo. Después cambias lo que quieras.`}
           acciones={
             <>
+              {opcionDesayunos}
               <Boton ancho cargando={armando === 'nueva'} disabled={armando !== undefined} onClick={() => void armar('nueva')}>
                 Armar mi semana
               </Boton>
@@ -190,19 +228,21 @@ export function PantallaPlan() {
               >
                 Repetir la semana pasada
               </Boton>
+              {/* Junto a los botones: arriba de la página quedaba fuera de la vista (auditoría). */}
+              {avisoError}
               <Boton variante="texto" cargando={armando === 'vacia'} disabled={armando !== undefined} onClick={() => void armar('vacia')}>
                 Prefiero armarla yo
               </Boton>
             </>
           }
         />
-        {avisoError}
       </>
     )
   }
 
-  const faltan = DIAS.reduce(
-    (total, dia) => total + COMIDAS_A_LLENAR.filter((tipo) => !plan.comidas.some((c) => c.dia === dia && c.tipoComida === tipo)).length,
+  // Los días que ya pasaron no se planean (el backend tampoco los llena).
+  const faltan = DIAS.filter((dia) => proxima || dia >= hoy).reduce(
+    (total, dia) => total + comidasALlenar.filter((tipo) => !plan.comidas.some((c) => c.dia === dia && c.tipoComida === tipo)).length,
     0,
   )
 
@@ -210,6 +250,7 @@ export function PantallaPlan() {
     <>
       <EncabezadoPagina titulo={titulo} detalle={rangoSemana(semana.lunes)} />
       <SelectorSemana proxima={proxima} />
+      <AvisoSinConexion />
       {plan.borrador && (
         <section className="borrador-plan" aria-labelledby="titulo-borrador">
           <h2 id="titulo-borrador">La armamos por ti</h2>
@@ -230,15 +271,26 @@ export function PantallaPlan() {
       {avisoError}
       <ResumenCosto semana={semana} ajustando={armando === 'ajustar'} alAjustar={() => void automatizar('ajustar')} />
 
-      {faltan > 0 && (
+      {(faltan > 0 || !conDesayuno) && (
         <section className="completar-plan" aria-labelledby="titulo-completar">
           <h2 id="titulo-completar">
-            {faltan === 1 ? 'Falta 1 comida en tu semana' : `Faltan ${faltan} comidas en tu semana`}
+            {faltan === 0
+              ? 'Tu semana tiene almuerzo y cena'
+              : faltan === 1
+                ? 'Falta 1 comida en tu semana'
+                : `Faltan ${faltan} comidas en tu semana`}
           </h2>
-          <p>Te proponemos recetas para el almuerzo y la cena que están vacíos. Lo que ya elegiste no cambia.</p>
-          <Boton ancho variante="secundario" cargando={armando === 'completar'} disabled={armando !== undefined} onClick={() => void automatizar('completar')}>
-            Completar los días vacíos
-          </Boton>
+          <p>
+            {faltan === 0
+              ? 'Si quieres, también te proponemos desayunos.'
+              : `Te proponemos recetas para ${conDesayuno ? 'el desayuno, el almuerzo y la cena' : 'el almuerzo y la cena'} que están vacíos. Lo que ya elegiste no cambia.`}
+          </p>
+          {opcionDesayunos}
+          {faltan > 0 && (
+            <Boton ancho variante="secundario" cargando={armando === 'completar'} disabled={armando !== undefined} onClick={() => void automatizar('completar')}>
+              Completar los días vacíos
+            </Boton>
+          )}
         </section>
       )}
 
@@ -263,14 +315,16 @@ function ResumenCosto({ semana, ajustando, alAjustar }: { semana: Semana; ajusta
   if (!costo) {
     return null
   }
-  const total = costo.costoAcumuladoPorDia[costo.costoAcumuladoPorDia.length - 1] ?? 0
+  const valor = costo.costoAcumuladoPorDia[costo.costoAcumuladoPorDia.length - 1] ?? 0
+  // RNF-02: el costo del plan es lo que falta comprar; el valor de las comidas va aparte.
+  const total = costo.costoPorComprar ?? valor
   const presupuesto = costo.presupuestoSemanal
   const porcentaje = presupuesto > 0 ? Math.min(100, (total / presupuesto) * 100) : 0
   return (
     <>
       <section className="costo-plan" aria-label="Costo del plan">
         <p className="costo-plan__fila">
-          <span>Costo del plan</span>
+          <span>Por comprar</span>
           <strong>
             {enPesos(total)} / {enPesos(presupuesto)}
           </strong>
@@ -285,6 +339,11 @@ function ResumenCosto({ semana, ajustando, alAjustar }: { semana: Semana; ajusta
         >
           <span style={{ width: `${porcentaje}%` }} />
         </div>
+        {costo.costoPorComprar !== undefined && valor > total && (
+          <p className="costo-plan__nota">
+            Las comidas de la semana valen {enPesos(valor)}; {enPesos(valor - total)} ya los tienes en la despensa.
+          </p>
+        )}
         {(costo.costoAlergias ?? 0) > 0 && (
           <p className="costo-plan__nota">
             Incluye {enPesos(costo.costoAlergias ?? 0)} por la porción de quien tiene alergia.
@@ -292,7 +351,7 @@ function ResumenCosto({ semana, ajustando, alAjustar }: { semana: Semana; ajusta
         )}
         {semana.periodicidad && (
           <p className="costo-plan__nota">
-            Presupuesto semanal calculado con tu ingreso {NOMBRE_PERIODICIDAD[semana.periodicidad]}.
+            Tu presupuesto {NOMBRE_PERIODICIDAD[semana.periodicidad]} de alimentación, repartido por semana.
           </p>
         )}
       </section>
@@ -303,8 +362,8 @@ function ResumenCosto({ semana, ajustando, alAjustar }: { semana: Semana; ajusta
           </span>
           <h2 id="titulo-presupuesto">Este plan supera tu presupuesto</h2>
           <p>
-            El plan de la semana va en {enPesos(total)} y tu presupuesto semanal es de {enPesos(presupuesto)}. Son{' '}
-            {enPesos(total - presupuesto)} de más.
+            Para el plan de la semana te falta comprar {enPesos(total)} y tu presupuesto semanal es de{' '}
+            {enPesos(presupuesto)}. Son {enPesos(total - presupuesto)} de más.
           </p>
           <p className="aviso-presupuesto__consejo">
             <strong>Qué puedes hacer:</strong> deja que cambiemos las recetas más costosas por otras más económicas, o

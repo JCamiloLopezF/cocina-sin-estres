@@ -50,6 +50,8 @@ describe('Navegación por sesión y rol', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Tu hogar · paso 1 de 4' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/perfil/hogar')
+    // Sin menú hasta terminar el perfil, para no dejarlo a medias.
+    expect(screen.queryByRole('navigation', { name: 'Menú principal' })).not.toBeInTheDocument()
   })
 
   it('sin sesión, la raíz muestra la bienvenida', async () => {

@@ -259,3 +259,16 @@
   border-radius: 999px;
   font-size: var(--texto-s);
 }
+
+/* Confirmación de un cambio de rol o de una desactivación (auditoría del 27 de octubre). */
+.cuenta__confirmar {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border: var(--borde) solid var(--color-linea);
+  border-radius: var(--radio-control);
+  background: var(--color-crema);
+}
+
+.cuenta__confirmar p {
+  margin: 0 0 0.5rem;
+}

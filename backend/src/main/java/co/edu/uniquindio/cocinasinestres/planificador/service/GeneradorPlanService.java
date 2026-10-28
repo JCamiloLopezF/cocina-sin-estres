@@ -227,6 +227,9 @@ public class GeneradorPlanService {
             .add(costoPorAlergias.total(plan.getHogar(), finales))
             .setScale(2, RoundingMode.HALF_UP);
         BigDecimal presupuesto = contexto.plan().presupuestoSemanal();
+        // RNF-02: lo que se compara con el presupuesto es lo que falta comprar.
+        BigDecimal porComprar = listaComprasService.costoPorComprar(plan.getId());
+        porComprar = porComprar == null ? costo : porComprar.setScale(2, RoundingMode.HALF_UP);
         Set<String> aprovecha = new LinkedHashSet<>();
         generador.aprovechados(contexto.plan(), comoQuedo.values())
             .forEach(id -> aprovecha.add(contexto.porVencer().get(id)));
@@ -240,14 +243,15 @@ public class GeneradorPlanService {
             cambios,
             costo,
             presupuesto,
-            presupuesto.signum() > 0 && costo.compareTo(presupuesto) > 0,
+            presupuesto.signum() > 0 && porComprar.compareTo(presupuesto) > 0,
             List.copyOf(aprovecha),
             contexto.plan().hayNinos() ? (int) generador.paraNinos(contexto.plan(), comoQuedo.values()) : 0,
             (int) comoQuedo.values().stream()
                 .map(id -> generador.adaptar(contexto.plan(), id).estado())
                 .filter(e -> e == AdaptacionReceta.Estado.ADAPTADA || e == AdaptacionReceta.Estado.PLATO_APARTE)
                 .count(),
-            generador.diasDespuesDelPago(contexto.plan()));
+            generador.diasDespuesDelPago(contexto.plan()),
+            porComprar);
     }
 
     private Hogar hogarDeLaUsuaria() {

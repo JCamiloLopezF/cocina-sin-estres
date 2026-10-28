@@ -41,4 +41,12 @@ public interface MovimientosDespensa {
      * @return cuántos productos se descontaron
      */
     int descontarReceta(Long hogarId, Long recetaId);
+
+    /**
+     * Si la receta existe y está activa. «La preparé» con una receta que no existe
+     * respondía 204 sin hacer nada (auditoría del 27 de octubre); ahora responde 404.
+     */
+    default boolean recetaActiva(Long recetaId) {
+        return true;
+    }
 }

@@ -93,7 +93,10 @@ public final class AdaptadorAlergias {
         return cambios;
     }
 
-    /** La receta que se le prepara aparte: plato fuerte sin sus alergias, rápida y barata. */
+    /**
+     * La receta que se le prepara aparte: plato fuerte sin sus alergias, de la misma comida
+     * que la original (un almuerzo por un almuerzo), rápida y barata.
+     */
     private Optional<Long> platoAparte(ContextoPlan contexto, RecetaCandidata original, Comensal persona) {
         return contexto.recetas().values().stream()
             .filter(RecetaCandidata::activa)
@@ -101,7 +104,8 @@ public final class AdaptadorAlergias {
             .filter(r -> !r.id().equals(original.id()))
             .filter(r -> Collections.disjoint(r.alergias(), persona.restricciones()))
             .min(Comparator
-                .comparing((RecetaCandidata r) -> r.tiempoMinutos() > MINUTOS_PLATO_APARTE)
+                .comparing((RecetaCandidata r) -> Collections.disjoint(r.momentos(), original.momentos()))
+                .thenComparing(r -> r.tiempoMinutos() > MINUTOS_PLATO_APARTE)
                 .thenComparing(RecetaCandidata::costo)
                 .thenComparing(RecetaCandidata::id))
             .map(RecetaCandidata::id);

@@ -31,7 +31,7 @@ describe('Carga rápida y Todo listo (pantallas 11 y 12)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Tu cocina ya está organizada' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/listo')
     expect(await screen.findByText('2 personas en casa')).toBeInTheDocument()
-    expect(screen.getByText(/780\.000 · ingreso quincenal/)).toBeInTheDocument()
+    expect(screen.getByText(/780\.000 · presupuesto quincenal/)).toBeInTheDocument()
     expect(screen.getByText('4 productos en la despensa')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Armar mi primera semana' })).toHaveAttribute('href', '/plan')
 

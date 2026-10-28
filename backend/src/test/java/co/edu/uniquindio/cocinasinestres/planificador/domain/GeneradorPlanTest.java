@@ -389,4 +389,42 @@ class GeneradorPlanTest {
         assertThat(Porciones.factor(2, null)).isEqualByComparingTo("1");
         assertThat(Porciones.factor(6, 4)).isEqualByComparingTo("1.5");
     }
+
+    @Test
+    @DisplayName("un desayuno no va de almuerzo: cada comida solo lleva recetas de ese momento (V17)")
+    void cadaComidaConSusRecetas() {
+        Map<Long, RecetaCandidata> recetas = new HashMap<>();
+        // Huevos pericos: la más barata y con todo en la despensa, pero es de desayuno y cena.
+        recetas.put(1L, new RecetaCandidata(1L, 15, BigDecimal.valueOf(1000), Map.of(HUEVO, BigDecimal.valueOf(4)),
+            Set.of(), Set.of(), true, true, false, Set.of(), Set.of("DESAYUNO", "CENA")));
+        recetas.put(2L, new RecetaCandidata(2L, 40, BigDecimal.valueOf(9000), Map.of(POLLO, BigDecimal.valueOf(400)),
+            Set.of(), Set.of(), true, true, false, Set.of(), Set.of("ALMUERZO", "CENA")));
+        // Un jugo es de almuerzo, pero no es plato fuerte: nunca va solo.
+        recetas.put(3L, new RecetaCandidata(3L, 10, BigDecimal.valueOf(500), Map.of(LECHE, BigDecimal.valueOf(100)),
+            Set.of(), Set.of(), true, false, false, Set.of(), Set.of("DESAYUNO", "ALMUERZO")));
+        ContextoPlan contexto = new ContextoPlan(
+            recetas, Set.of(), Set.of(), BigDecimal.valueOf(200_000),
+            Map.of(HUEVO, BigDecimal.valueOf(30)), Set.of(), Map.of());
+
+        Map<Hueco, Long> plan = generador.completar(contexto, List.of(
+            new Hueco(1, "DESAYUNO"), new Hueco(1, "ALMUERZO"), new Hueco(2, "ALMUERZO"), new Hueco(2, "CENA")));
+
+        assertThat(plan)
+            .containsEntry(new Hueco(1, "DESAYUNO"), 1L)
+            .containsEntry(new Hueco(1, "ALMUERZO"), 2L)
+            .containsEntry(new Hueco(2, "ALMUERZO"), 2L);
+        assertThat(plan.values()).doesNotContain(3L);
+        assertThat(generador.otraOpcion(contexto, new Hueco(1, "ALMUERZO"), Set.of(2L))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("una receta sin momentos explícitos y plato fuerte va al almuerzo y la cena")
+    void platoFuertePorDefecto() {
+        RecetaCandidata receta = receta(1, 30, 1000, Map.of(ARROZ, 100), Set.of(), Set.of());
+
+        assertThat(receta.sirvePara("ALMUERZO")).isTrue();
+        assertThat(receta.sirvePara("CENA")).isTrue();
+        assertThat(receta.sirvePara("DESAYUNO")).isFalse();
+        assertThat(receta.escalada(BigDecimal.TEN).momentos()).isEqualTo(receta.momentos());
+    }
 }

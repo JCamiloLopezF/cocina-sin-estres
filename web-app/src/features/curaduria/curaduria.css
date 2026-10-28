@@ -168,3 +168,65 @@
 .etiquetas-receta:disabled {
   opacity: 0.6;
 }
+
+/* RNF-28: el curador crea y edita recetas. */
+.curaduria__filtros--recetas {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.formulario-receta__par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-3);
+  align-items: start;
+}
+
+.formulario-receta__texto {
+  min-height: auto;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.formulario-receta__problemas {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ingredientes-curados {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ingredientes-curados__fila {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: var(--espacio-2);
+  padding-bottom: var(--espacio-3);
+  border-bottom: 1px solid var(--color-linea);
+}
+
+.ingredientes-curados__marcas {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.ingredientes-curados__marcas > :last-child {
+  margin-left: auto;
+}
+
+@media (max-width: 420px) {
+  .formulario-receta__par,
+  .ingredientes-curados__fila {
+    grid-template-columns: 1fr;
+  }
+}

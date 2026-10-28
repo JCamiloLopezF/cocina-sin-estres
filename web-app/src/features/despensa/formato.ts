@@ -10,13 +10,18 @@ export const NOMBRE_NIVEL: Record<Nivel, string> = {
 }
 
 const CATEGORIAS: Record<string, string> = {
-  GRANOS: 'Granos y básicos',
-  PROTEINAS: 'Proteínas',
-  LACTEOS: 'Lácteos y huevos',
+  GRANOS: 'Arroz, pasta y granos',
+  LEGUMBRES: 'Legumbres',
+  TUBERCULOS: 'Papa, yuca y plátano',
+  HARINAS: 'Harinas, arepas y pan',
+  PROTEINAS: 'Carnes, huevos y pescado',
+  LACTEOS: 'Lácteos',
   VERDURAS: 'Verduras',
   FRUTAS: 'Frutas',
   ACEITES: 'Aceites',
-  CONDIMENTOS: 'Condimentos',
+  CONDIMENTOS: 'Condimentos y panela',
+  BEBIDAS: 'Café y chocolate',
+  OTROS: 'Otros',
 }
 
 /** Nombre legible de una categoría del catálogo (en la base va en mayúsculas). */

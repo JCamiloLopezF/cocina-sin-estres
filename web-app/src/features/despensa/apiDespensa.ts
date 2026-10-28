@@ -11,7 +11,7 @@ function consulta(parametros: Record<string, string | undefined>): string {
 export function listarDespensa(filtro: Filtro, buscar: string, senal?: AbortSignal) {
   return pedir<ItemDespensa[]>(
     `/items-despensa${consulta({ filtro: filtro === 'TODO' ? undefined : filtro, buscar })}`,
-    { senal },
+    { senal, respaldo: true },
   )
 }
 
@@ -24,7 +24,7 @@ export function obtenerItem(id: number, senal?: AbortSignal) {
 }
 
 export function catalogoDisponible(buscar: string, senal?: AbortSignal) {
-  return pedir<ProductoDisponible[]>(`/items-despensa/catalogo${consulta({ buscar })}`, { senal })
+  return pedir<ProductoDisponible[]>(`/items-despensa/catalogo${consulta({ buscar })}`, { senal, respaldo: true })
 }
 
 export function agregarItem(productoId: number, datos: DatosItem) {

@@ -12,4 +12,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
 
     Optional<Producto> findByIdAndHogarIdIsNull(Long id);
 
+    /** Productos activos del catálogo global, para no repetir nombres (RNF-24). */
+    List<Producto> findByHogarIdIsNullAndActivoTrue();
+
 }

@@ -16,6 +16,9 @@ import java.util.List;
  * @param restricciones     alergias y condiciones de los ingredientes obligatorios; los
  *                          opcionales se pueden omitir, así que no cuentan
  * @param video             cómo se hace, en video; {@code null} si todavía no tiene
+ * @param momentos          comidas en que va: {@code DESAYUNO}, {@code ALMUERZO}, {@code CENA} (V17)
+ * @param platoFuerte       es una comida; si no, es un acompañamiento o una bebida
+ * @param gustaANinos       el curador la marcó como receta que suele gustarles a los niños
  */
 public record RecetaDetalleResponse(
     Long id,
@@ -27,6 +30,9 @@ public record RecetaDetalleResponse(
     List<String> pasos,
     List<IngredienteRecetaResponse> ingredientes,
     List<String> restricciones,
-    VideoRecetaResponse video
+    VideoRecetaResponse video,
+    List<String> momentos,
+    boolean platoFuerte,
+    boolean gustaANinos
 ) {
 }

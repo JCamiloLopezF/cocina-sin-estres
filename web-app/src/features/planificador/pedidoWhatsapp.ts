@@ -16,8 +16,9 @@ export function plural(palabra: string, cantidad: number): string {
 /**
  * Cuánto pedir de un producto, como se pide en la tienda:
  * - por libra, bolsa, paquete o botella: "1 libra", "2 bolsas de 1 kg";
- * - lo que se vende por unidad: "2 latas", y si viene en cubeta o racimo, las unidades
- *   exactas ("6 unidades"), para no pedir 30 huevos cuando faltan 6.
+ * - lo que se vende por unidad: "2 latas", y si viene en racimo, las unidades exactas;
+ * - los huevos, como se piden en la tienda: media docena, una docena o cubetas
+ *   (auditoría: el pedido decía «Huevos: 1 unidad»).
  */
 export function cantidadParaPedir(cantidad: number, producto?: ProductoDisponible): string {
   const unidadBase = producto?.unidadBase ?? 'unidad'
@@ -27,6 +28,7 @@ export function cantidadParaPedir(cantidad: number, producto?: ProductoDisponibl
     return cantidadConUnidad(unidadBase === 'unidad' ? Math.ceil(cantidad) : Math.round(cantidad), unidadBase)
   }
   if (unidadBase === 'unidad') {
+    if (unidadCompra === 'cubeta') return huevos(Math.ceil(cantidad), presentacion)
     if (presentacion !== 1) return cantidadConUnidad(Math.ceil(cantidad), 'unidad')
     const n = Math.ceil(cantidad)
     return `${n} ${plural(unidadCompra, n)}`
@@ -34,6 +36,14 @@ export function cantidadParaPedir(cantidad: number, producto?: ProductoDisponibl
   const n = Math.max(1, Math.ceil(cantidad / presentacion))
   const tamano = unidadCompra === 'libra' ? '' : ` de ${cantidadConUnidad(presentacion, unidadBase)}`
   return `${n} ${plural(unidadCompra, n)}${tamano}`
+}
+
+/** 1 a 6 huevos: media docena; 7 a 12: una docena; más: cubetas completas. */
+function huevos(n: number, porCubeta: number): string {
+  if (n <= 6) return 'media docena'
+  if (n <= 12) return '1 docena'
+  const cubetas = Math.ceil(n / porCubeta)
+  return `${cubetas} ${plural('cubeta', cubetas)}`
 }
 
 export interface LineaPedido {

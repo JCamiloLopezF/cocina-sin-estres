@@ -109,7 +109,7 @@ describe('Recetario (pantallas 21 a 24)', () => {
     expect(router.state.location.pathname).toBe('/plan/dia/2')
     const { semanaInicio } = llamadas.find((l) => l.metodo === 'POST')!.cuerpo as { semanaInicio: string }
     expect(new Date(`${semanaInicio}T12:00`).getDay()).toBe(1)
-    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toEqual({ dia: 2, tipoComida: 'CENA', recetaId: 10 })
+    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toMatchObject({ dia: 2, tipoComida: 'CENA', recetaId: 10 })
   })
 
   it('avisa si el hueco ya tiene receta y la reemplaza', async () => {
@@ -227,5 +227,31 @@ describe('Recetario (pantallas 21 a 24)', () => {
     expect(video.getAttribute('src')).toMatch(
       /^https:\/\/www\.youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?start=30&end=90&autoplay=1/,
     )
+  })
+
+  it('desde un almuerzo del plan solo ofrece platos de almuerzo (V17) y muestra lo que cumple cada receta', async () => {
+    const desayuno = { ...SOPA, momentos: ['DESAYUNO' as const], platoFuerte: true }
+    const almuerzo = { ...ARROZ_CON_POLLO, momentos: ['ALMUERZO' as const, 'CENA' as const], platoFuerte: true }
+    const jugo = { ...ARROZ_CON_LECHE, nombre: 'Jugo de mora', momentos: ['ALMUERZO' as const], platoFuerte: false }
+    const { llamadas } = backendFalso({
+      ...rutasCocina(),
+      'GET /recetas/detalle': () => respuestaJson([almuerzo, desayuno, jugo]),
+    })
+    montarApp(crearServicioFalso(LUISA).servicio, '/recetas?dia=3&comida=ALMUERZO')
+    const usuario = userEvent.setup()
+
+    const arroz = within(await screen.findByRole('link', { name: /Arroz con pollo/ }))
+    expect(arroz.getByText('50 min · 3 ingredientes · almuerzo y cena')).toBeInTheDocument()
+    expect(arroz.getByText('sin lactosa')).toBeInTheDocument()
+    expect(arroz.getByText('sin gluten')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Sopa de lentejas/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Jugo de mora/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Almuerzo' })).toHaveAttribute('aria-pressed', 'true')
+    // Una sola petición para todo el recetario.
+    expect(llamadas.filter((l) => l.ruta.startsWith('/recetas/')).map((l) => l.ruta)).toEqual(['/recetas/detalle'])
+
+    await usuario.click(screen.getByRole('button', { name: 'Cualquier comida' }))
+    expect(screen.getByRole('link', { name: /Sopa de lentejas/ })).toBeInTheDocument()
+    expect(within(tarjeta('Jugo de mora')).getByText(/acompañamiento/)).toBeInTheDocument()
   })
 })

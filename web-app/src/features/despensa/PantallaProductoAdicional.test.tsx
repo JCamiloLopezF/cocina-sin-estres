@@ -45,7 +45,7 @@ describe('Producto propio del hogar (ADR-18)', () => {
     montarApp(crearServicioFalso(LUISA).servicio, '/despensa/adicional?nombre=Lenteja')
     const usuario = userEvent.setup()
 
-    await usuario.click(await screen.findByRole('radio', { name: 'A granel (gramos)' }))
+    await usuario.click(await screen.findByRole('radio', { name: 'Por peso (arroz, harina…)' }))
     await usuario.click(screen.getByRole('button', { name: 'Continuar' }))
     await usuario.click(await screen.findByRole('radio', { name: 'Medio' }))
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }))

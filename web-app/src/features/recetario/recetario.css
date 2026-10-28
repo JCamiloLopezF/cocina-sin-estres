@@ -237,3 +237,9 @@
   border-color: var(--color-tinta);
   border-style: dashed;
 }
+
+/* RNF-15: restricciones que la receta cumple ("sin lactosa"). */
+.pildora--cumple {
+  border-color: var(--color-linea);
+  color: var(--color-tenue);
+}

@@ -223,6 +223,19 @@ class ListaComprasServiceImplTest {
         assertEquals(new BigDecimal("2000.00"), item.getCostoEstimado());
     }
 
+    @Test
+    void costoPorComprar_esLoQueFaltaConLaDespensa_sinGuardarNada() {
+        planQuePide(1L, "500.000");
+        when(stockEnDespensa.disponibles(10L, HOY))
+            .thenReturn(Map.of(1L, new BigDecimal("200.000")));
+        productoA4000(1L);
+
+        // RNF-02: la receta pide 500 g, hay 200 g: faltan 300 g a $4000 el kilo.
+        assertEquals(new BigDecimal("1200.00"), service.costoPorComprar(500L));
+        verify(itemListaComprasRepository, never()).saveAll(any());
+        verify(stockEnDespensa, never()).bajoMinimo(any());
+    }
+
     // ---------------------------------------------------------------------
     // Despensa automática (ADR-24)
     // ---------------------------------------------------------------------

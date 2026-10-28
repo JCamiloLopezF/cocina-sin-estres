@@ -217,7 +217,9 @@
 }
 
 .contador__valor {
-  width: 4.5rem;
+  /* Auditoría: con 4.5rem se cortaban los dígitos de una cantidad larga. */
+  width: 7ch;
+  min-width: 4.5rem;
   min-height: 3rem;
   padding: 0;
   border: 0;

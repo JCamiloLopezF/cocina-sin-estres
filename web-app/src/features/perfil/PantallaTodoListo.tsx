@@ -12,7 +12,8 @@ interface Resumen {
   productos?: number
 }
 
-const CICLO = { SEMANAL: 'ingreso semanal', QUINCENAL: 'ingreso quincenal', MENSUAL: 'ingreso mensual' } as const
+// Es el presupuesto de alimentación del ciclo, no el ingreso (auditoría: se mezclaban las dos palabras).
+const CICLO = { SEMANAL: 'presupuesto semanal', QUINCENAL: 'presupuesto quincenal', MENSUAL: 'presupuesto mensual' } as const
 
 /** Pantalla 12: cierre del primer ingreso con el resumen del hogar. */
 export function PantallaTodoListo() {

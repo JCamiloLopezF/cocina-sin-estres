@@ -8,10 +8,10 @@ import java.util.List;
  *
  * @param plan               el plan como quedó
  * @param cambios            lo que el generador puso o cambió, en orden de la semana
- * @param costoEstimado      costo total del plan (misma fórmula que {@code /costo})
+ * @param costoEstimado      valor de todas las comidas del plan (el acumulado de {@code /costo})
  * @param presupuestoSemanal presupuesto del hogar prorrateado a la semana (ADR-14)
- * @param excedePresupuesto  el plan sigue por encima del presupuesto (no había recetas
- *                           más baratas que encajaran)
+ * @param excedePresupuesto  lo que falta comprar sigue por encima del presupuesto (no había
+ *                           recetas más baratas que encajaran)
  * @param aprovecha          productos por vencer que el plan usa
  * @param paraNinos          comidas del plan que suelen gustarles a los niños; 0 si en el
  *                           hogar no hay niños
@@ -20,6 +20,8 @@ import java.util.List;
  * @param diasDespuesDelPago días de esta semana (1 = lunes … 7 = domingo) en que la usuaria
  *                           recién recibió el pago; ahí quedaron las comidas más costosas.
  *                           Vacío si la semana no tiene pago
+ * @param costoPorComprar    el costo del plan según RNF-02: lo que falta comprar con lo que
+ *                           ya hay en la despensa (el {@code costoPorComprar} de {@code /costo})
  */
 public record PlanGeneradoResponse(
     PlanSemanalResponse plan,
@@ -30,5 +32,6 @@ public record PlanGeneradoResponse(
     List<String> aprovecha,
     int paraNinos,
     int conAdaptaciones,
-    List<Integer> diasDespuesDelPago) {
+    List<Integer> diasDespuesDelPago,
+    BigDecimal costoPorComprar) {
 }

@@ -29,6 +29,9 @@ const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', '
 
 const PERIODO: Record<Periodicidad, string> = { SEMANAL: 'semanal', QUINCENAL: 'quincenal', MENSUAL: 'mensual' }
 
+/** Tope de HogarService.PRESUPUESTO_MAXIMO. */
+const PRESUPUESTO_MAXIMO = 9_999_999_999
+
 const PASOS = ['Personas y edades', 'Alergias y condiciones de salud', 'Presupuesto y ciclo de ingreso', 'Días sin tiempo para cocinar']
 
 interface Persona {
@@ -83,7 +86,7 @@ export function PantallaPerfilHogar() {
   const [otras, setOtras] = useState('')
   const [verOtras, setVerOtras] = useState(false)
   const [consentimiento, setConsentimiento] = useState(false)
-  const [errores, setErrores] = useState<Errores>({})
+  const [erroresAlContinuar, setErrores] = useState<Errores>({})
   const [errorGeneral, setErrorGeneral] = useState<string>()
   const [enviando, setEnviando] = useState(false)
 
@@ -135,6 +138,9 @@ export function PantallaPerfilHogar() {
   const dia2 = Number(diaPago2)
   // El hogar guarda la unión de las restricciones de todas las personas.
   const restricciones = [...new Set(personas.flatMap((p) => p.restricciones))]
+  // Después de un intento fallido, los errores se recalculan con cada cambio: el que se
+  // corrige desaparece enseguida (auditoría: «Edad entre 0 y 120» seguía en pantalla).
+  const errores = Object.values(erroresAlContinuar).some(Boolean) ? validarPaso(paso) : erroresAlContinuar
 
   function cambiarPersona(indice: number, cambio: Partial<Persona>) {
     setPersonas((actuales) => actuales.map((p, i) => (i === indice ? { ...p, ...cambio } : p)))
@@ -169,6 +175,9 @@ export function PantallaPerfilHogar() {
     if (indice === 2) {
       if (!presupuesto.trim() || Number.isNaN(monto) || monto <= 0) {
         nuevos.presupuesto = 'Escribe un presupuesto mayor que cero.'
+      } else if (monto > PRESUPUESTO_MAXIMO) {
+        // El mismo tope de HogarService: antes solo lo revisaba la API.
+        nuevos.presupuesto = 'Ese presupuesto es demasiado alto. Revisa la cifra.'
       }
       const maximo = periodicidad === 'SEMANAL' ? 7 : 31
       if (!Number.isInteger(dia1) || dia1 < 1 || dia1 > maximo) {
@@ -376,6 +385,7 @@ export function PantallaPerfilHogar() {
               {verOtras && (
                 <CampoTexto
                   etiqueta="Otra alergia o condición"
+                  ayuda="Queda anotada en tu perfil, pero las recetas no se filtran por ella. Si está en la lista de arriba, márcala ahí."
                   value={otras}
                   maxLength={200}
                   autoFocus

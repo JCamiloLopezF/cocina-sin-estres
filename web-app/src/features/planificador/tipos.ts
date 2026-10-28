@@ -13,6 +13,8 @@ export interface ComidaPlan {
   recetaId: number
   preparada: boolean
   preparadaEn?: string
+  /** Se hizo sin conexión y todavía no llega al servidor (RNF-17); su id es provisional (negativo). */
+  pendiente?: boolean
 }
 
 /** `GET /api/planes-semanales?semanaInicio=AAAA-MM-DD` (PlanSemanalResponse). */
@@ -27,10 +29,16 @@ export interface PlanSemanal {
 
 /** `GET /api/planes-semanales/{id}/costo` (PlanCostoResponse, ADR-14). */
 export interface CostoPlan {
-  /** Acumulado de lunes (índice 0) a domingo (índice 6). El último es el total. */
+  /** Valor de las comidas, acumulado de lunes (índice 0) a domingo (índice 6), aunque parte ya esté en la despensa. */
   costoAcumuladoPorDia: number[]
   presupuestoSemanal: number
+  /** Lo que falta comprar supera el presupuesto. */
   excedePresupuesto: boolean
+  /**
+   * El costo del plan según RNF-02: lo que falta comprar con lo que ya hay en la despensa, para
+   * las comidas que quedan por preparar. Es lo que se compara con el presupuesto.
+   */
+  costoPorComprar?: number
   /** Lo que suma el reemplazo o el plato aparte de quien tiene alergia (KAN-24); ya está en el total. */
   costoAlergias?: number
 }
@@ -90,4 +98,6 @@ export interface PlanGenerado {
   conAdaptaciones?: number
   /** Días de la semana en que recién le pagaron; ahí quedaron las comidas más costosas. */
   diasDespuesDelPago?: Dia[]
+  /** Lo que falta comprar (RNF-02). */
+  costoPorComprar?: number
 }

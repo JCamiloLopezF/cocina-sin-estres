@@ -5,7 +5,7 @@ import { backendFalso } from '../../prueba/backendFalso'
 import { rutasCocina } from '../../prueba/cocinaFalsa'
 import { montarApp } from '../../prueba/montar'
 import { crearServicioFalso, LUISA, respuestaJson } from '../../prueba/servicioFalso'
-import { aIso, fechaDelDia, lunesDe } from './semana'
+import { aIso, diaDe, fechaDelDia, lunesDe } from './semana'
 import type { ComidaPlan } from './tipos'
 
 const LUNES = aIso(lunesDe(new Date()))
@@ -16,7 +16,7 @@ function comida(id: number, dia: number, tipoComida: ComidaPlan['tipoComida'], r
 
 function conPlan(
   comidas: ComidaPlan[],
-  costo: { acumulado: number[]; presupuesto: number; alergias?: number } = {
+  costo: { acumulado: number[]; presupuesto: number; alergias?: number; porComprar?: number } = {
     acumulado: [3600, 3600, 16000, 16000, 16000, 16000, 16000],
     presupuesto: 195000,
   },
@@ -28,8 +28,9 @@ function conPlan(
       respuestaJson({
         costoAcumuladoPorDia: costo.acumulado,
         presupuestoSemanal: costo.presupuesto,
-        excedePresupuesto: costo.acumulado[6] > costo.presupuesto,
+        excedePresupuesto: (costo.porComprar ?? costo.acumulado[6]) > costo.presupuesto,
         costoAlergias: costo.alergias ?? 0,
+        costoPorComprar: costo.porComprar,
       }),
   }
 }
@@ -67,14 +68,16 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
     await usuario.click(screen.getByRole('button', { name: 'Armar mi semana' }))
 
     expect(await screen.findByText(/Te propusimos 2 comidas\. Usamos primero lo que está por vencer: lenteja\./)).toBeInTheDocument()
-    expect(screen.getByText(/El plan quedó en \$\s?16\.000 de \$\s?195\.000/)).toBeInTheDocument()
+    expect(screen.getByText(/El plan quedó en \$\s?16\.000 por comprar de \$\s?195\.000/)).toBeInTheDocument()
     expect(screen.getByText(/Como en casa hay niños, incluimos 2 recetas de las que suelen gustarles\./)).toBeInTheDocument()
     expect(screen.getByText(/Dejamos las comidas más costosas para el viernes y el sábado, cuando recién te pagan\./)).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: /^Lunes/ })).toHaveTextContent('Almuerzo · Sopa de lentejas')
     expect(llamadas.find((l) => l.metodo === 'POST' && l.ruta === '/planes-semanales')?.cuerpo).toEqual({ semanaInicio: LUNES })
     expect(llamadas.some((l) => l.ruta === '/planes-semanales/7/generar')).toBe(true)
-    // Quedan 12 huecos de almuerzo y cena: se ofrece completarlos.
-    expect(screen.getByRole('heading', { name: 'Faltan 12 comidas en tu semana' })).toBeInTheDocument()
+    // Quedan los huecos de almuerzo y cena de hoy en adelante (los días que pasaron no se planean).
+    const hoy = diaDe(new Date())
+    const faltan = (8 - hoy) * 2 - (hoy === 1 ? 2 : 0)
+    expect(screen.getByRole('heading', { name: `Faltan ${faltan} comidas en tu semana` })).toBeInTheDocument()
   })
 
   it('"Prefiero armarla yo" crea la semana vacía', async () => {
@@ -127,7 +130,23 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
 
     await usuario.click(await screen.findByRole('button', { name: 'Repetir la semana pasada' }))
     expect(await screen.findByText('Almuerzo · Arroz con pollo')).toBeInTheDocument()
-    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toEqual({ dia: 1, tipoComida: 'ALMUERZO', recetaId: 11 })
+    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toMatchObject({ dia: 1, tipoComida: 'ALMUERZO', recetaId: 11 })
+  })
+
+  it('el costo del plan es lo que falta comprar; lo que hay en la despensa no cuenta (RNF-02)', async () => {
+    backendFalso(
+      conPlan([comida(70, 1, 'ALMUERZO', 10), comida(71, 3, 'CENA', 11)], {
+        acumulado: [3600, 3600, 16000, 16000, 16000, 16000, 16000],
+        presupuesto: 10000,
+        porComprar: 9000,
+      }),
+    )
+    montarApp(crearServicioFalso(LUISA).servicio, '/plan')
+
+    const costo = await screen.findByRole('region', { name: 'Costo del plan' })
+    expect(costo).toHaveTextContent(/Por comprar\$\s?9\.000 \/ \$\s?10\.000/)
+    expect(within(costo).getByText(/valen \$\s?16\.000; \$\s?7\.000 ya los tienes en la despensa/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('muestra costo frente al presupuesto, las comidas por día y avisa si se pasa', async () => {
@@ -142,7 +161,7 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
 
     const costo = await screen.findByRole('region', { name: 'Costo del plan' })
     expect(costo).toHaveTextContent(/16\.000.*10\.000/)
-    expect(within(costo).getByText(/ingreso quincenal/)).toBeInTheDocument()
+    expect(within(costo).getByText(/presupuesto quincenal de alimentación/)).toBeInTheDocument()
     expect(within(costo).getByText(/Incluye \$\s?1\.200 por la porción de quien tiene alergia\./)).toBeInTheDocument()
     const aviso = screen.getByRole('alert')
     expect(aviso).toHaveTextContent('Este plan supera tu presupuesto')
@@ -187,7 +206,7 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
     await usuario.click(await screen.findByRole('button', { name: 'Ajustar al presupuesto' }))
 
     expect(
-      await screen.findByText(/Cambiamos 1 comida por una opción más económica: el plan quedó en \$\s?3\.600 de \$\s?10\.000\./),
+      await screen.findByText(/Cambiamos 1 comida por una opción más económica: el plan quedó en \$\s?3\.600 por comprar de \$\s?10\.000\./),
     ).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: /^Miércoles/ })).toHaveTextContent('Cena · Sopa de lentejas')
     expect(screen.queryByText('Este plan supera tu presupuesto')).not.toBeInTheDocument()
@@ -232,7 +251,7 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Deshacer' }))
     expect(await screen.findByText('Arroz con pollo volvió a tu plan.')).toBeInTheDocument()
-    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toEqual({ dia: 3, tipoComida: 'CENA', recetaId: 11 })
+    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toMatchObject({ dia: 3, tipoComida: 'CENA', recetaId: 11 })
   })
 
   it('en el día se marca una comida como preparada después de confirmar', async () => {
@@ -306,7 +325,7 @@ describe('Plan semanal (pantallas 27 a 33)', () => {
     expect(await screen.findByText(/Quitamos Arroz con pollo del miércoles/)).toBeInTheDocument()
     await usuario.click(screen.getByRole('button', { name: 'Deshacer' }))
     expect(await screen.findByText('Arroz con pollo volvió a tu plan.')).toBeInTheDocument()
-    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toEqual({ dia: 3, tipoComida: 'CENA', recetaId: 11 })
+    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toMatchObject({ dia: 3, tipoComida: 'CENA', recetaId: 11 })
   })
 
   it('sin perfil del hogar lleva a completarlo', async () => {

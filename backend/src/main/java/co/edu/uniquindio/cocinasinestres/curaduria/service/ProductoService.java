@@ -1,5 +1,8 @@
 package co.edu.uniquindio.cocinasinestres.curaduria.service;
 
+import co.edu.uniquindio.cocinasinestres.comun.error.ConflictoException;
+import co.edu.uniquindio.cocinasinestres.curaduria.domain.CategoriaProducto;
+
 import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
 import co.edu.uniquindio.cocinasinestres.curaduria.domain.AccionAuditoria;
 import co.edu.uniquindio.cocinasinestres.curaduria.domain.ComparadorProducto;
@@ -68,13 +71,15 @@ public class ProductoService {
     public ProductoResponse crear(ProductoRequest request) {
 
         validar(request);
+        String nombre = CategoriaProducto.limpiarNombre(request.nombre());
+        validarNoRepetido(nombre, null);
 
         UsuarioAutenticado usuarioActual = usuarioActualService.obtener();
 
         Producto producto = new Producto(
             null,
-            request.nombre(),
-            request.categoria(),
+            nombre,
+            CategoriaProducto.normalizar(request.categoria()),
             request.tipoCantidad(),
             request.unidadBase(),
             request.unidadCompra(),
@@ -105,12 +110,14 @@ public class ProductoService {
     public ProductoResponse actualizar(Long id, ProductoRequest request) {
 
         validar(request);
+        String nombre = CategoriaProducto.limpiarNombre(request.nombre());
+        validarNoRepetido(nombre, id);
 
         Producto producto = buscarOExcepcion(id);
         InstantaneaProducto antes = ProductoMapper.aInstantanea(producto);
 
-        producto.setNombre(request.nombre());
-        producto.setCategoria(request.categoria());
+        producto.setNombre(nombre);
+        producto.setCategoria(CategoriaProducto.normalizar(request.categoria()));
         producto.setTipoCantidad(request.tipoCantidad());
         producto.setUnidadBase(request.unidadBase());
         producto.setUnidadCompra(request.unidadCompra());
@@ -178,6 +185,21 @@ public class ProductoService {
                 new RecursoNoEncontradoException(
                     "El producto solicitado no existe."
                 ));
+    }
+
+    /**
+     * Dos productos activos del catálogo no pueden llamarse igual, sin importar mayúsculas,
+     * tildes ni espacios: "  ARROZ " repite a "Arroz" (auditoría del 27 de octubre).
+     */
+    private void validarNoRepetido(String nombre, Long id) {
+        String clave = CategoriaProducto.claveNombre(nombre);
+        boolean repetido = productoRepository.findByHogarIdIsNullAndActivoTrue().stream()
+            .anyMatch(p -> !p.getId().equals(id) && CategoriaProducto.claveNombre(p.getNombre()).equals(clave));
+        if (repetido) {
+            throw new ConflictoException(
+                "PRODUCTO_DUPLICADO",
+                "Ya hay un producto llamado así en el catálogo. Edítalo en lugar de crear otro.");
+        }
     }
 
     private void validar(ProductoRequest request) {
