@@ -40,10 +40,19 @@ public class PlanificadorCostoService {
      * {@code cantidad / cantidadUnidadCompra * precioUnidadCompra}, igual que en
      * la lista de compras.
      */
+    /**
+     * Cada receta, para las personas del hogar (personas / porciones de la receta): un hogar
+     * de una persona no paga cuatro porciones. Sin personas registradas, la receta completa.
+     */
     private static final String SQL_COSTO_POR_DIA = """
         SELECT cp.dia,
-               SUM(ir.cantidad / p.cantidad_unidad_compra * p.precio_unidad_compra) AS costo
+               SUM(ir.cantidad * COALESCE(NULLIF(pe.personas, 0), r.porciones) / r.porciones
+                   / p.cantidad_unidad_compra * p.precio_unidad_compra) AS costo
         FROM comida_plan cp
+        JOIN plan_semanal pl ON pl.id = cp.plan_semanal_id
+        JOIN receta r ON r.id = cp.receta_id
+        LEFT JOIN (SELECT hogar_id, COUNT(*) AS personas FROM persona GROUP BY hogar_id) pe
+               ON pe.hogar_id = pl.hogar_id
         JOIN ingrediente_receta ir ON ir.receta_id = cp.receta_id AND ir.opcional = FALSE
         JOIN producto p ON p.id = ir.producto_id
         WHERE cp.plan_semanal_id = ?

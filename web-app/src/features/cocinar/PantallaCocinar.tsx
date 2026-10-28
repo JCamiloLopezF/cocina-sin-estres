@@ -8,7 +8,7 @@ import { marcarPreparada } from '../planificador/apiPlanificador'
 import { mensajePlan } from '../planificador/mensajesPlan'
 import { obtenerAdaptaciones, textoCambio, type Adaptacion } from '../recetario/adaptaciones'
 import { obtenerReceta } from '../recetario/apiRecetario'
-import { analizarReceta, cargarCocina, type RecetaVista } from '../recetario/cocina'
+import { analizarReceta, cargarCocina, porcionesDelHogar, type RecetaVista } from '../recetario/cocina'
 import { nuevoTemporizador, sonarAlarma, type EstadoTemporizador } from './cuentaRegresiva'
 import { escuchaDisponible, useEscucha } from './escucha'
 import { animo, fraseDelPaso, minutosDelPaso, minutosEnPalabras, primerNombre, type Comando } from './guion'
@@ -124,7 +124,7 @@ export function PantallaCocinar() {
       .then(([receta, cocina, adaptaciones]) =>
         setCarga({
           tipo: 'listo',
-          vista: analizarReceta(receta, cocina, porciones ?? receta.porciones),
+          vista: analizarReceta(receta, cocina, porciones ?? porcionesDelHogar(receta, cocina)),
           adaptacion: adaptaciones.get(Number(id)),
         }),
       )

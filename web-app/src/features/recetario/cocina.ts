@@ -77,6 +77,8 @@ export interface IngredienteVista {
 
 export interface RecetaVista {
   receta: RecetaDetalle
+  /** Porciones para las que están calculadas las cantidades y el costo. */
+  porciones: number
   ingredientes: IngredienteVista[]
   /** Costo de la receta completa sin los opcionales (que no se compran). */
   costo?: number
@@ -97,8 +99,16 @@ export interface Choque {
   restricciones: string[]
 }
 
-/** Calcula costo y faltantes. `porciones` escala las cantidades (por defecto, las de la receta). */
-export function analizarReceta(receta: RecetaDetalle, cocina: Cocina, porciones = receta.porciones): RecetaVista {
+/**
+ * Porciones que cocina el hogar: una por persona, como el backend calcula el plan, la lista
+ * y lo que se descuenta de la despensa. Sin perfil, las de la receta.
+ */
+export function porcionesDelHogar(receta: RecetaDetalle, cocina: Cocina): number {
+  return cocina.personas.length > 0 ? cocina.personas.length : receta.porciones
+}
+
+/** Calcula costo y faltantes. `porciones` escala las cantidades (por defecto, las del hogar). */
+export function analizarReceta(receta: RecetaDetalle, cocina: Cocina, porciones = porcionesDelHogar(receta, cocina)): RecetaVista {
   const factor = receta.porciones > 0 ? porciones / receta.porciones : 1
   const ingredientes = receta.ingredientes.map((ing): IngredienteVista => {
     const producto = cocina.productos.get(ing.productoId)
@@ -123,6 +133,7 @@ export function analizarReceta(receta: RecetaDetalle, cocina: Cocina, porciones 
   const costo = conPrecio.length ? conPrecio.reduce((suma, i) => suma + (i.costo ?? 0), 0) : undefined
   return {
     receta,
+    porciones,
     ingredientes,
     costo,
     costoPorcion: costo !== undefined && porciones > 0 ? costo / porciones : undefined,

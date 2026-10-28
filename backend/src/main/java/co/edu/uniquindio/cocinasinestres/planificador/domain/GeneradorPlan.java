@@ -70,6 +70,14 @@ public final class GeneradorPlan {
     private static final double PESO_COSTO = 30;
     private static final double PESO_REPETIDA = 50;
     private static final double PESO_DIA_VECINO = 20;
+    /**
+     * Por cada producto de la despensa que la receta usa y que ninguna otra comida del plan
+     * usa todavía: así el plan reparte lo que hay en casa (aprovechamiento, meta > 60 %).
+     */
+    private static final double PESO_DESPENSA_NUEVA = 8;
+    private static final int MAX_DESPENSA_NUEVA = 3;
+    /** Veces que una receta puede salir en la semana, si hay otras posibles. */
+    public static final int MAX_VECES_POR_SEMANA = 2;
     private static final int MAX_CAMBIOS_PRESUPUESTO = 50;
     /** Sin presupuesto conocido, el costo se compara contra este valor por comida. */
     private static final BigDecimal COSTO_REFERENCIA = new BigDecimal("10000");
@@ -221,13 +229,25 @@ public final class GeneradorPlan {
             }
         });
 
-        List<RecetaCandidata> aptas = contexto.recetas().values().stream()
+        List<RecetaCandidata> todas = contexto.recetas().values().stream()
             .filter(RecetaCandidata::activa)
             .filter(RecetaCandidata::platoFuerte)
             .filter(r -> adaptador.adaptar(contexto, r).estado() != AdaptacionReceta.Estado.NO_APTA)
             .filter(r -> !delMismoDia.contains(r.id()))
             .sorted(Comparator.comparing(RecetaCandidata::id))
             .toList();
+
+        // Variedad: una receta sale como máximo dos veces en la semana, salvo que no haya otra.
+        Map<Long, Long> usos = new HashMap<>();
+        plan.forEach((h, id) -> {
+            if (!h.equals(hueco)) {
+                usos.merge(id, 1L, Long::sum);
+            }
+        });
+        List<RecetaCandidata> variadas = todas.stream()
+            .filter(r -> usos.getOrDefault(r.id(), 0L) < MAX_VECES_POR_SEMANA)
+            .toList();
+        List<RecetaCandidata> aptas = variadas.isEmpty() ? todas : variadas;
 
         if (!contexto.diasSinTiempo().contains(hueco.dia()) || aptas.isEmpty()) {
             return aptas;
@@ -269,6 +289,19 @@ public final class GeneradorPlan {
             .filter(p -> stock.getOrDefault(p, BigDecimal.ZERO).signum() > 0)
             .count();
         puntaje += PESO_POR_VENCER * Math.min(porVencer, MAX_POR_VENCER);
+
+        Set<Long> yaUsados = new HashSet<>();
+        plan.forEach((h, id) -> {
+            RecetaCandidata otra = contexto.recetas().get(id);
+            if (otra != null && !h.equals(hueco)) {
+                yaUsados.addAll(otra.ingredientes().keySet());
+            }
+        });
+        long nuevosDeLaDespensa = receta.ingredientes().keySet().stream()
+            .filter(p -> contexto.stock().getOrDefault(p, BigDecimal.ZERO).signum() > 0)
+            .filter(p -> !yaUsados.contains(p))
+            .count();
+        puntaje += PESO_DESPENSA_NUEVA * Math.min(nuevosDeLaDespensa, MAX_DESPENSA_NUEVA);
 
         if (!Collections.disjoint(receta.condiciones(), contexto.restricciones())) {
             puntaje -= PESO_CONDICION;

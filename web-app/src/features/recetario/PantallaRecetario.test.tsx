@@ -191,7 +191,9 @@ describe('Recetario (pantallas 21 a 24)', () => {
       )
       expect(within(ajustes).getByRole('link', { name: 'Ver Sopa de lentejas' })).toHaveAttribute('href', '/recetas/10')
       expect(screen.getByText(/Precaución para Luisa \(diabetes\)/)).toBeInTheDocument()
-      expect(screen.getByText('Leche · 1 kg')).toBeInTheDocument()
+      // La receta es para 4; el hogar es de 2: se muestra lo que cocina el hogar.
+      expect(screen.getByText('Leche · 500 g')).toBeInTheDocument()
+      expect(screen.getByText('2', { selector: 'output' })).toBeInTheDocument()
       expect(screen.getByText('· lactosa')).toBeInTheDocument()
     })
 

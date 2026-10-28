@@ -23,7 +23,10 @@ public class FuenteAnalisisJdbc implements FuenteAnalisis {
 
     private static final int TOP_RECETAS = 5;
 
-    /** Costo de cada receta con la fórmula del costo del plan (ADR-14): solo obligatorios. */
+    /**
+     * Costo de cada receta completa con la fórmula del costo del plan (ADR-14): solo
+     * obligatorios. En los planes se multiplica por personas / porciones, como en la app.
+     */
     private static final String COSTO_RECETA = """
         SELECT ir.receta_id,
                SUM(ir.cantidad / pr.cantidad_unidad_compra * pr.precio_unidad_compra) AS costo
@@ -123,10 +126,13 @@ public class FuenteAnalisisJdbc implements FuenteAnalisis {
 
         List<PlanConCosto> planes = jdbc.sql("""
                 SELECT p.id, h.presupuesto_monto, h.periodicidad_ingreso,
-                       COALESCE(SUM(rc.costo), 0) AS costo
+                       COALESCE(SUM(rc.costo * COALESCE(NULLIF(pe.personas, 0), r.porciones) / r.porciones), 0) AS costo
                 FROM plan_semanal p
                 JOIN hogar h ON h.id = p.hogar_id
                 JOIN comida_plan c ON c.plan_semanal_id = p.id
+                JOIN receta r ON r.id = c.receta_id
+                LEFT JOIN (SELECT hogar_id, COUNT(*) AS personas FROM persona GROUP BY hogar_id) pe
+                       ON pe.hogar_id = h.id
                 LEFT JOIN (%s) rc ON rc.receta_id = c.receta_id
                 WHERE p.semana_inicio BETWEEN :desde AND :lunes
                 GROUP BY p.id, h.presupuesto_monto, h.periodicidad_ingreso

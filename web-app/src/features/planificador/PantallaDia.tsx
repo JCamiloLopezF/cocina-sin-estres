@@ -216,7 +216,7 @@ function Comida({ semana, comida, dia, deLaSemana, ocupado, confirmando, alPregu
   const nombre = semana.nombres.get(comida.recetaId) ?? 'Receta'
   const detalle = [
     vista && `${vista.receta.tiempoMinutos} min`,
-    vista && `${vista.receta.porciones} porciones`,
+    vista && `${vista.porciones} ${vista.porciones === 1 ? 'porción' : 'porciones'}`,
     vista?.costo !== undefined && enPesos(vista.costo),
   ]
     .filter(Boolean)

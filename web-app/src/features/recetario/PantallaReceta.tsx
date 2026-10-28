@@ -7,7 +7,7 @@ import { mensajePlan } from '../planificador/mensajesPlan'
 import { diaDe } from '../planificador/semana'
 import { obtenerAdaptaciones, textoCambio, type Adaptacion } from './adaptaciones'
 import { obtenerReceta } from './apiRecetario'
-import { analizarReceta, cargarCocina, type Cocina } from './cocina'
+import { analizarReceta, cargarCocina, porcionesDelHogar, type Cocina } from './cocina'
 import type { RecetaDetalle } from './tipos'
 import './recetario.css'
 
@@ -65,7 +65,7 @@ export function PantallaReceta() {
   }
 
   const { receta, cocina, adaptacion } = estado
-  const elegidas = porciones ?? receta.porciones
+  const elegidas = porciones ?? porcionesDelHogar(receta, cocina)
   const vista = analizarReceta(receta, cocina, elegidas)
   const hoy = new URLSearchParams(parametros)
   hoy.set('dia', String(hoyDia))
