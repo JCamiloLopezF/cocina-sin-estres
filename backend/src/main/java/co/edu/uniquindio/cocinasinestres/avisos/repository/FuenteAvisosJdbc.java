@@ -69,18 +69,18 @@ public class FuenteAvisosJdbc implements FuenteAvisos {
     }
 
     @Override
-    public List<ProductoAviso> porVencer(Long hogarId, LocalDate hoy, LocalDate hasta) {
+    public List<ProductoAviso> porVencer(Long hogarId, LocalDate desde, LocalDate hasta) {
         return jdbc.sql("""
                 SELECT i.producto_id, p.nombre, i.vence_en
                 FROM item_despensa i
                 JOIN producto p ON p.id = i.producto_id
                 WHERE i.hogar_id = :hogar
                   AND i.cantidad > 0
-                  AND i.vence_en BETWEEN :hoy AND :hasta
+                  AND i.vence_en BETWEEN :desde AND :hasta
                 ORDER BY i.vence_en, p.nombre
                 """)
             .param("hogar", hogarId)
-            .param("hoy", hoy)
+            .param("desde", desde)
             .param("hasta", hasta)
             .query((rs, n) -> new ProductoAviso(
                 rs.getLong("producto_id"), rs.getString("nombre"), rs.getObject("vence_en", LocalDate.class)))

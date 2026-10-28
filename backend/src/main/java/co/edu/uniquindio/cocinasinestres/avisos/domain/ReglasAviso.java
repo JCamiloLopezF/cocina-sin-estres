@@ -30,6 +30,12 @@ public final class ReglasAviso {
     /** Un producto "por vencer" para el aviso: vence hoy o en los próximos 3 días (ADR-17). */
     public static final int DIAS_POR_VENCER = 3;
 
+    /**
+     * Lo que ya venció también avisa, hasta 7 días después: es lo más urgente de revisar.
+     * Pasada una semana se deja de insistir; sigue marcado en la despensa.
+     */
+    public static final int DIAS_VENCIDO = 7;
+
     /** Desde este día se revisa si la semana siguiente tiene plan (ADR-17). */
     public static final DayOfWeek DIA_REVISAR_SEMANA = DayOfWeek.FRIDAY;
 
@@ -69,30 +75,50 @@ public final class ReglasAviso {
             titulo, mensaje, "/despensa?filtro=BAJO_MINIMO", "Ver en la despensa"));
     }
 
-    /** Productos que vencen hoy o en los próximos {@value #DIAS_POR_VENCER} días. */
+    /**
+     * Productos que vencen hoy o en los próximos {@value #DIAS_POR_VENCER} días, y los que
+     * vencieron en los últimos {@value #DIAS_VENCIDO}. Lo vencido va primero y con su propio
+     * mensaje: no es "úsalo primero", es "revísalo antes de usarlo".
+     */
     public static Optional<Aviso> porVencer(Long hogarId, LocalDate hoy, List<ProductoAviso> productos) {
-        List<ProductoAviso> pronto = productos.stream()
+        List<ProductoAviso> enVentana = productos.stream()
             .filter(p -> p.nombre() != null && p.venceEn() != null)
-            .filter(p -> !p.venceEn().isBefore(hoy) && !p.venceEn().isAfter(hoy.plusDays(DIAS_POR_VENCER)))
+            .filter(p -> !p.venceEn().isBefore(hoy.minusDays(DIAS_VENCIDO))
+                && !p.venceEn().isAfter(hoy.plusDays(DIAS_POR_VENCER)))
             .sorted(Comparator.comparing(ProductoAviso::venceEn).thenComparing(ProductoAviso::nombre))
             .toList();
-        if (pronto.isEmpty()) {
+        if (enVentana.isEmpty()) {
             return Optional.empty();
         }
+        List<ProductoAviso> vencidos = enVentana.stream().filter(p -> p.venceEn().isBefore(hoy)).toList();
         String titulo;
         String mensaje;
-        if (pronto.size() == 1) {
-            ProductoAviso producto = pronto.get(0);
+        if (enVentana.size() == 1) {
+            ProductoAviso producto = enVentana.get(0);
             boolean plural = esPlural(producto.nombre());
-            titulo = mayuscula(minuscula(producto.nombre())) + (plural ? " vencen " : " vence ") + cuando(producto.venceEn(), hoy);
-            mensaje = (plural ? "Úsalos" : "Úsalo") + " primero en tus comidas para que no se pierda"
-                + (plural ? "n." : ".");
+            String nombre = mayuscula(minuscula(producto.nombre()));
+            if (vencidos.isEmpty()) {
+                titulo = nombre + (plural ? " vencen " : " vence ") + cuando(producto.venceEn(), hoy);
+                mensaje = (plural ? "Úsalos" : "Úsalo") + " primero en tus comidas para que no se pierda"
+                    + (plural ? "n." : ".");
+            } else {
+                titulo = nombre + (plural ? " vencieron " : " venció ") + hace(producto.venceEn(), hoy);
+                mensaje = (plural ? "Revísalos" : "Revísalo") + " antes de usarl" + (plural ? "os" : "o")
+                    + ": si huele" + (plural ? "n" : "") + " o se ve" + (plural ? "n" : "")
+                    + " distinto, mejor no " + (plural ? "los" : "lo") + " uses.";
+            }
         } else {
-            titulo = pronto.size() + " productos vencen pronto";
-            mensaje = mayuscula(enumerar(pronto.stream()
-                    .map(p -> minuscula(p.nombre()) + " (" + cuando(p.venceEn(), hoy) + ")")
+            titulo = vencidos.isEmpty()
+                ? enVentana.size() + " productos vencen pronto"
+                : enVentana.size() + " productos vencidos o por vencer";
+            mensaje = mayuscula(enumerar(enVentana.stream()
+                    .map(p -> minuscula(p.nombre()) + " (" + (p.venceEn().isBefore(hoy)
+                        ? (esPlural(p.nombre()) ? "vencieron " : "venció ") + hace(p.venceEn(), hoy)
+                        : cuando(p.venceEn(), hoy)) + ")")
                     .toList()))
-                + ". Úsalos primero en tus comidas para que no se pierdan.";
+                + (vencidos.isEmpty()
+                    ? ". Úsalos primero en tus comidas para que no se pierdan."
+                    : ". Revisa primero lo vencido y usa pronto lo demás.");
         }
         return Optional.of(new Aviso(TipoAviso.POR_VENCER, clave(TipoAviso.POR_VENCER, hogarId, hoy),
             titulo, mensaje, "/despensa?filtro=POR_VENCER", "Ver en la despensa"));
@@ -203,6 +229,12 @@ public final class ReglasAviso {
     }
 
     /** "hoy", "mañana" o "en 3 días". */
+    /** "ayer", "hace 3 días": para lo que ya venció. */
+    static String hace(LocalDate fecha, LocalDate hoy) {
+        long dias = ChronoUnit.DAYS.between(fecha, hoy);
+        return dias <= 1 ? "ayer" : "hace " + dias + " días";
+    }
+
     static String cuando(LocalDate fecha, LocalDate hoy) {
         long dias = ChronoUnit.DAYS.between(hoy, fecha);
         if (dias <= 0) {

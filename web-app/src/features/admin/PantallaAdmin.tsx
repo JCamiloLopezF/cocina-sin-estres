@@ -100,7 +100,11 @@ export function PantallaAdmin() {
       <NavAdmin />
       <EncabezadoPagina
         titulo="Cuentas"
-        detalle={`${contar('USUARIA')} usuarias · ${contar('CURADOR')} curadores · ${contar('ADMIN')} administradores`}
+        detalle={[
+          cantidad(contar('USUARIA'), 'usuaria', 'usuarias'),
+          cantidad(contar('CURADOR'), 'curador', 'curadores'),
+          cantidad(contar('ADMIN'), 'administrador', 'administradores'),
+        ].join(' · ')}
         detalleAbajo
       />
       {aviso && <Alerta tono={aviso.tono}>{aviso.texto}</Alerta>}
@@ -179,4 +183,9 @@ export function PantallaAdmin() {
       </p>
     </>
   )
+}
+
+/** "1 curador", "3 curadores". */
+function cantidad(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`
 }

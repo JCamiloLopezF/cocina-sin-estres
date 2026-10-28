@@ -6,7 +6,7 @@ package co.edu.uniquindio.cocinasinestres.avisos.domain;
 public enum TipoAviso {
 
     BAJO_MINIMO("Productos que se acaban", "Cuando un producto llega al mínimo que definiste."),
-    POR_VENCER("Productos por vencer", "Cuando algo vence en los próximos 3 días."),
+    POR_VENCER("Productos por vencer", "Cuando algo vence en los próximos 3 días o ya venció."),
     PREPARACION_PREVIA("Alistar desde la víspera", "Cuando una comida de mañana pide preparar algo antes, como remojar."),
     SEMANA_SIN_PLANIFICAR("Próxima semana", "Desde el viernes, si la semana siguiente no tiene plan. Te dejamos un borrador."),
     APROVECHAR_PRODUCTO("Aprovechar lo que tienes", "Una receta que usa lo que está por vencer, sin comprar nada.");

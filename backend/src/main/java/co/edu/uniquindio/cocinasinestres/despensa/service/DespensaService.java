@@ -182,13 +182,21 @@ public class DespensaService {
             .orElseThrow(() ->
                 new RecursoNoEncontradoException("No encontramos ese producto en el catálogo."));
 
+        // Sin fecha, se estima con la vida útil del producto: así lo perecedero de la carga
+        // rápida (pollo, leche) también avisa cuando está por vencer (KAN-27).
+        LocalDate venceEn = request.fechaVencimiento() != null
+            ? request.fechaVencimiento()
+            : catalogo.vidaUtilDias(producto.id())
+                .map(dias -> LocalDate.now(reloj).plusDays(dias))
+                .orElse(null);
+
         DatosItemDespensa datos = ValidadorItemDespensa.validar(
             producto,
             request.cantidad(),
             request.nivel(),
             request.cantidadMinima(),
             request.nivelMinimo(),
-            request.fechaVencimiento(),
+            venceEn,
             request.ubicacion()
         );
 

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -17,6 +18,7 @@ import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
@@ -71,6 +73,21 @@ public class ManejadorErrores {
                                                HttpServletRequest peticion) {
         return construir(HttpStatus.BAD_REQUEST, "Petición mal formada",
                 CodigoError.PETICION_MAL_FORMADA, "No pudimos leer los datos enviados.", peticion);
+    }
+
+    /**
+     * Falta un parámetro obligatorio, o uno trae un valor que no se puede convertir: un id
+     * que no es número ({@code /items-despensa/abc}), un número demasiado grande, una fecha
+     * mal escrita ({@code semanaInicio=hola}).
+     *
+     * <p>Es un error de quien llama, no del servidor: sin esto caía en el manejador de lo
+     * inesperado y respondía 500, con su traza en el log.</p>
+     */
+    @ExceptionHandler({TypeMismatchException.class, ServletRequestBindingException.class})
+    public ProblemDetail manejarParametroInvalido(Exception excepcion, HttpServletRequest peticion) {
+        return construir(HttpStatus.BAD_REQUEST, "Petición mal formada",
+                CodigoError.PETICION_MAL_FORMADA, "Revisa los datos de la dirección: falta uno o no es válido.",
+                peticion);
     }
 
     /**

@@ -21,6 +21,8 @@ interface Props {
   /** En edición se puede marcar "Agotado"; al agregar no tiene sentido. */
   permitirAgotado?: boolean
   textoEnviar: string
+  /** Texto de ayuda bajo la fecha de vencimiento. */
+  ayudaVence?: string
   alEnviar: (datos: DatosItem) => Promise<void>
   alCancelar: () => void
 }
@@ -39,7 +41,7 @@ interface Errores {
  * granel se registra por nivel. Lo valida aquí para dar el error al lado del campo; el
  * backend lo vuelve a validar.
  */
-export function FormularioItem({ producto, inicial, permitirAgotado = false, textoEnviar, alEnviar, alCancelar }: Props) {
+export function FormularioItem({ producto, inicial, permitirAgotado = false, textoEnviar, ayudaVence, alEnviar, alCancelar }: Props) {
   const esGranel = producto.tipoCantidad === 'GRANEL'
   const formulario = useRef<HTMLFormElement>(null)
   const [cantidad, setCantidad] = useState(inicial?.cantidad?.toString() ?? (esGranel ? '' : '1'))
@@ -114,6 +116,7 @@ export function FormularioItem({ producto, inicial, permitirAgotado = false, tex
   const campoFecha = (
     <CampoTexto
       etiqueta="Fecha de vencimiento (opcional)"
+      ayuda={ayudaVence}
       type="date"
       name="vence"
       value={vence}
