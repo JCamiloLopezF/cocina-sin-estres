@@ -30,6 +30,12 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "usuario")
 public class Usuario {
 
+    /**
+     * Cuenta técnica que crea la migración V2 para firmar la carga inicial del catálogo
+     * (ADR-23). Nadie entra con ella: no se lista, no se administra y no cuenta como usuaria.
+     */
+    public static final String UID_SISTEMA = "sistema-carga-inicial";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

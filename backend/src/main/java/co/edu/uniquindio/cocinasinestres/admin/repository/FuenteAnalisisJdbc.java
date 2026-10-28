@@ -47,6 +47,7 @@ public class FuenteAnalisisJdbc implements FuenteAnalisis {
                 SELECT COUNT(*), COALESCE(SUM(perfil_completo), 0)
                 FROM usuario
                 WHERE rol = 'USUARIA' AND activo = TRUE
+                  AND firebase_uid <> 'sistema-carga-inicial'
                 """)
             .query((rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)})
             .single();

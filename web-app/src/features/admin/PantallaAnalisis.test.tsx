@@ -74,6 +74,29 @@ describe('Análisis del administrador (KAN-54)', () => {
     expect(screen.getByRole('link', { name: 'Cuentas' })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('un indicador sin valor ni meta, como lo manda la API (sin los campos vacíos), no muestra NaN', async () => {
+    const comoLlega = {
+      ...ANALISIS,
+      indicadores: [
+        { proceso: P1, nombre: 'Éxito de autenticación', formula: 'F', meta: '> 95 %', muestra: 0, nota: 'Firebase.' },
+        { proceso: P3, nombre: 'Uso del modo rescate', formula: 'F', valor: 33.3, unidad: '%', muestra: 6, nota: 'Seguimiento.' },
+        { proceso: P3, nombre: 'Cumplimiento del presupuesto', formula: 'F', valor: 83.3, unidad: '%', meta: '> 85 %', cumple: false, muestra: 6, nota: 'N.' },
+      ],
+    }
+    backendFalso({
+      'GET /yo': () => respuestaJson({ id: 1, correo: 'admin@correo.com', rol: 'ADMIN', perfilCompleto: false }),
+      'GET /admin/analisis': () => respuestaJson(comoLlega),
+    })
+    montarApp(crearServicioFalso({ uid: 'a', correo: 'admin@correo.com', nombre: null }).servicio, '/admin/analisis')
+
+    expect(await screen.findByText('0 de 1 indicadores medidos alcanzan su meta.')).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('NaN')
+    const exito = screen.getByRole('listitem', { name: 'Éxito de autenticación' })
+    expect(within(exito).getByText('Fuera de la app')).toBeInTheDocument()
+    expect(exito).toHaveTextContent('—')
+    expect(within(screen.getByRole('listitem', { name: 'Uso del modo rescate' })).getByText('Seguimiento')).toBeInTheDocument()
+  })
+
   it('la tabla del informe trae una fila por indicador, sin los símbolos del estado', () => {
     const lineas = textoParaInforme(ANALISIS).split('\n')
     expect(lineas[0]).toBe('Indicadores de calidad · Cocina sin estrés · 26/09/2026 a 26/10/2026')
