@@ -138,6 +138,27 @@ class DespensaServiceTest {
     // ---------- Agregar ----------
 
     @Test
+    void sinFechaElVencimientoSeEstimaConLaVidaUtilDelProducto() {
+        guardarDevolviendoLoRecibido();
+        catalogo.vidaUtil.put(1L, 21);
+
+        servicio().agregar(new ItemDespensaRequest(1L, new BigDecimal("30"), null, null, null, null, null));
+
+        // 14 de octubre + 21 días
+        assertThat(capturarGuardado().getVenceEn()).isEqualTo(LocalDate.of(2026, 11, 4));
+    }
+
+    @Test
+    void laFechaQueEscribeLaUsuariaGanaALaVidaUtil() {
+        guardarDevolviendoLoRecibido();
+        catalogo.vidaUtil.put(1L, 21);
+
+        servicio().agregar(new ItemDespensaRequest(1L, new BigDecimal("30"), null, null, null, LocalDate.of(2026, 10, 20), null));
+
+        assertThat(capturarGuardado().getVenceEn()).isEqualTo(LocalDate.of(2026, 10, 20));
+    }
+
+    @Test
     void agregaUnProductoContableConSuCantidadVencimientoYMinimo() {
         guardarDevolviendoLoRecibido();
 
@@ -542,6 +563,13 @@ class DespensaServiceTest {
         @Override
         public Optional<ProductoCatalogo> buscarDisponible(Long productoId, Long hogarId) {
             return Optional.ofNullable(productos.get(productoId));
+        }
+
+        final Map<Long, Integer> vidaUtil = new HashMap<>();
+
+        @Override
+        public Optional<Integer> vidaUtilDias(Long productoId) {
+            return Optional.ofNullable(vidaUtil.get(productoId));
         }
 
         @Override

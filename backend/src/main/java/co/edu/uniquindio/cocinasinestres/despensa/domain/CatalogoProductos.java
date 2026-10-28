@@ -49,4 +49,13 @@ public interface CatalogoProductos {
      */
     ProductoCatalogo registrarAdicional(Long hogarId, String nombre, String categoria,
         TipoCantidad tipoCantidad, UnidadBase unidadBase, BigDecimal capacidadReferencia);
+
+    /**
+     * Cuántos días dura el producto desde que se compra, según el curador (V9).
+     *
+     * @return vacío si el producto no tiene vida útil registrada
+     */
+    default Optional<Integer> vidaUtilDias(Long productoId) {
+        return Optional.empty();
+    }
 }

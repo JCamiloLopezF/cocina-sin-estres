@@ -66,12 +66,34 @@ class ReglasAvisoTest {
     class PorVencer {
 
         @Test
-        @DisplayName("solo cuenta lo que vence entre hoy y dentro de 3 días")
+        @DisplayName("solo cuenta lo vencido hace hasta 7 días y lo que vence en los próximos 3")
         void ventana() {
             List<ProductoAviso> productos = List.of(
-                vence("Queso", VIERNES.minusDays(1)),
+                vence("Queso", VIERNES.minusDays(8)),
                 vence("Yogur", VIERNES.plusDays(4)));
             assertThat(ReglasAviso.porVencer(HOGAR, VIERNES, productos)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("lo que ya venció avisa: revísalo antes de usarlo")
+        void vencido() {
+            Aviso huevos = ReglasAviso.porVencer(HOGAR, VIERNES, List.of(vence("Huevos", VIERNES.minusDays(1)))).orElseThrow();
+            assertThat(huevos.titulo()).isEqualTo("Huevos vencieron ayer");
+            assertThat(huevos.mensaje()).isEqualTo("Revísalos antes de usarlos: si huelen o se ven distinto, mejor no los uses.");
+
+            Aviso queso = ReglasAviso.porVencer(HOGAR, VIERNES, List.of(vence("Queso", VIERNES.minusDays(3)))).orElseThrow();
+            assertThat(queso.titulo()).isEqualTo("Queso venció hace 3 días");
+            assertThat(queso.mensaje()).isEqualTo("Revísalo antes de usarlo: si huele o se ve distinto, mejor no lo uses.");
+        }
+
+        @Test
+        @DisplayName("vencidos y por vencer juntos: primero lo vencido")
+        void vencidosYPorVencer() {
+            Aviso aviso = ReglasAviso.porVencer(HOGAR, VIERNES, List.of(
+                vence("Leche", VIERNES.plusDays(1)),
+                vence("Pollo", VIERNES.minusDays(2)))).orElseThrow();
+            assertThat(aviso.titulo()).isEqualTo("2 productos vencidos o por vencer");
+            assertThat(aviso.mensaje()).isEqualTo("Pollo (venció hace 2 días) y leche (mañana). Revisa primero lo vencido y usa pronto lo demás.");
         }
 
         @Test

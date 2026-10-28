@@ -52,6 +52,7 @@ export function PantallaAgregarProducto() {
         <FormularioItem
           producto={elegido}
           textoEnviar="Guardar"
+          ayudaVence="Si la dejas vacía, la calculamos con lo que suele durar el producto."
           alCancelar={() => setElegido(undefined)}
           alEnviar={async (datos) => {
             await agregarItem(elegido.id, datos)

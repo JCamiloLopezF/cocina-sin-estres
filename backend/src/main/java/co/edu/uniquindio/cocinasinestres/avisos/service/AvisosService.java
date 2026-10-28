@@ -93,7 +93,8 @@ public class AvisosService {
         }
         if (!apagados.contains(TipoAviso.POR_VENCER)) {
             ReglasAviso.porVencer(hogarId, hoy,
-                fuente.porVencer(hogarId, hoy, hoy.plusDays(ReglasAviso.DIAS_POR_VENCER))).ifPresent(avisos::add);
+                fuente.porVencer(hogarId, hoy.minusDays(ReglasAviso.DIAS_VENCIDO),
+                    hoy.plusDays(ReglasAviso.DIAS_POR_VENCER))).ifPresent(avisos::add);
         }
         if (!apagados.contains(TipoAviso.PREPARACION_PREVIA)) {
             ReglasAviso.preparacionPrevia(hogarId, hoy, fuente.preparacionesPara(hogarId, hoy.plusDays(1)))
