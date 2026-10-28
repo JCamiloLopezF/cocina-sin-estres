@@ -53,7 +53,7 @@ public final class GeneradorPlan {
     /** El día del pago y los que le siguen hasta este número cuentan como "recién pagó". */
     public static final int DIAS_DESPUES_DEL_PAGO = 1;
 
-    /** Comidas que llena "Armar mi semana": el desayuno es opcional (pantalla 27). */
+    /** Comidas que llena "Armar mi semana" si no se piden otras: el desayuno es opcional (pantalla 27). */
     public static final List<String> COMIDAS_A_LLENAR = List.of("ALMUERZO", "CENA");
 
     private static final double PESO_DESPENSA = 40;
@@ -218,8 +218,9 @@ public final class GeneradorPlan {
     }
 
     /**
-     * Recetas que pueden ir en el hueco: activas, plato fuerte, aptas para el hogar, que
-     * no estén ya en otra comida del mismo día y, en un día sin tiempo, rápidas.
+     * Recetas que pueden ir en el hueco: activas, plato fuerte de esa comida (V17: un
+     * almuerzo es un plato completo, no unos huevos), aptas para el hogar, que no estén ya
+     * en otra comida del mismo día y, en un día sin tiempo, rápidas.
      */
     private List<RecetaCandidata> permitidas(ContextoPlan contexto, Map<Hueco, Long> plan, Hueco hueco) {
         Set<Long> delMismoDia = new HashSet<>();
@@ -231,7 +232,7 @@ public final class GeneradorPlan {
 
         List<RecetaCandidata> todas = contexto.recetas().values().stream()
             .filter(RecetaCandidata::activa)
-            .filter(RecetaCandidata::platoFuerte)
+            .filter(r -> r.sirvePara(hueco.tipoComida()))
             .filter(r -> adaptador.adaptar(contexto, r).estado() != AdaptacionReceta.Estado.NO_APTA)
             .filter(r -> !delMismoDia.contains(r.id()))
             .sorted(Comparator.comparing(RecetaCandidata::id))

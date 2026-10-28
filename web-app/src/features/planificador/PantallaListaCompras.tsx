@@ -327,6 +327,9 @@ interface EditarCostoProps {
   cancelar: () => void
 }
 
+/** Tope de ListaComprasServiceImpl.COSTO_MAXIMO (DECIMAL(12,2)). */
+const COSTO_MAXIMO = 9_999_999_999
+
 /** Formulario para escribir lo que pagó en la tienda (KAN-26). */
 function EditarCosto({ item, nombre, ocupado, guardar, cancelar }: EditarCostoProps) {
   const [texto, setTexto] = useState(() => (item.costoReal != null ? String(Math.round(item.costoReal)) : ''))
@@ -334,9 +337,18 @@ function EditarCosto({ item, nombre, ocupado, guardar, cancelar }: EditarCostoPr
 
   function enviar(evento: FormEvent) {
     evento.preventDefault()
+    // leerPesos quita todo lo que no es dígito: «-5000» se guardaba como 5000 sin avisar.
+    if (texto.trim().startsWith('-')) {
+      setError('El precio no puede ser negativo.')
+      return
+    }
     const valor = leerPesos(texto)
     if (valor === undefined) {
       setError('Escribe cuánto pagaste, en pesos.')
+      return
+    }
+    if (valor > COSTO_MAXIMO) {
+      setError('Ese valor es demasiado alto. Revisa la cifra.')
       return
     }
     guardar(valor)

@@ -202,13 +202,14 @@
 }
 
 .vacio::before {
+  /* Un círculo lleno con la olla: el recuadro punteado parecía una imagen que no cargó (auditoría). */
   content: '';
-  width: 7rem;
-  height: 7rem;
+  width: 6.5rem;
+  height: 6.5rem;
   margin-bottom: var(--espacio-3);
-  border: var(--borde) dashed var(--color-punteado);
-  border-radius: var(--radio-tarjeta);
-  background: var(--color-beige) url('/olla.svg') center / 3.5rem no-repeat;
+  border: var(--borde) solid var(--color-primario-hondo);
+  border-radius: 50%;
+  background: var(--color-crema) url('/olla.svg') center / 3.25rem no-repeat;
 }
 
 .vacio__titulo {

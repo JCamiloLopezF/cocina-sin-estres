@@ -22,7 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Consulta el costo acumulado del plan semanal frente al presupuesto del hogar (ADR-14).
+ * Consulta el costo del plan semanal frente al presupuesto del hogar (ADR-14, RNF-02).
+ *
+ * <p>Da dos cifras: lo que falta comprar (el costo del plan según RNF-02, que se compara con
+ * el presupuesto) y el valor de todas las comidas día a día, aunque parte ya esté en la
+ * despensa.</p>
  *
  * <p>El costo por día sale de una sola consulta SQL sobre las comidas del plan y solo
  * cuenta los ingredientes obligatorios; no usa los repositorios de curaduría ni de
@@ -65,6 +69,7 @@ public class PlanificadorCostoService {
     private final JdbcTemplate jdbcTemplate;
     private final ComidaPlanRepository comidaPlanRepository;
     private final CostoPorAlergias costoPorAlergias;
+    private final ListaComprasService listaComprasService;
 
     public PlanificadorCostoService(
         PlanSemanalRepository planSemanalRepository,
@@ -72,13 +77,15 @@ public class PlanificadorCostoService {
         UsuarioActualService usuarioActualService,
         JdbcTemplate jdbcTemplate,
         ComidaPlanRepository comidaPlanRepository,
-        CostoPorAlergias costoPorAlergias) {
+        CostoPorAlergias costoPorAlergias,
+        ListaComprasService listaComprasService) {
         this.planSemanalRepository = planSemanalRepository;
         this.hogarRepository = hogarRepository;
         this.usuarioActualService = usuarioActualService;
         this.jdbcTemplate = jdbcTemplate;
         this.comidaPlanRepository = comidaPlanRepository;
         this.costoPorAlergias = costoPorAlergias;
+        this.listaComprasService = listaComprasService;
     }
 
     /**
@@ -141,8 +148,12 @@ public class PlanificadorCostoService {
             acumulado.add(acumuladoHastaAhora);
         }
 
-        boolean excede = acumuladoHastaAhora.compareTo(presupuestoSemanal) > 0;
+        // RNF-02: el costo del plan es lo que falta comprar; eso es lo que se compara con el presupuesto.
+        BigDecimal porComprar = listaComprasService.costoPorComprar(planId);
+        porComprar = (porComprar == null ? BigDecimal.ZERO : porComprar).setScale(2, RoundingMode.HALF_UP);
+        boolean excede = porComprar.compareTo(presupuestoSemanal) > 0;
 
-        return new PlanCostoResponse(acumulado, presupuestoSemanal, excede, costoAlergias.setScale(2, RoundingMode.HALF_UP));
+        return new PlanCostoResponse(
+            acumulado, presupuestoSemanal, excede, costoAlergias.setScale(2, RoundingMode.HALF_UP), porComprar);
     }
 }

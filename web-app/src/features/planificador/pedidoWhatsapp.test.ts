@@ -19,8 +19,11 @@ describe('Pedido a la tienda por WhatsApp (KAN-53)', () => {
     expect(cantidadParaPedir(400, producto('g', 'Bolsa', 1000))).toBe('1 bolsa de 1 kg')
     expect(cantidadParaPedir(600, producto('g', 'Paquete', 500))).toBe('2 paquetes de 500 g')
     expect(cantidadParaPedir(2, producto('unidad', 'Lata', 1))).toBe('2 latas')
-    // Los huevos vienen en cubeta de 30: se piden los que faltan.
-    expect(cantidadParaPedir(6, producto('unidad', 'Cubeta', 30))).toBe('6 unidades')
+    // Los huevos se piden por media docena, docena o cubeta, no de a uno.
+    expect(cantidadParaPedir(1, producto('unidad', 'Cubeta', 30))).toBe('media docena')
+    expect(cantidadParaPedir(8, producto('unidad', 'Cubeta', 30))).toBe('1 docena')
+    expect(cantidadParaPedir(20, producto('unidad', 'Cubeta', 30))).toBe('1 cubeta')
+    expect(cantidadParaPedir(40, producto('unidad', 'Cubeta', 30))).toBe('2 cubetas')
     expect(cantidadParaPedir(250, undefined)).toBe('250 unidades')
   })
 

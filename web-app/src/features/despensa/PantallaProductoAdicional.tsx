@@ -16,7 +16,20 @@ const MEDIDAS: Record<Medida, { tipoCantidad: TipoCantidad; unidadBase: UnidadBa
   MILILITROS: { tipoCantidad: 'GRANEL', unidadBase: 'ml' },
 }
 
-const CATEGORIAS = ['OTROS', 'GRANOS', 'PROTEINAS', 'LACTEOS', 'VERDURAS', 'FRUTAS', 'ACEITES', 'CONDIMENTOS']
+const CATEGORIAS = [
+  'OTROS',
+  'GRANOS',
+  'LEGUMBRES',
+  'TUBERCULOS',
+  'HARINAS',
+  'PROTEINAS',
+  'LACTEOS',
+  'VERDURAS',
+  'FRUTAS',
+  'ACEITES',
+  'CONDIMENTOS',
+  'BEBIDAS',
+]
 
 /**
  * Registrar un producto que no está en el catálogo (proceso 2, ADR-18). Solo lo ve este
@@ -86,8 +99,8 @@ export function PantallaProductoAdicional() {
           leyenda="¿Cómo lo mides?"
           opciones={[
             { valor: 'UNIDADES', texto: 'Por unidades' },
-            { valor: 'GRAMOS', texto: 'A granel (gramos)' },
-            { valor: 'MILILITROS', texto: 'A granel (líquido)' },
+            { valor: 'GRAMOS', texto: 'Por peso (arroz, harina…)' },
+            { valor: 'MILILITROS', texto: 'Líquido (aceite, leche…)' },
           ]}
           valor={medida}
           alCambiar={setMedida}

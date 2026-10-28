@@ -3,7 +3,8 @@ import { Link, useSearchParams } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina, EstadoVacio, GrupoOpciones } from '../../shared/componentes'
 import { enPesos } from '../despensa/formato'
 import { mensajePlan } from '../planificador/mensajesPlan'
-import { conSemana, esProxima, huecoDesde, NOMBRE_COMIDA, NOMBRE_DIA } from '../planificador/semana'
+import { COMIDAS, conSemana, esProxima, huecoDesde, NOMBRE_COMIDA, NOMBRE_DIA } from '../planificador/semana'
+import type { TipoComida } from '../planificador/tipos'
 import { listarRecetasConDetalle } from './apiRecetario'
 import { analizarReceta, cargarCocina, listaPersonas, type RecetaVista } from './cocina'
 import './recetario.css'
@@ -35,6 +36,8 @@ const SIN_FILTROS: Filtros = { tiempo: 'SIN_LIMITE', ingredientes: MAX_INGREDIEN
 
 type Estado = { tipo: 'cargando' } | { tipo: 'listo'; recetas: RecetaVista[] } | { tipo: 'error'; error: unknown }
 
+type Momento = TipoComida | 'TODAS'
+
 /** Pantallas 21 y 22: el recetario con búsqueda, atajos y filtros. */
 export function PantallaRecetario() {
   const [parametros] = useSearchParams()
@@ -47,6 +50,8 @@ export function PantallaRecetario() {
     const valor = parametros.get('atajo')
     return ATAJOS.some((a) => a.valor === valor) ? (valor as Atajo) : 'TODAS'
   })
+  // Desde un hueco del plan solo se ofrecen platos de esa comida: un almuerzo es un plato completo (V17).
+  const [momento, setMomento] = useState<Momento>(() => hueco?.comida ?? 'TODAS')
   const [abiertos, setAbiertos] = useState(false)
   // Por defecto se ocultan las recetas con alergias de alguien del hogar (ajuste del prototipo 2).
   const [aplicarAlergias, setAplicarAlergias] = useState(true)
@@ -69,8 +74,11 @@ export function PantallaRecetario() {
   }, [version])
 
   const candidatas = useMemo(
-    () => (estado.tipo === 'listo' ? estado.recetas.filter((v) => cumple(v, buscar, atajo, filtros)) : []),
-    [estado, buscar, atajo, filtros],
+    () =>
+      estado.tipo === 'listo'
+        ? estado.recetas.filter((v) => cumple(v, buscar, atajo, filtros) && esDelMomento(v, momento, hueco !== undefined))
+        : [],
+    [estado, buscar, atajo, filtros, momento, hueco],
   )
   const visibles = aplicarAlergias ? candidatas.filter((v) => v.noAptaPara.length === 0) : candidatas
   const ocultasPorAlergia = candidatas.length - visibles.length
@@ -198,6 +206,20 @@ export function PantallaRecetario() {
             </section>
           )}
 
+          <div className="filtros" role="group" aria-label="Comida">
+            {(['TODAS', ...COMIDAS] as Momento[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                className="filtros__boton"
+                aria-pressed={momento === m}
+                onClick={() => setMomento(m)}
+              >
+                {m === 'TODAS' ? 'Cualquier comida' : NOMBRE_COMIDA[m]}
+              </button>
+            ))}
+          </div>
+
           <div className="filtros" role="group" aria-label="Mostrar">
             {ATAJOS.map((a) => (
               <button
@@ -250,6 +272,7 @@ export function TarjetaReceta({ vista, ruta }: { vista: RecetaVista; ruta: strin
         <span className="fila__nombre">{receta.nombre}</span>
         <span className="fila__detalle">
           {receta.tiempoMinutos} min · {receta.ingredientes.length} ingredientes
+          {momentos(vista) && ` · ${momentos(vista)}`}
         </span>
         {vista.costoPorcion !== undefined && (
           <span className="fila__detalle">{enPesos(vista.costoPorcion)} / porción</span>
@@ -263,6 +286,12 @@ export function TarjetaReceta({ vista, ruta }: { vista: RecetaVista; ruta: strin
             </span>
           )}
           {receta.preparacionPrevia && <span className="pildora">preparación previa</span>}
+          {vista.noAptaPara.length === 0 &&
+            vista.cumple.map((texto) => (
+              <span key={texto} className="pildora pildora--cumple">
+                {texto.toLowerCase()}
+              </span>
+            ))}
           {vista.noAptaPara.length > 0 && (
             <span className="pildora pildora--alerta">no apta para {listaPersonas(vista.noAptaPara)}</span>
           )}
@@ -276,6 +305,27 @@ export function TarjetaReceta({ vista, ruta }: { vista: RecetaVista; ruta: strin
       </span>
     </Link>
   )
+}
+
+/** "almuerzo y cena", "desayuno" o "acompañamiento" (jugos, ensaladas). */
+function momentos(vista: RecetaVista): string {
+  const { receta } = vista
+  if (receta.platoFuerte === false) return 'acompañamiento'
+  const nombres = (receta.momentos ?? []).map((m) => NOMBRE_COMIDA[m].toLowerCase())
+  if (nombres.length === 0) return ''
+  return nombres.length === 1 ? nombres[0] : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`
+}
+
+/**
+ * La receta va en esa comida. Para llenar un hueco del plan además tiene que ser plato
+ * fuerte: un jugo o una ensalada acompañan, pero no son el almuerzo.
+ */
+function esDelMomento(vista: RecetaVista, momento: Momento, paraElPlan: boolean): boolean {
+  const { receta } = vista
+  if (momento === 'TODAS') return true
+  if (paraElPlan && receta.platoFuerte === false) return false
+  // Una API sin momentos (anterior a V17) no filtra.
+  return receta.momentos === undefined || receta.momentos.includes(momento)
 }
 
 function cumple(vista: RecetaVista, buscar: string, atajo: Atajo, filtros: Filtros): boolean {

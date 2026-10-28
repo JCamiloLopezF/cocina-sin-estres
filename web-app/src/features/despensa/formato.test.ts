@@ -47,8 +47,9 @@ describe('formato de la despensa', () => {
   })
 
   it('nombra las categorías del catálogo', () => {
-    expect(nombreCategoria('GRANOS')).toBe('Granos y básicos')
-    expect(nombreCategoria('BEBIDAS')).toBe('Bebidas')
+    expect(nombreCategoria('GRANOS')).toBe('Arroz, pasta y granos')
+    expect(nombreCategoria('BEBIDAS')).toBe('Café y chocolate')
+    expect(nombreCategoria('SNACKS')).toBe('Snacks')
   })
 })
 

@@ -97,61 +97,7 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             .stream()
             .filter(c -> !c.isPreparada())
             .toList();
-
-        Map<Long, BigDecimal> requeridos = new HashMap<>();
-        if (!pendientes.isEmpty()) {
-            // Ingredientes multiplicados por las veces que está la receta y por las personas
-            // del hogar (personas / porciones). Los opcionales no se compran (igual que en el
-            // costo del plan, KAN-24).
-            String sql = """
-                SELECT ir.producto_id AS producto_id,
-                       SUM(ir.cantidad * occ.cnt * occ.comensales / occ.porciones) AS cantidad_total
-                FROM ingrediente_receta ir
-                JOIN (
-                    SELECT cp.receta_id, COUNT(*) AS cnt,
-                           COALESCE(NULLIF(MAX(pe.personas), 0), MAX(r.porciones)) AS comensales,
-                           MAX(r.porciones) AS porciones
-                    FROM comida_plan cp
-                    JOIN plan_semanal pl ON pl.id = cp.plan_semanal_id
-                    JOIN receta r ON r.id = cp.receta_id
-                    LEFT JOIN (SELECT hogar_id, COUNT(*) AS personas FROM persona GROUP BY hogar_id) pe
-                           ON pe.hogar_id = pl.hogar_id
-                    WHERE cp.plan_semanal_id = ? AND cp.preparada = FALSE
-                    GROUP BY cp.receta_id
-                ) occ ON ir.receta_id = occ.receta_id
-                WHERE ir.opcional = FALSE
-                GROUP BY ir.producto_id
-                """;
-            for (Map<String, Object> row : jdbcTemplate.queryForList(sql, planSemanalId)) {
-                Number prodIdNum = (Number) row.get("producto_id");
-                Number cantNum = (Number) row.get("cantidad_total");
-                if (prodIdNum != null && cantNum != null) {
-                    requeridos.put(prodIdNum.longValue(), new BigDecimal(cantNum.toString()));
-                }
-            }
-        }
-
-        // La porción de reemplazo o el plato aparte de quien tiene alergia (ADR-24).
-        Set<Long> soloPorAlergia = new HashSet<>();
-        comprasPorAlergias.extras(plan.getHogar(), pendientes).forEach((productoId, cantidad) -> {
-            if (!requeridos.containsKey(productoId)) {
-                soloPorAlergia.add(productoId);
-            }
-            requeridos.merge(productoId, cantidad, BigDecimal::add);
-        });
-
-        // Cruce con la despensa: lo que el hogar ya tiene (y no está vencido) no se
-        // compra. La regla de vencimiento la aplica el puerto StockEnDespensa.
-        Map<Long, BigDecimal> stock = stockEnDespensa.disponibles(hogarId, LocalDate.now(reloj));
-
-        Map<Long, Faltante> faltantes = new LinkedHashMap<>();
-        requeridos.forEach((productoId, requerido) -> {
-            BigDecimal faltante = requerido.subtract(stock.getOrDefault(productoId, BigDecimal.ZERO));
-            if (faltante.compareTo(BigDecimal.ZERO) > 0) {
-                faltantes.put(productoId, new Faltante(
-                    faltante, soloPorAlergia.contains(productoId) ? MOTIVO_ALERGIA : MOTIVO_PLAN, 1));
-            }
-        });
+        Map<Long, Faltante> faltantes = faltantesDelPlan(plan, pendientes);
         // Lo que quedó por debajo de su mínimo se repone solo, con menos prioridad (ADR-24).
         stockEnDespensa.bajoMinimo(hogarId).forEach((productoId, falta) -> {
             if (!faltantes.containsKey(productoId) && falta != null && falta.compareTo(BigDecimal.ZERO) > 0) {
@@ -212,6 +158,83 @@ public class ListaComprasServiceImpl implements ListaComprasService {
             })
             .collect(Collectors.toList());
         itemListaComprasRepository.saveAll(items);
+    }
+
+    /**
+     * Lo que falta para cocinar las comidas pendientes: los ingredientes que no alcanzan con lo
+     * que hay en la despensa (sin vencer), más la porción de quien tiene alergia.
+     */
+    private Map<Long, Faltante> faltantesDelPlan(PlanSemanal plan, List<ComidaPlan> pendientes) {
+        Map<Long, BigDecimal> requeridos = new HashMap<>();
+        if (!pendientes.isEmpty()) {
+            // Ingredientes multiplicados por las veces que está la receta y por las personas
+            // del hogar (personas / porciones). Los opcionales no se compran (igual que en el
+            // costo del plan, KAN-24).
+            String sql = """
+                SELECT ir.producto_id AS producto_id,
+                       SUM(ir.cantidad * occ.cnt * occ.comensales / occ.porciones) AS cantidad_total
+                FROM ingrediente_receta ir
+                JOIN (
+                    SELECT cp.receta_id, COUNT(*) AS cnt,
+                           COALESCE(NULLIF(MAX(pe.personas), 0), MAX(r.porciones)) AS comensales,
+                           MAX(r.porciones) AS porciones
+                    FROM comida_plan cp
+                    JOIN plan_semanal pl ON pl.id = cp.plan_semanal_id
+                    JOIN receta r ON r.id = cp.receta_id
+                    LEFT JOIN (SELECT hogar_id, COUNT(*) AS personas FROM persona GROUP BY hogar_id) pe
+                           ON pe.hogar_id = pl.hogar_id
+                    WHERE cp.plan_semanal_id = ? AND cp.preparada = FALSE
+                    GROUP BY cp.receta_id
+                ) occ ON ir.receta_id = occ.receta_id
+                WHERE ir.opcional = FALSE
+                GROUP BY ir.producto_id
+                """;
+            for (Map<String, Object> row : jdbcTemplate.queryForList(sql, plan.getId())) {
+                Number prodIdNum = (Number) row.get("producto_id");
+                Number cantNum = (Number) row.get("cantidad_total");
+                if (prodIdNum != null && cantNum != null) {
+                    requeridos.put(prodIdNum.longValue(), new BigDecimal(cantNum.toString()));
+                }
+            }
+        }
+
+        // La porción de reemplazo o el plato aparte de quien tiene alergia (ADR-24).
+        Set<Long> soloPorAlergia = new HashSet<>();
+        comprasPorAlergias.extras(plan.getHogar(), pendientes).forEach((productoId, cantidad) -> {
+            if (!requeridos.containsKey(productoId)) {
+                soloPorAlergia.add(productoId);
+            }
+            requeridos.merge(productoId, cantidad, BigDecimal::add);
+        });
+
+        // Cruce con la despensa: lo que el hogar ya tiene (y no está vencido) no se
+        // compra. La regla de vencimiento la aplica el puerto StockEnDespensa.
+        Map<Long, BigDecimal> stock = stockEnDespensa.disponibles(plan.getHogar().getId(), LocalDate.now(reloj));
+
+        Map<Long, Faltante> faltantes = new LinkedHashMap<>();
+        requeridos.forEach((productoId, requerido) -> {
+            BigDecimal faltante = requerido.subtract(stock.getOrDefault(productoId, BigDecimal.ZERO));
+            if (faltante.compareTo(BigDecimal.ZERO) > 0) {
+                faltantes.put(productoId, new Faltante(
+                    faltante, soloPorAlergia.contains(productoId) ? MOTIVO_ALERGIA : MOTIVO_PLAN, 1));
+            }
+        });
+        return faltantes;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal costoPorComprar(Long planSemanalId) {
+        PlanSemanal plan = planSemanalRepository.findById(planSemanalId)
+            .orElseThrow(() -> new DatosInvalidosException(ERROR_RECURSO_NO_ENCONTRADO, "Plan no encontrado"));
+        List<ComidaPlan> pendientes = comidaPlanRepository.findByPlanSemanal_IdOrderByDiaAscTipoComidaAsc(planSemanalId)
+            .stream()
+            .filter(c -> !c.isPreparada())
+            .toList();
+        return faltantesDelPlan(plan, pendientes).entrySet().stream()
+            .map(e -> costoEstimado(e.getKey(), e.getValue().cantidad()))
+            .reduce(BigDecimal.ZERO, BigDecimal::add)
+            .setScale(2, RoundingMode.HALF_UP);
     }
 
     @Override

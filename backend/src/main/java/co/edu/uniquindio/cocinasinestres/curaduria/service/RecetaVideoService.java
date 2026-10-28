@@ -4,6 +4,7 @@ import co.edu.uniquindio.cocinasinestres.comun.error.DatosInvalidosException;
 import co.edu.uniquindio.cocinasinestres.comun.error.RecursoNoEncontradoException;
 import co.edu.uniquindio.cocinasinestres.curaduria.domain.AccionAuditoria;
 import co.edu.uniquindio.cocinasinestres.curaduria.domain.EntidadCatalogo;
+import co.edu.uniquindio.cocinasinestres.curaduria.domain.ReglaAlmuerzo;
 import co.edu.uniquindio.cocinasinestres.curaduria.domain.VideoYoutube;
 import co.edu.uniquindio.cocinasinestres.curaduria.dto.EtiquetasRecetaRequest;
 import co.edu.uniquindio.cocinasinestres.curaduria.dto.RecetaVideoRequest;
@@ -122,6 +123,10 @@ public class RecetaVideoService {
         if (platoFuerte == antes.platoFuerte() && ninos == antes.gustaANinos()) {
             return antes;
         }
+        // Si es de almuerzo, volverla plato fuerte la pone en el almuerzo: tiene que ser un plato completo (V17).
+        if (platoFuerte && !antes.platoFuerte() && esAlmuerzoIncompleto(recetaId)) {
+            throw new DatosInvalidosException("RECETA_ALMUERZO_INCOMPLETO", ReglaAlmuerzo.MENSAJE);
+        }
         Long curador = usuarioActualService.obtener().id();
         jdbc.sql("""
                 UPDATE receta
@@ -143,6 +148,27 @@ public class RecetaVideoService {
         auditoriaRepository.save(new AuditoriaCatalogo(
             EntidadCatalogo.RECETA, recetaId, AccionAuditoria.EDITAR, curador, cambios));
         return buscar(recetaId);
+    }
+
+    private boolean esAlmuerzoIncompleto(Long recetaId) {
+        boolean almuerzo = jdbc.sql("SELECT para_almuerzo FROM receta WHERE id = :id")
+            .param("id", recetaId)
+            .query(Boolean.class)
+            .optional()
+            .orElse(false);
+        if (!almuerzo) {
+            return false;
+        }
+        List<String> categorias = jdbc.sql("""
+                SELECT p.categoria
+                FROM ingrediente_receta ir
+                JOIN producto p ON p.id = ir.producto_id
+                WHERE ir.receta_id = :id AND ir.opcional = FALSE
+                """)
+            .param("id", recetaId)
+            .query(String.class)
+            .list();
+        return !ReglaAlmuerzo.esCompleto(categorias);
     }
 
     private RecetaVideoResponse buscar(Long recetaId) {

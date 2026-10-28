@@ -39,7 +39,19 @@ En la sustentación el profesor observó que la aplicación era "muy CRUD": la u
   - La respuesta trae `diasDespuesDelPago` y la pantalla lo cuenta: "Dejamos las comidas más costosas para el viernes y el sábado, cuando recién te pagan".
 - **Empates.** Gana la receta más barata y luego la de menor id. Con los mismos datos el plan sale igual, lo que hace las pruebas repetibles.
 - **Costo.** Se calcula con la fórmula del costo del plan (`cantidad / cantidadUnidadCompra × precio`, solo ingredientes obligatorios). Así el resultado coincide con la barra de presupuesto.
-- **Plato fuerte.** Solo las recetas con `receta.es_plato_fuerte` (V7) van al almuerzo o la cena. Un batido o una ensalada de frutas no son una comida. El curador cambia esta marca y la de `gusta_a_ninos` en **Recetas** (`PUT /api/curaduria/recetas/{id}/etiquetas`, KAN-17), sin tocar código ni migraciones.
+- **Plato fuerte y momento del día** (V7 y V17). Cada hueco solo recibe recetas con `receta.es_plato_fuerte` y marcadas para esa comida (`para_desayuno`, `para_almuerzo`, `para_cena`). Un jugo o una ensalada acompañan, pero no son una comida; unos huevos pericos son desayuno o cena, no almuerzo. «Elegir otra» en el plan usa el mismo filtro. Ver "Qué es un almuerzo".
+- **Recetas desde la aplicación** (RNF-28). El curador crea y edita recetas completas en **Curaduría › Recetas** (`/api/curaduria/recetas`): nombre, descripción, tiempo, porciones, comidas en que va, ingredientes con cantidades, pasos, video y etiquetas, sin tocar código ni migraciones. `ValidadorReceta` revisa lo mismo que la migración: un tiempo por paso (Modo cocinar), ingredientes del catálogo sin repetir y la regla del almuerzo.
+
+### Qué es un almuerzo
+
+En la revisión del 28 de octubre Juan señaló que el plan proponía almorzar solo huevos pericos. En una casa colombiana el almuerzo es la comida fuerte del día, así que se definió:
+
+- **Almuerzo:** plato completo con una **proteína** (carne, pollo, cerdo, pescado, huevo o legumbres) y algo que **llene** (arroz, pasta, papa, yuca, plátano, arepa o pan). Se revisa con la categoría de los ingredientes obligatorios (`ReglaAlmuerzo`: `PROTEINAS` o `LEGUMBRES`, y `GRANOS`, `TUBERCULOS` o `HARINAS`). Los opcionales no cuentan porque no siempre se compran.
+- **Cena:** puede ser más liviana: una crema, una sopa, arepas rellenas o unos huevos.
+- **Desayuno:** huevos con arepa, calentado, changua, caldo, avena o chocolate con pan. El plan solo propone desayunos si la usuaria lo pide.
+- **Acompañamientos y jugos** (ensaladas, jugo de mora, aguapanela) no son plato fuerte: aparecen en el recetario, pero el plan no los pone solos.
+
+La regla se aplica en tres lugares: el curador no puede marcar para el almuerzo una receta que no la cumpla (400 con el mensaje de `ReglaAlmuerzo`), `ComposicionAlmuerzoIntegracionTest` la revisa sobre todo el catálogo después de las migraciones, y `docs/datos/recetario_colombiano.py` la valida antes de generar V18. Con V18 el catálogo tiene 76 recetas; como plato fuerte hay 37 almuerzos completos, 47 cenas y 16 desayunos, además de jugos y acompañamientos, con 44 ingredientes nuevos de una cocina colombiana (plátano, yuca, arepa, cebolla larga, cilantro, panela, carne molida, cerdo, frutas para jugo…).
 - **Edad de las personas.** El perfil ya pide la edad de cada persona (ADR-13). `ResumenHogarService` la usa para saber si hay niños, sin exponer quién es.
 - El generador lee el catálogo con su propio puerto (`CatalogoParaPlan`). El perfil le entrega las restricciones ya descifradas mediante `ResumenHogarService` (RNF-26, ADR-20).
 

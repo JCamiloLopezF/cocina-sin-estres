@@ -33,6 +33,7 @@ function backend(extra = {}) {
     'GET /yo': () => respuestaJson({ id: 2, correo: CURADORA.correo, rol: 'CURADOR', perfilCompleto: false }),
     'GET /curaduria/productos': () => respuestaJson([]),
     'GET /curaduria/recetas': () => respuestaJson([SOPA, ARROZ]),
+    'GET /curaduria/recetas/catalogo': () => respuestaJson([]),
     ...extra,
   })
 }
@@ -55,6 +56,7 @@ describe('Recetas del curador: video y etiquetas', () => {
     montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria')
 
     await usuario.click(await screen.findByRole('link', { name: 'Recetas' }))
+    await usuario.click(await screen.findByRole('link', { name: 'Videos y etiquetas' }))
     expect(await screen.findByText('1 de 2 recetas tienen video')).toBeInTheDocument()
     expect(screen.getByText('Sin video · máximo 05:00')).toBeInTheDocument()
     expect(screen.getByText('Video de 02:00 (desde 00:30)')).toBeInTheDocument()
@@ -66,7 +68,7 @@ describe('Recetas del curador: video y etiquetas', () => {
         respuestaJson({ ...SOPA, youtubeId: 'dQw4w9WgXcQ', ...(cuerpo as object) }),
     })
     const usuario = userEvent.setup()
-    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/recetas')
+    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/recetas/videos')
 
     await usuario.click(await screen.findByRole('button', { name: 'Agregar video de Sopa de lentejas' }))
     await usuario.type(screen.getByLabelText('Enlace de YouTube'), 'https://youtu.be/dQw4w9WgXcQ?t=60')
@@ -97,7 +99,7 @@ describe('Recetas del curador: video y etiquetas', () => {
       'DELETE /curaduria/recetas/11/video': () => respuestaJson({ ...ARROZ, youtubeId: null, inicioSeg: null, finSeg: null }),
     })
     const usuario = userEvent.setup()
-    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/recetas')
+    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/recetas/videos')
 
     await usuario.click(await screen.findByRole('button', { name: 'Cambiar video de Arroz con pollo' }))
     const enlace = screen.getByLabelText('Enlace de YouTube')
@@ -118,7 +120,7 @@ describe('Recetas del curador: video y etiquetas', () => {
       'PUT /curaduria/recetas/10/etiquetas': (cuerpo: unknown) => respuestaJson({ ...SOPA, ...(cuerpo as object) }),
     })
     const usuario = userEvent.setup()
-    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/recetas')
+    montarApp(crearServicioFalso(CURADORA).servicio, '/curaduria/recetas/videos')
 
     const sopa = within((await screen.findByText('Sopa de lentejas')).closest('li')!)
     expect(sopa.getByRole('checkbox', { name: 'Plato fuerte (almuerzo o cena)' })).toBeChecked()

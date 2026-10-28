@@ -95,6 +95,14 @@ public class MovimientosDespensaJdbc implements MovimientosDespensa {
     }
 
     @Override
+    public boolean recetaActiva(Long recetaId) {
+        return jdbc.sql("SELECT COUNT(*) FROM receta WHERE id = :id AND activa = TRUE")
+            .param("id", recetaId)
+            .query(Long.class)
+            .single() > 0;
+    }
+
+    @Override
     public int descontarReceta(Long hogarId, Long recetaId) {
         return jdbc.sql(SQL_DESCONTAR_RECETA)
             .param("hogar", hogarId)

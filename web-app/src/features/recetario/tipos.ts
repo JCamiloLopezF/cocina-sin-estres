@@ -1,3 +1,5 @@
+import type { TipoComida } from '../planificador/tipos'
+
 /** Tipos de la API del recetario (backend: módulo recetario, `/api/recetas`). */
 
 /** `GET /api/recetas` (RecetaResponse): resumen sin pasos ni ingredientes. */
@@ -7,6 +9,11 @@ export interface Receta {
   descripcion?: string
   tiempoMinutos: number
   porciones: number
+  /** Comidas en que va (V17). Un almuerzo es un plato completo: proteína y algo que llene. */
+  momentos?: TipoComida[]
+  /** `false` para acompañamientos y bebidas: el plan nunca los pone solos. */
+  platoFuerte?: boolean
+  gustaANinos?: boolean
 }
 
 /** Un ingrediente de la receta. `cantidad` va en la unidad base del producto (g, ml o unidad). */

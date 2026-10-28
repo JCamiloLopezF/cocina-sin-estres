@@ -31,6 +31,7 @@ export function crearServicioAuthFirebase(configuracion: ConfiguracionFirebase):
     uid: usuario.uid,
     correo: usuario.email ?? '',
     nombre: usuario.displayName,
+    correoVerificado: usuario.emailVerified,
   })
 
   return {
@@ -55,6 +56,20 @@ export function crearServicioAuthFirebase(configuracion: ConfiguracionFirebase):
 
     async salir() {
       await signOut(auth)
+    },
+
+    async reenviarVerificacion() {
+      if (auth.currentUser) {
+        await traducir(() => sendEmailVerification(auth.currentUser as User))
+      }
+    },
+
+    async comprobarVerificacion() {
+      const usuario = auth.currentUser
+      if (!usuario) return
+      await traducir(() => usuario.reload())
+      // Un token nuevo dispara onIdTokenChanged con el correo ya verificado.
+      await traducir(() => usuario.getIdToken(true))
     },
 
     async credenciales(): Promise<Record<string, string>> {

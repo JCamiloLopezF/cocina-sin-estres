@@ -75,6 +75,22 @@ public class Receta {
     @Column(name = "video_fin_seg")
     private Integer videoFinSeg;
 
+    // Para qué comida sirve (V7 y V17). Los edita el curador desde su módulo; aquí solo se leen.
+    @Column(name = "es_plato_fuerte", nullable = false)
+    private boolean platoFuerte = true;
+
+    @Column(name = "gusta_a_ninos", nullable = false)
+    private boolean gustaANinos;
+
+    @Column(name = "para_desayuno", nullable = false)
+    private boolean paraDesayuno;
+
+    @Column(name = "para_almuerzo", nullable = false)
+    private boolean paraAlmuerzo;
+
+    @Column(name = "para_cena", nullable = false)
+    private boolean paraCena;
+
     @Column(name = "modificado_por", nullable = false)
     private Long modificadoPor;
 
@@ -171,6 +187,30 @@ public class Receta {
 
     public boolean isActiva() {
         return activa;
+    }
+
+    /** Es una comida y no un acompañamiento (un jugo, una ensalada). */
+    public boolean isPlatoFuerte() {
+        return platoFuerte;
+    }
+
+    public boolean isGustaANinos() {
+        return gustaANinos;
+    }
+
+    /** Comidas en que va la receta, en el orden del día: DESAYUNO, ALMUERZO, CENA. */
+    public List<String> momentos() {
+        List<String> momentos = new ArrayList<>();
+        if (paraDesayuno) {
+            momentos.add("DESAYUNO");
+        }
+        if (paraAlmuerzo) {
+            momentos.add("ALMUERZO");
+        }
+        if (paraCena) {
+            momentos.add("CENA");
+        }
+        return momentos;
     }
 
     public Long getModificadoPor() {

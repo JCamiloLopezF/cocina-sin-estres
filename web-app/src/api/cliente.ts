@@ -49,6 +49,46 @@ export interface OpcionesPeticion {
   metodo?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   cuerpo?: unknown
   senal?: AbortSignal
+  /**
+   * Solo GET: guarda la última respuesta en este navegador y, si no hay conexión, la devuelve
+   * (RNF-17: el plan se puede ver sin señal). No se usa con datos de salud.
+   */
+  respaldo?: boolean
+}
+
+const PREFIJO_RESPALDO = 'cocina.respaldo:'
+
+function leerRespaldo(ruta: string): string | null {
+  try {
+    return localStorage.getItem(PREFIJO_RESPALDO + ruta)
+  } catch {
+    return null
+  }
+}
+
+function guardarRespaldo(ruta: string, texto: string): void {
+  try {
+    localStorage.setItem(PREFIJO_RESPALDO + ruta, texto)
+  } catch {
+    // Sin espacio o sin almacenamiento (modo privado): simplemente no queda respaldo.
+  }
+}
+
+/** La última respuesta guardada de una ruta con `respaldo`, si hay. */
+export function respaldoDe<T>(ruta: string): T | undefined {
+  const guardado = leerRespaldo(ruta)
+  return guardado === null ? undefined : (JSON.parse(guardado) as T)
+}
+
+/** Borra las respuestas guardadas para usar sin conexión; se llama al cerrar sesión. */
+export function limpiarRespaldos(): void {
+  try {
+    Object.keys(localStorage)
+      .filter((clave) => clave.startsWith(PREFIJO_RESPALDO))
+      .forEach((clave) => localStorage.removeItem(clave))
+  } catch {
+    // Sin almacenamiento: no hay nada que borrar.
+  }
 }
 
 /**
@@ -73,6 +113,10 @@ export async function pedir<T>(ruta: string, opciones: OpcionesPeticion = {}): P
     if (causa instanceof DOMException && causa.name === 'AbortError') {
       throw causa
     }
+    const guardado = opciones.respaldo ? leerRespaldo(ruta) : null
+    if (guardado !== null) {
+      return JSON.parse(guardado) as T
+    }
     throw new ErrorApi(0, SIN_CONEXION, 'No hubo respuesta del servidor.')
   }
 
@@ -81,6 +125,9 @@ export async function pedir<T>(ruta: string, opciones: OpcionesPeticion = {}): P
       return undefined as T
     }
     const texto = await respuesta.text()
+    if (opciones.respaldo && texto) {
+      guardarRespaldo(ruta, texto)
+    }
     return (texto ? JSON.parse(texto) : undefined) as T
   }
   throw await leerError(respuesta)

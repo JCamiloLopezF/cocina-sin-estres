@@ -24,10 +24,15 @@ describe('Cuentas y roles (rol ADMIN)', () => {
     expect(screen.queryByRole('button', { name: /admin@correo.com/ })).not.toBeInTheDocument()
 
     await usuario.selectOptions(screen.getByRole('combobox', { name: 'Rol de luisa@correo.com' }), 'CURADOR')
+    // Nada cambia hasta confirmar.
+    expect(screen.getByText(/deja de ver su despensa y su plan/)).toBeInTheDocument()
+    expect(llamadas.some((l) => l.metodo === 'PUT')).toBe(false)
+    await usuario.click(screen.getByRole('button', { name: 'Sí, cambiar el rol' }))
     expect(await screen.findByText('luisa@correo.com ahora es curador de contenido.')).toBeInTheDocument()
     expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toEqual({ rol: 'CURADOR' })
 
     await usuario.click(screen.getByRole('button', { name: 'Desactivar luisa@correo.com' }))
+    await usuario.click(screen.getByRole('button', { name: 'Sí, desactivar' }))
     expect(await screen.findByText(/Desactivamos luisa@correo.com/)).toBeInTheDocument()
     const fila = screen.getByText('luisa@correo.com').closest('li')!
     expect(within(fila).getByText('desactivada')).toBeInTheDocument()
@@ -44,6 +49,24 @@ describe('Cuentas y roles (rol ADMIN)', () => {
     const usuario = userEvent.setup()
 
     await usuario.click(await screen.findByRole('button', { name: 'Desactivar luisa@correo.com' }))
+    await usuario.click(screen.getByRole('button', { name: 'Sí, desactivar' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('No puedes cambiar tu propio rol')
+  })
+
+  it('pide confirmar antes de cambiar un rol y permite cancelar', async () => {
+    const { llamadas } = backendFalso({
+      'GET /yo': () => respuestaJson({ id: 1, correo: ADMIN.correo, rol: 'ADMIN', perfilCompleto: false }),
+      'GET /admin/cuentas': () => respuestaJson([ADMIN, LUISA]),
+    })
+    montarApp(crearServicioFalso({ uid: 'a', correo: ADMIN.correo, nombre: null }).servicio, '/admin')
+    const usuario = userEvent.setup()
+
+    const rol = await screen.findByRole('combobox', { name: 'Rol de luisa@correo.com' })
+    await usuario.selectOptions(rol, 'ADMIN')
+    expect(screen.getByText(/Podrá ver y cambiar todas las cuentas/)).toBeInTheDocument()
+    await usuario.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+    expect(rol).toHaveValue('USUARIA')
+    expect(llamadas.some((l) => l.metodo === 'PUT')).toBe(false)
   })
 })

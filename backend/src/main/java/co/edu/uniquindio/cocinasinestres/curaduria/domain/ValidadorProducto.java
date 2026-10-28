@@ -78,6 +78,15 @@ public final class ValidadorProducto {
             );
         }
 
+        // Solo las categorías de la app (V17): una inventada deja el producto fuera de los grupos.
+        if (CategoriaProducto.normalizar(categoria) == null) {
+            throw new DatosInvalidosException(
+                "PRODUCTO_CATEGORIA_INVALIDA",
+                "La categoría no es válida. Usa una de la lista: granos, legumbres, tubérculos, harinas, "
+                    + "proteínas, lácteos, verduras, frutas, aceites, condimentos, bebidas u otros."
+            );
+        }
+
         if (tipoCantidad == null) {
             throw new DatosInvalidosException(
                 "PRODUCTO_TIPO_CANTIDAD_REQUERIDO",
@@ -89,6 +98,14 @@ public final class ValidadorProducto {
             throw new DatosInvalidosException(
                 "PRODUCTO_UNIDAD_BASE_REQUERIDA",
                 "La unidad base es obligatoria."
+            );
+        }
+
+        // Lo que se cuenta va en unidades; lo que va a granel, en gramos o mililitros.
+        if ((tipoCantidad == TipoCantidad.CONTABLE) != (unidadBase == UnidadBase.unidad)) {
+            throw new DatosInvalidosException(
+                "PRODUCTO_UNIDAD_INVALIDA",
+                "Un producto contable se cuenta en unidades; uno a granel, en gramos o mililitros."
             );
         }
 

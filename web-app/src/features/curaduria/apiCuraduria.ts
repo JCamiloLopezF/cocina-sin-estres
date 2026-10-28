@@ -1,6 +1,7 @@
 import { ErrorApi, pedir } from '../../api/cliente'
 import { mensajeDeError } from '../../api/mensajesError'
 import type { TipoCantidad, UnidadBase } from '../despensa/tipos'
+import type { TipoComida } from '../planificador/tipos'
 
 /** `GET /api/curaduria/productos` (ProductoResponse): el catálogo global con precio de referencia. */
 export interface ProductoCurado {
@@ -22,7 +23,21 @@ export interface ProductoCurado {
 
 export type DatosProducto = Omit<ProductoCurado, 'id' | 'activo'>
 
-export const CATEGORIAS = ['GRANOS', 'PROTEINAS', 'LACTEOS', 'VERDURAS', 'FRUTAS', 'ACEITES', 'CONDIMENTOS']
+/** Las categorías que acepta el catálogo (V17). La base rechaza cualquier otra. */
+export const CATEGORIAS = [
+  'GRANOS',
+  'LEGUMBRES',
+  'TUBERCULOS',
+  'HARINAS',
+  'PROTEINAS',
+  'LACTEOS',
+  'VERDURAS',
+  'FRUTAS',
+  'ACEITES',
+  'CONDIMENTOS',
+  'BEBIDAS',
+  'OTROS',
+]
 
 export function listarProductos(senal?: AbortSignal) {
   return pedir<ProductoCurado[]>('/curaduria/productos', { senal })
@@ -99,6 +114,93 @@ export function cambiarEtiquetasReceta(recetaId: number, etiquetas: { platoFuert
 
 export function quitarVideoReceta(recetaId: number) {
   return pedir<RecetaConVideo>(`/curaduria/recetas/${recetaId}/video`, { metodo: 'DELETE' })
+}
+
+/** Un ingrediente de una receta del curador (RNF-28). `cantidad` va en la unidad base del producto. */
+export interface IngredienteCurado {
+  productoId: number
+  nombre: string
+  categoria: string
+  unidadBase: UnidadBase
+  cantidad: number
+  /** La receta se puede preparar sin él: no se compra ni se descuenta. */
+  opcional: boolean
+  /** Define el plato: si alguien es alérgico, no se reemplaza (le toca plato aparte). */
+  principal: boolean
+  /** El producto sigue en el catálogo. */
+  activo: boolean
+}
+
+/** `GET /api/curaduria/recetas/{id}`: la receta completa como la edita el curador. */
+export interface RecetaCurada {
+  id: number
+  nombre: string
+  descripcion?: string | null
+  tiempoMinutos: number
+  porciones: number
+  pasos: string[]
+  preparacionPrevia?: string | null
+  ingredientes: IngredienteCurado[]
+  momentos: TipoComida[]
+  platoFuerte: boolean
+  gustaANinos: boolean
+  activa: boolean
+  /** Costo de la receta con los precios de referencia, sin los opcionales. */
+  costo: number
+  tieneVideo: boolean
+}
+
+/** `GET /api/curaduria/recetas/catalogo`: una fila del listado, activas y desactivadas. */
+export interface RecetaCuradaResumen {
+  id: number
+  nombre: string
+  tiempoMinutos: number
+  porciones: number
+  momentos: TipoComida[]
+  platoFuerte: boolean
+  activa: boolean
+  ingredientes: number
+  costo: number
+  tieneVideo: boolean
+}
+
+/** Lo que se envía al crear o editar una receta. */
+export interface DatosReceta {
+  nombre: string
+  descripcion?: string
+  tiempoMinutos: number
+  porciones: number
+  pasos: string[]
+  preparacionPrevia?: string
+  ingredientes: { productoId: number; cantidad: number; opcional: boolean; principal: boolean }[]
+  momentos: TipoComida[]
+  platoFuerte: boolean
+  gustaANinos: boolean
+}
+
+export function listarRecetasCuradas(senal?: AbortSignal) {
+  return pedir<RecetaCuradaResumen[]>('/curaduria/recetas/catalogo', { senal })
+}
+
+export function obtenerRecetaCurada(id: number, senal?: AbortSignal) {
+  return pedir<RecetaCurada>(`/curaduria/recetas/${id}`, { senal })
+}
+
+export function crearReceta(datos: DatosReceta) {
+  return pedir<RecetaCurada>('/curaduria/recetas', { metodo: 'POST', cuerpo: datos })
+}
+
+export function actualizarReceta(id: number, datos: DatosReceta) {
+  return pedir<RecetaCurada>(`/curaduria/recetas/${id}`, { metodo: 'PUT', cuerpo: datos })
+}
+
+/** La receta deja de ofrecerse en el recetario y en el plan; los planes que ya la tienen la conservan. */
+export function desactivarReceta(id: number) {
+  return pedir<RecetaCurada>(`/curaduria/recetas/${id}`, { metodo: 'DELETE' })
+}
+
+export function reactivarReceta(id: number) {
+  return pedir<RecetaCurada>(`/curaduria/recetas/${id}/reactivar`, { metodo: 'POST' })
 }
 
 /**
