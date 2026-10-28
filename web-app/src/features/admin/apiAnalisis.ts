@@ -42,6 +42,26 @@ export interface Analisis {
   sinUsar: string[]
 }
 
-export function obtenerAnalisis(senal?: AbortSignal) {
-  return pedir<Analisis>('/admin/analisis', { senal })
+export async function obtenerAnalisis(senal?: AbortSignal): Promise<Analisis> {
+  const analisis = await pedir<Analisis>('/admin/analisis', { senal })
+  return { ...analisis, indicadores: analisis.indicadores.map(completarIndicador) }
+}
+
+/**
+ * La API no manda los campos vacíos (Jackson `non_null`): un indicador sin valor llega sin
+ * `valor`, sin `meta` o sin `cumple`. Se completan con `null`, que es lo que el resto de la
+ * pantalla espera; con `undefined` se mostraba «NaN» y «Sin datos».
+ */
+export function completarIndicador(indicador: Partial<Indicador> & Pick<Indicador, 'nombre'>): Indicador {
+  return {
+    proceso: indicador.proceso ?? '',
+    nombre: indicador.nombre,
+    formula: indicador.formula ?? '',
+    valor: indicador.valor ?? null,
+    unidad: indicador.unidad ?? null,
+    meta: indicador.meta ?? null,
+    cumple: indicador.cumple ?? null,
+    muestra: indicador.muestra ?? 0,
+    nota: indicador.nota ?? '',
+  }
 }
