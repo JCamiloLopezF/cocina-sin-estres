@@ -339,4 +339,54 @@ class GeneradorPlanTest {
         assertThat(recetas.get(plan.get(new Hueco(5, "ALMUERZO"))).tiempoMinutos())
             .isLessThanOrEqualTo(GeneradorPlan.MINUTOS_DIA_SIN_TIEMPO);
     }
+
+    @Test
+    @DisplayName("una receta sale como máximo dos veces en la semana, aunque sea la más barata")
+    void maximoDosVeces() {
+        Map<Long, RecetaCandidata> recetas = new HashMap<>();
+        recetas.put(1L, receta(1, 30, 1000, Map.of(ARROZ, 100), Set.of(), Set.of()));
+        for (long id = 2; id <= 7; id++) {
+            recetas.put(id, receta(id, 30, 9000, Map.of(ARROZ, 100), Set.of(), Set.of()));
+        }
+
+        Map<Hueco, Long> plan = generador.completar(contexto(recetas), semana());
+
+        assertThat(plan).hasSize(14);
+        Map<Long, Integer> veces = new HashMap<>();
+        plan.values().forEach(id -> veces.merge(id, 1, Integer::sum));
+        assertThat(veces.values()).allMatch(n -> (Integer) n <= GeneradorPlan.MAX_VECES_POR_SEMANA);
+    }
+
+    @Test
+    @DisplayName("reparte lo que hay en la despensa: prefiere la receta que usa productos que el plan aún no usa")
+    void repartirLaDespensa() {
+        Map<Long, RecetaCandidata> recetas = new HashMap<>();
+        recetas.put(1L, receta(1, 30, 5000, Map.of(ARROZ, 100), Set.of(), Set.of()));
+        recetas.put(2L, receta(2, 30, 5000, Map.of(ARROZ, 100), Set.of(), Set.of()));
+        recetas.put(3L, receta(3, 30, 5000, Map.of(LECHE, 100, POLLO, 100), Set.of(), Set.of()));
+        Map<Long, BigDecimal> despensa = Map.of(
+            ARROZ, BigDecimal.valueOf(1000), LECHE, BigDecimal.valueOf(1000), POLLO, BigDecimal.valueOf(1000));
+        ContextoPlan contexto = new ContextoPlan(
+            recetas, Set.of(), Set.of(), BigDecimal.valueOf(200_000), despensa, Set.of(), Map.of());
+
+        Map<Hueco, Long> plan = generador.completar(
+            contexto, List.of(new Hueco(1, "ALMUERZO"), new Hueco(1, "CENA")));
+
+        assertThat(plan.values()).contains(3L);
+    }
+
+    @Test
+    @DisplayName("una receta para el hogar: cantidades y costo según las personas")
+    void recetaParaElHogar() {
+        RecetaCandidata paraCuatro = receta(1, 30, 4000, Map.of(ARROZ, 400), Set.of(), Set.of());
+
+        RecetaCandidata paraUna = paraCuatro.escalada(Porciones.factor(1, 4));
+
+        assertThat(paraUna.costo()).isEqualByComparingTo("1000");
+        assertThat(paraUna.ingredientes().get(ARROZ)).isEqualByComparingTo("100");
+        assertThat(paraCuatro.escalada(Porciones.factor(4, 4))).isEqualTo(paraCuatro);
+        assertThat(Porciones.factor(0, 4)).isEqualByComparingTo("1");
+        assertThat(Porciones.factor(2, null)).isEqualByComparingTo("1");
+        assertThat(Porciones.factor(6, 4)).isEqualByComparingTo("1.5");
+    }
 }

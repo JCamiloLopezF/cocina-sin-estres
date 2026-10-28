@@ -1,6 +1,8 @@
 package co.edu.uniquindio.cocinasinestres.planificador.domain;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,5 +48,20 @@ public record RecetaCandidata(
         Long id, int tiempoMinutos, BigDecimal costo, Map<Long, BigDecimal> ingredientes,
         Set<String> alergias, Set<String> condiciones, boolean activa, boolean platoFuerte, boolean gustaANinos) {
         this(id, tiempoMinutos, costo, ingredientes, alergias, condiciones, activa, platoFuerte, gustaANinos, Set.of());
+    }
+
+    /**
+     * La misma receta para otro número de porciones: cantidades y costo multiplicados por
+     * {@code factor} (comensales del hogar / porciones de la receta). Con factor 1, la misma.
+     */
+    public RecetaCandidata escalada(BigDecimal factor) {
+        if (factor == null || factor.signum() <= 0 || factor.compareTo(BigDecimal.ONE) == 0) {
+            return this;
+        }
+        Map<Long, BigDecimal> cantidades = new HashMap<>();
+        ingredientes.forEach((producto, cantidad) ->
+            cantidades.put(producto, cantidad.multiply(factor).setScale(3, RoundingMode.HALF_UP)));
+        return new RecetaCandidata(id, tiempoMinutos, costo.multiply(factor).setScale(2, RoundingMode.HALF_UP),
+            cantidades, alergias, condiciones, activa, platoFuerte, gustaANinos, principales);
     }
 }

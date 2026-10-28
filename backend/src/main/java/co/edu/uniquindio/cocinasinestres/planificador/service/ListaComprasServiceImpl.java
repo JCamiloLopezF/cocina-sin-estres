@@ -100,17 +100,24 @@ public class ListaComprasServiceImpl implements ListaComprasService {
 
         Map<Long, BigDecimal> requeridos = new HashMap<>();
         if (!pendientes.isEmpty()) {
-            // Ingredientes multiplicados por las veces que está la receta. Los opcionales
-            // no se compran (igual que en el costo del plan, KAN-24).
+            // Ingredientes multiplicados por las veces que está la receta y por las personas
+            // del hogar (personas / porciones). Los opcionales no se compran (igual que en el
+            // costo del plan, KAN-24).
             String sql = """
                 SELECT ir.producto_id AS producto_id,
-                       SUM(ir.cantidad * occ.cnt) AS cantidad_total
+                       SUM(ir.cantidad * occ.cnt * occ.comensales / occ.porciones) AS cantidad_total
                 FROM ingrediente_receta ir
                 JOIN (
-                    SELECT receta_id, COUNT(*) AS cnt
-                    FROM comida_plan
-                    WHERE plan_semanal_id = ? AND preparada = FALSE
-                    GROUP BY receta_id
+                    SELECT cp.receta_id, COUNT(*) AS cnt,
+                           COALESCE(NULLIF(MAX(pe.personas), 0), MAX(r.porciones)) AS comensales,
+                           MAX(r.porciones) AS porciones
+                    FROM comida_plan cp
+                    JOIN plan_semanal pl ON pl.id = cp.plan_semanal_id
+                    JOIN receta r ON r.id = cp.receta_id
+                    LEFT JOIN (SELECT hogar_id, COUNT(*) AS personas FROM persona GROUP BY hogar_id) pe
+                           ON pe.hogar_id = pl.hogar_id
+                    WHERE cp.plan_semanal_id = ? AND cp.preparada = FALSE
+                    GROUP BY cp.receta_id
                 ) occ ON ir.receta_id = occ.receta_id
                 WHERE ir.opcional = FALSE
                 GROUP BY ir.producto_id

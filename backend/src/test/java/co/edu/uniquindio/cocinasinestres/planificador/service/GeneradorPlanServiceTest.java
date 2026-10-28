@@ -128,6 +128,22 @@ class GeneradorPlanServiceTest {
     }
 
     @Test
+    @DisplayName("a mitad de semana no planea los días que ya pasaron")
+    void sinDiasPasados() {
+        // Miércoles 21 de octubre: quedan miércoles a domingo.
+        Clock miercoles = Clock.fixed(Instant.parse("2026-10-21T15:00:00Z"), ZoneId.of("America/Bogota"));
+        GeneradorPlanService aMitadDeSemana = new GeneradorPlanService(
+            planSemanalRepository, comidaPlanRepository, hogarRepository, usuarioActualService,
+            new ContextoPlanFactory(resumenHogarService, catalogo, stockEnDespensa, miercoles),
+            catalogo, listaComprasService, registroUso, costoPorAlergias);
+
+        PlanGeneradoResponse respuesta = aMitadDeSemana.generar(7L, null);
+
+        assertThat(respuesta.cambios()).hasSize(10);
+        assertThat(respuesta.cambios()).allMatch(cambio -> cambio.dia() >= 3);
+    }
+
+    @Test
     @DisplayName("no toca un plan de otro hogar: responde como si no existiera")
     void planDeOtroHogar() {
         Hogar otro = mock(Hogar.class);

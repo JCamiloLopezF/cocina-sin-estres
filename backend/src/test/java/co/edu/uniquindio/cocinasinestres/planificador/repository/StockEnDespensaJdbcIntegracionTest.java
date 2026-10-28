@@ -224,6 +224,25 @@ class StockEnDespensaJdbcIntegracionTest {
     }
 
     @Test
+    @DisplayName("se descuenta lo que cocina el hogar: una persona gasta una porción de la receta")
+    void descontarParaLasPersonasDelHogar() {
+        Long receta = jdbcTemplate.queryForObject("SELECT id FROM receta WHERE nombre = 'Huevos pericos'", Long.class);
+        Integer porciones = jdbcTemplate.queryForObject("SELECT porciones FROM receta WHERE id = ?", Integer.class, receta);
+        Long huevos = jdbcTemplate.queryForObject(
+            "SELECT id FROM producto WHERE hogar_id IS NULL AND nombre = 'Huevos'", Long.class);
+        BigDecimal huevosReceta = jdbcTemplate.queryForObject(
+            "SELECT cantidad FROM ingrediente_receta WHERE receta_id = ? AND producto_id = ?",
+            BigDecimal.class, receta, huevos);
+        jdbcTemplate.update("INSERT INTO persona (hogar_id, nombre, edad) VALUES (?, 'Ana', 40)", hogarId);
+        jdbcTemplate.update("INSERT INTO item_despensa (hogar_id, producto_id, cantidad) VALUES (?, ?, 30)", hogarId, huevos);
+
+        movimientos.descontarReceta(hogarId, receta);
+
+        BigDecimal unaPorcion = huevosReceta.divide(BigDecimal.valueOf(porciones), 3, java.math.RoundingMode.HALF_UP);
+        assertThat(cantidadDe(huevos)).isEqualByComparingTo(new BigDecimal("30").subtract(unaPorcion));
+    }
+
+    @Test
     @DisplayName("lo que quedó por debajo del mínimo se reporta con lo que falta para llegar a él")
     void bajoMinimo() {
         Long arroz = agregarADespensa("Arroz", "200.000", null);
