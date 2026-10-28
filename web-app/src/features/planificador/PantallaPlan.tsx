@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Alerta, Boton, Cargando, EncabezadoPagina, EstadoVacio } from '../../shared/componentes'
 import { enPesos } from '../despensa/formato'
 import { ajustarPresupuesto, asignarComida, confirmarBorrador, crearPlan, generarPlan, obtenerPlan } from './apiPlanificador'
+import { seguirPlanificacion } from './medicionPlan'
 import { mensajePlan, planSinHogar } from './mensajesPlan'
 import { aIso, COMIDAS, conSemana, DIAS, diaDe, fechaDelDia, NOMBRE_COMIDA, NOMBRE_DIA, rangoSemana, tituloDia } from './semana'
 import type { Dia, PlanGenerado } from './tipos'
@@ -76,6 +77,11 @@ export function PantallaPlan() {
   // "Hoy" solo se marca en la semana actual.
   const [hoy] = useState(() => diaDe(new Date()))
   const titulo = proxima ? 'Próxima semana' : 'Mi semana'
+
+  // Tiempo de planificación semanal (KAN-54): desde que abre la semana sin completar.
+  useEffect(() => {
+    if (estado.tipo === 'listo') seguirPlanificacion(estado.semana.lunes, estado.semana.plan)
+  }, [estado])
 
   if (estado.tipo === 'cargando') {
     return (

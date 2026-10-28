@@ -15,4 +15,11 @@ public interface FuenteAnalisis {
      * @param desdeLunes  lunes de la primera semana que cuenta para los planes
      */
     DatosAnalisis leer(int dias, LocalDate lunes, LocalDate desdeLunes);
+
+    /**
+     * Inicios de sesión medidos por la web en los últimos {@code dias} (V16).
+     */
+    default DatosLogin login(int dias) {
+        return DatosLogin.SIN_DATOS;
+    }
 }
