@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { configurarCliente, pedir } from '../../api/cliente'
 import { Contexto, type Cuenta, type EstadoSesion } from './contextoSesion'
 import type { ServicioAuth, SesionAuth } from './servicioAuth'
+import { reportarInicioSesion } from './medicionLogin'
 
 interface Props {
   servicio: ServicioAuth
@@ -27,6 +28,8 @@ export function ProveedorSesion({ servicio, urlApi, children }: Props) {
   const cargarCuenta = useCallback(async (sesion: SesionAuth) => {
     try {
       const cuenta = await pedir<Cuenta>('/yo')
+      // Éxito y tiempo del inicio de sesión (KAN-54); solo si vino de «Entrar».
+      void reportarInicioSesion()
       if (sesionActual.current?.uid === sesion.uid) {
         setEstado({ tipo: 'con-sesion', sesion, cuenta })
       }

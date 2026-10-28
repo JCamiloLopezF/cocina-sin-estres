@@ -52,7 +52,8 @@ export function PantallaPrivacidad() {
             corriges y las tiendas que guardas para pedir por WhatsApp (nombre y celular de la tienda).
           </li>
           <li>
-            <strong>Cifras de uso:</strong> cuándo abres la app, qué recetas cocinas y si usas el modo rescate. Solo se
+            <strong>Cifras de uso:</strong> cuándo abres la app, qué recetas cocinas, si usas el modo rescate, cuánto
+            tarda tu inicio de sesión (y cuántos intentos fallaron antes) y cuánto tardas en armar la semana. Solo se
             usan sumadas, para medir la calidad de la aplicación; no guardan nada de lo que escribes ni de lo que dices.
           </li>
         </ul>

@@ -54,8 +54,22 @@ class IndicadoresCalidadTest {
         assertThat(i.get("Tiempo de evaluación del motor de reglas").valor()).isEqualTo(120.0);
         assertThat(i.get("Cobertura de reglas evaluadas").valor()).isEqualTo(95.0);
         assertThat(i.get("Cobertura de reglas evaluadas").cumple()).isFalse();
+        // Sin inicios de sesión medidos por la web: sin dato, no "cumple".
         assertThat(i.get("Éxito de autenticación").valor()).isNull();
-        assertThat(i.get("Éxito de autenticación").nota()).contains("Firebase");
+        assertThat(i.get("Éxito de autenticación").cumple()).isNull();
+    }
+
+    @Test
+    @DisplayName("el inicio de sesión se mide con lo que anota la web: éxito y milisegundos")
+    void inicioDeSesion() {
+        Map<String, Indicador> i = porNombre(IndicadoresCalidad.calcular(datos(List.of()), new DatosLogin(19, 1, 820.4)));
+
+        // 19 de 20 intentos: 95 % justo no supera la meta "> 95 %".
+        assertThat(i.get("Éxito de autenticación").valor()).isEqualTo(95.0);
+        assertThat(i.get("Éxito de autenticación").cumple()).isFalse();
+        assertThat(i.get("Éxito de autenticación").muestra()).isEqualTo(20);
+        assertThat(i.get("Tiempo de respuesta de login").valor()).isEqualTo(820.4);
+        assertThat(i.get("Tiempo de respuesta de login").cumple()).isTrue();
     }
 
     @Test

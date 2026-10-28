@@ -3,6 +3,7 @@ package co.edu.uniquindio.cocinasinestres.admin.repository;
 import co.edu.uniquindio.cocinasinestres.admin.domain.DatosAnalisis;
 import co.edu.uniquindio.cocinasinestres.admin.domain.DatosAnalisis.PlanConCosto;
 import co.edu.uniquindio.cocinasinestres.admin.domain.DatosAnalisis.RecetaUsada;
+import co.edu.uniquindio.cocinasinestres.admin.domain.DatosLogin;
 import co.edu.uniquindio.cocinasinestres.admin.domain.FuenteAnalisis;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -112,13 +113,15 @@ public class FuenteAnalisisJdbc implements FuenteAnalisis {
             .query((rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)})
             .single();
 
+        // Lo mide la web: desde que la usuaria abre la semana sin completar hasta que queda
+        // con almuerzo y cena los 7 días (V16). Contar desde que se creó el plan daba 0 min,
+        // porque «Armar mi semana» lo crea y lo completa en un segundo.
         Promedio armado = jdbc.sql("""
                 SELECT COUNT(*) AS n,
-                       AVG(TIMESTAMPDIFF(SECOND, creado_en, completado_en)) / 60 AS promedio
+                       AVG(segundos_planificacion) / 60 AS promedio
                 FROM plan_semanal
-                WHERE completado_en IS NOT NULL
-                  AND completado_en >= NOW(3) - INTERVAL :dias DAY
-                  AND TIMESTAMPDIFF(HOUR, creado_en, completado_en) < 24
+                WHERE segundos_planificacion IS NOT NULL
+                  AND creado_en >= NOW(3) - INTERVAL :dias DAY
                 """)
             .param("dias", dias)
             .query((rs, n) -> new Promedio(rs.getLong("n"), doble(rs, "promedio")))
@@ -245,6 +248,20 @@ public class FuenteAnalisisJdbc implements FuenteAnalisis {
             semanasRescate[0], semanasRescate[1],
             vencimiento[0], vencimiento[1],
             masPreparadas, masPlaneadas, sinUsar);
+    }
+
+    @Override
+    public DatosLogin login(int dias) {
+        return jdbc.sql("""
+                SELECT COUNT(*) AS exitosos,
+                       COALESCE(SUM(fallidos_previos), 0) AS fallidos,
+                       AVG(duracion_ms) AS ms
+                FROM inicio_sesion
+                WHERE creado_en >= NOW(3) - INTERVAL :dias DAY
+                """)
+            .param("dias", dias)
+            .query((rs, n) -> new DatosLogin(rs.getLong("exitosos"), rs.getLong("fallidos"), doble(rs, "ms")))
+            .single();
     }
 
     private long contar(String sql, int dias) {
