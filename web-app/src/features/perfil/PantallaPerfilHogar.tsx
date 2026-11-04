@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ErrorApi, pedir } from '../../api/cliente'
 import { mensajeDeError } from '../../api/mensajesError'
 import { Alerta, Boton, Cargando, CampoTexto, GrupoOpciones } from '../../shared/componentes'
 import { useSesion, useCuenta } from '../auth/contextoSesion'
 import { enfocarPrimerError } from '../auth/enfocarPrimerError'
-import { ALERGIAS, CONDICIONES } from './restricciones'
+import { listarIngredientes, type IngredienteDelRecetario } from '../recetario/apiRecetario'
+import { ALERGIAS, codigoIngrediente, CONDICIONES, ingredienteDe, nombreRestriccion, recordarIngredientes } from './restricciones'
 import './perfil.css'
 
 type Periodicidad = 'SEMANAL' | 'QUINCENAL' | 'MENSUAL'
@@ -86,9 +87,22 @@ export function PantallaPerfilHogar() {
   const [otras, setOtras] = useState('')
   const [verOtras, setVerOtras] = useState(false)
   const [consentimiento, setConsentimiento] = useState(false)
+  const [ingredientes, setIngredientes] = useState<IngredienteDelRecetario[]>([])
   const [erroresAlContinuar, setErrores] = useState<Errores>({})
   const [errorGeneral, setErrorGeneral] = useState<string>()
   const [enviando, setEnviando] = useState(false)
+
+  // Lo que usan las recetas, para marcar una alergia a un ingrediente que no está en la lista.
+  useEffect(() => {
+    const control = new AbortController()
+    listarIngredientes(control.signal)
+      .then((lista) => {
+        recordarIngredientes(lista)
+        setIngredientes(lista)
+      })
+      .catch(() => undefined)
+    return () => control.abort()
+  }, [])
 
   useEffect(() => {
     const control = new AbortController()
@@ -363,9 +377,26 @@ export function PantallaPerfilHogar() {
                       })
                     }
                   />
+                  <OtrosAlimentos
+                    persona={nombrePersona(persona, i)}
+                    disponibles={ingredientes}
+                    marcadas={persona.restricciones}
+                    agregar={(codigo) => cambiarPersona(i, { restricciones: [...persona.restricciones, codigo] })}
+                    quitar={(codigo) =>
+                      cambiarPersona(i, {
+                        restricciones: persona.restricciones.filter((r) => r !== codigo),
+                        alergiasGraves: persona.alergiasGraves.filter((g) => g !== codigo),
+                      })
+                    }
+                  />
                   <AlergiasGraves
                     persona={nombrePersona(persona, i)}
-                    alergias={ALERGIAS.filter((a) => persona.restricciones.includes(a.codigo))}
+                    alergias={[
+                      ...ALERGIAS.filter((a) => persona.restricciones.includes(a.codigo)),
+                      ...persona.restricciones
+                        .filter((codigo) => ingredienteDe(codigo) !== undefined)
+                        .map((codigo) => ({ codigo, texto: nombreRestriccion(codigo) })),
+                    ]}
                     graves={persona.alergiasGraves}
                     alternar={(codigo) => cambiarPersona(i, { alergiasGraves: alternar(persona.alergiasGraves, codigo) })}
                   />
@@ -385,7 +416,7 @@ export function PantallaPerfilHogar() {
               {verOtras && (
                 <CampoTexto
                   etiqueta="Otra alergia o condición"
-                  ayuda="Queda anotada en tu perfil, pero las recetas no se filtran por ella. Si está en la lista de arriba, márcala ahí."
+                  ayuda="Queda anotada en tu perfil, pero las recetas no se filtran por ella. Si es un alimento, búscalo en «Otro alimento» de cada persona para que el plan lo tenga en cuenta."
                   value={otras}
                   maxLength={200}
                   autoFocus
@@ -551,5 +582,95 @@ function Chips({ leyenda, opciones, marcadas, alternar, extra }: ChipsProps) {
         {extra}
       </ul>
     </fieldset>
+  )
+}
+
+interface OtrosAlimentosProps {
+  persona: string
+  disponibles: IngredienteDelRecetario[]
+  marcadas: string[]
+  agregar: (codigo: string) => void
+  quitar: (codigo: string) => void
+}
+
+/** Sin tildes ni mayúsculas, para buscar "pina" y encontrar "Piña". */
+function normalizar(texto: string): string {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+}
+
+/**
+ * Alergia o intolerancia a un alimento que no está en la lista corta (auditoría del 4 de
+ * noviembre: «si la alergia de alguien no está en la lista, el recetario no lo protege»).
+ * Se busca entre los ingredientes de las recetas; el plan y el recetario lo tratan como
+ * cualquier alergia: le cambian el ingrediente, le hacen otro plato o, si es grave, no
+ * proponen la receta.
+ */
+function OtrosAlimentos({ persona, disponibles, marcadas, agregar, quitar }: OtrosAlimentosProps) {
+  const id = useId()
+  const [buscar, setBuscar] = useState('')
+  const texto = normalizar(buscar)
+  const elegidos = marcadas.filter((codigo) => ingredienteDe(codigo) !== undefined)
+  const sugerencias =
+    texto.length >= 2
+      ? disponibles
+          .filter((p) => normalizar(p.nombre).includes(texto) && !marcadas.includes(codigoIngrediente(p.id)))
+          .slice(0, 6)
+      : []
+  const ti = persona === 'Tú'
+
+  return (
+    <div className="otros-alimentos">
+      <label className="campo__etiqueta" htmlFor={id}>
+        Otro alimento que {ti ? 'no puedes' : 'no puede'} comer
+      </label>
+      <p className="campo__ayuda" id={`${id}-ayuda`}>
+        Escribe al menos dos letras, por ejemplo «piña» o «tomate», y tócalo en la lista.
+      </p>
+      <input
+        id={id}
+        className="campo__control"
+        type="search"
+        autoComplete="off"
+        maxLength={40}
+        value={buscar}
+        aria-describedby={`${id}-ayuda`}
+        onChange={(e) => setBuscar(e.target.value)}
+      />
+      {sugerencias.length > 0 && (
+        <ul className="otros-alimentos__lista" aria-label={`Alimentos que coinciden con ${buscar.trim()}`}>
+          {sugerencias.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                className="chip-extra"
+                onClick={() => {
+                  agregar(codigoIngrediente(p.id))
+                  setBuscar('')
+                }}
+              >
+                + {p.nombre}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {texto.length >= 2 && sugerencias.length === 0 && (
+        <p className="campo__ayuda">
+          Ninguna receta lleva «{buscar.trim()}». Si quieres dejarlo anotado, usa «Otra alergia o condición».
+        </p>
+      )}
+      {elegidos.length > 0 && (
+        <ul className="otros-alimentos__lista" aria-label={`Alimentos que ${ti ? 'no comes' : `no come ${persona}`}`}>
+          {elegidos.map((codigo) => (
+            <li key={codigo} className="otros-alimentos__elegido">
+              <span>{nombreRestriccion(codigo)}</span>
+              <button type="button" className="otros-alimentos__quitar" aria-label={`Quitar ${nombreRestriccion(codigo)}`} onClick={() => quitar(codigo)}>
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

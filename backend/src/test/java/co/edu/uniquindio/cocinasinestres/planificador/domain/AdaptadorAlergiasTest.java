@@ -121,4 +121,50 @@ class AdaptadorAlergiasTest {
         assertThat(plan.values()).containsExactly(ATUN_CON_ARROZ, ARROZ_CON_HUEVO, PERICOS);
         assertThat(plan.values()).doesNotContain(REVUELTOS_CON_QUESO);
     }
+
+    // ---------- Alergia a un ingrediente que no está en la lista (auditoría del 4 de noviembre) ----------
+
+    @Test
+    @DisplayName("una alergia al queso, que no está en la lista, también se adapta: su porción va sin queso")
+    void alergiaAUnIngredienteSecundario() {
+        Comensal pedro = new Comensal("Pedro", Set.of(AlergiaIngrediente.codigo(QUESO)), Set.of());
+        ContextoPlan contexto = contexto(pedro);
+
+        AdaptacionReceta adaptacion = adaptador.adaptar(contexto, contexto.recetas().get(REVUELTOS_CON_QUESO));
+
+        assertThat(adaptacion.estado()).isEqualTo(Estado.ADAPTADA);
+        assertThat(adaptacion.cambios()).containsExactly(
+            new Cambio(TipoCambio.SIN, "Pedro", Set.of("producto:9"), QUESO, null, false, null));
+    }
+
+    @Test
+    @DisplayName("si el ingrediente que no come es el principal, le toca otro plato sin ese ingrediente")
+    void alergiaAlIngredientePrincipal() {
+        Comensal pedro = new Comensal("Pedro", Set.of(AlergiaIngrediente.codigo(ARROZ)), Set.of());
+        ContextoPlan contexto = contexto(pedro);
+
+        AdaptacionReceta adaptacion = adaptador.adaptar(contexto, contexto.recetas().get(ARROZ_CON_HUEVO));
+
+        assertThat(adaptacion.estado()).isEqualTo(Estado.PLATO_APARTE);
+        assertThat(adaptacion.cambios().get(0).recetaAparteId()).isEqualTo(PERICOS);
+    }
+
+    @Test
+    @DisplayName("si es grave, la receta con ese ingrediente no se cocina en la casa")
+    void alergiaGraveAUnIngrediente() {
+        String atun = AlergiaIngrediente.codigo(ATUN);
+        Comensal pedro = new Comensal("Pedro", Set.of(atun), Set.of(atun));
+        ContextoPlan contexto = contexto(pedro);
+
+        assertThat(adaptador.adaptar(contexto, contexto.recetas().get(ATUN_CON_ARROZ)).estado()).isEqualTo(Estado.NO_APTA);
+        assertThat(adaptador.adaptar(contexto, contexto.recetas().get(PERICOS)).estado()).isEqualTo(Estado.APTA);
+    }
+
+    @Test
+    @DisplayName("el código producto:<id> se lee de vuelta y otro código no es de ingrediente")
+    void codigoDeIngrediente() {
+        assertThat(AlergiaIngrediente.producto("producto:12")).contains(12L);
+        assertThat(AlergiaIngrediente.producto("huevo")).isEmpty();
+        assertThat(AlergiaIngrediente.producto("producto:abc")).isEmpty();
+    }
 }

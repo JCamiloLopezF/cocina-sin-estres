@@ -3,8 +3,11 @@
 | Carpeta | Contenido |
 | --- | --- |
 | [`modelo-datos.md`](modelo-datos.md) | Modelo de datos: diagrama entidad-relación, reglas y qué valida la base de datos |
-| [`adr/`](adr/) | Registro de decisiones de arquitectura (ADR-01 a ADR-23) |
-| [`despliegue/`](despliegue/) | Infraestructura en AWS: [base de datos](despliegue/base-de-datos.md) (KAN-9) |
+| [`adr/`](adr/) | Registro de decisiones de arquitectura (ADR-01 a ADR-25) |
+| [`despliegue/`](despliegue/) | Infraestructura en AWS: [aplicación](despliegue/aplicacion.md) (despliegue, vigilancia y alertas) y [base de datos](despliegue/base-de-datos.md) (respaldos, prueba de restauración y permisos mínimos) |
+| [`operacion/`](operacion/) | [Registro de incidentes](operacion/incidentes.md): cómo se detectan, atienden y cierran las fallas en producción |
+| [`licencias.md`](licencias.md) | Licencia del proyecto (MIT) y licencias de las dependencias |
+| [`datos/`](datos/) | Generador validado del recetario colombiano (V18) |
 | [`c4/`](c4/) | Diagramas del modelo C4 (contexto, contenedores, componentes) |
 | [`calidad/`](calidad/) | [Indicadores de calidad](calidad/indicadores.md): cómo calcula la app cada indicador del Plan de Calidad (KAN-54). [Lighthouse](calidad/lighthouse.md): rendimiento y accesibilidad en celular |
 | [`curso/`](curso/) | Entregables del curso: Definición del Proyecto, Arquitectura C4, Plan de Calidad e Interfaces |

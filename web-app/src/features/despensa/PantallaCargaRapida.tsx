@@ -79,6 +79,11 @@ export function PantallaCargaRapida() {
     <>
       <EncabezadoPagina titulo="Carga rápida" detalle={omitir} />
       <p className="carga__intro">Marca lo que sueles tener en casa. Después ajustas las cantidades.</p>
+      <p className="carga__intro carga__intro--nota">
+        Para empezar, cada producto entra con valores aproximados: la mitad de lo que se guarda (por ejemplo, el arroz),
+        una presentación de lo que se cuenta (una cubeta de huevos) y una fecha de vencimiento según lo que suele durar.
+        En tu despensa aparecen como aproximados hasta que los corrijas.
+      </p>
 
       {[...grupos].map(([categoria, productos]) => (
         <section key={categoria} className="carga__grupo" aria-labelledby={`carga-${categoria}`}>
@@ -110,5 +115,8 @@ export function PantallaCargaRapida() {
 }
 
 function datosIniciales(producto: ProductoDisponible): DatosItem {
-  return producto.tipoCantidad === 'GRANEL' ? { nivel: 'MEDIO' } : { cantidad: producto.cantidadUnidadCompra ?? 1 }
+  // La cantidad la pone la app: va marcada como estimada (auditoría del 4 de noviembre).
+  return producto.tipoCantidad === 'GRANEL'
+    ? { nivel: 'MEDIO' }
+    : { cantidad: producto.cantidadUnidadCompra ?? 1, cantidadEstimada: true }
 }

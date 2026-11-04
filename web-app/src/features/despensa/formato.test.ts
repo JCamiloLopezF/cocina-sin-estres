@@ -37,6 +37,13 @@ describe('formato de la despensa', () => {
     expect(describirVencimiento({ diasParaVencer: dias })).toBe(esperado)
   })
 
+  it('marca lo que estimó la app: cantidad aproximada y vencimiento según lo que suele durar', () => {
+    expect(detalleItem({ ...base, esEstimada: true, diasParaVencer: 9, venceEstimado: true, estadoVencimiento: 'VIGENTE' })).toBe(
+      '6 unidades aprox. · vence en unos 9 días',
+    )
+    expect(describirVencimiento({ diasParaVencer: 1, venceEstimado: true })).toBe('vence mañana')
+  })
+
   it('arma la línea del listado con cantidad o nivel, vencimiento y mínimo', () => {
     expect(detalleItem({ ...base, diasParaVencer: 2, estadoVencimiento: 'POR_VENCER' })).toBe(
       '6 unidades · vence en 2 días',

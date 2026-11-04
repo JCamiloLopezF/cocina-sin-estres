@@ -124,6 +124,16 @@ También se puede lanzar a mano con **Run workflow**, sobre `main`.
 4. En CloudShell, `bash infra/aws/verificar-base-datos.sh` muestra V1, V2 y V3 aplicadas también en `cocina_produccion`.
 5. La primera vez que entres con el correo del ADMIN, esa cuenta queda como `ADMIN` y la app te lleva a `/admin`.
 
+## Vigilancia y alertas
+
+Auditoría del 4 de noviembre: «no hay alarmas automáticas que avisen si la app se cae». `.github/workflows/vigilancia.yml` pregunta a `/api/salud` cada 30 minutos. Esa ruta responde 503 con `"estado":"sin-base-de-datos"` si la API está arriba pero la base no contesta.
+
+1. En GitHub, **Settings → Secrets and variables → Actions → Variables**, crea la variable del repositorio `URL_SALUD` con `https://…cloudfront.net/api/salud` (la misma `API_URL` del ambiente, más `/salud`).
+2. Lánzalo una vez a mano: **Actions → Vigilancia → Run workflow**. Debe terminar en verde.
+3. Activa las notificaciones del repositorio (**Watch → All Activity** o al menos *Issues*): una caída abre un *issue* con la etiqueta `incidente` y GitHub avisa por correo; además el workflow fallido llega por correo a quien lo lanzó por última vez.
+
+Si la API no responde en 3 intentos seguidos, la vigilancia abre el incidente; si ya hay uno abierto, comenta la hora. Cuando vuelve, comenta y lo cierra. El registro de incidentes y cómo cerrarlos está en `docs/operacion/incidentes.md`. Un monitor externo como UptimeRobot sigue siendo útil como segunda opinión: mide desde fuera de GitHub y lleva el porcentaje de disponibilidad del RNF-16.
+
 ## Problemas comunes
 
 | Síntoma | Causa probable | Qué hacer |

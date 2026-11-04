@@ -33,3 +33,14 @@ export async function listarRecetasConDetalle(senal?: AbortSignal): Promise<Rece
   const recetas = await listarRecetas(senal)
   return Promise.all(recetas.map((r) => obtenerReceta(r.id, senal)))
 }
+
+/** `GET /api/recetas/ingredientes`: lo que usan las recetas, para marcar una alergia a un ingrediente. */
+export interface IngredienteDelRecetario {
+  id: number
+  nombre: string
+  categoria: string
+}
+
+export function listarIngredientes(senal?: AbortSignal) {
+  return pedir<IngredienteDelRecetario[]>('/recetas/ingredientes', { senal, respaldo: true })
+}

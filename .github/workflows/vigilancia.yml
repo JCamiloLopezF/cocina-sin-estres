@@ -1,0 +1,41 @@
+# Auditoría del 4 de noviembre · Alertas si la app deja de responder y registro de incidentes.
+#
+# Cada 30 minutos pregunta a /api/salud (que también revisa la base de datos). Si no
+# responde, abre un incidente en Issues y el workflow falla: GitHub avisa por correo.
+# Cuando vuelve, cierra el incidente automático. Detalle en docs/operacion/incidentes.md.
+#
+# Configuración: variable del repositorio URL_SALUD = https://<distribución>.cloudfront.net/api/salud
+# (Settings → Secrets and variables → Actions → Variables). Sin ella, no hace nada.
+name: Vigilancia
+
+on:
+  schedule:
+    # Minutos 7 y 37: fuera de las horas en punto, cuando GitHub tiene más cola.
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: vigilancia
+  cancel-in-progress: false
+
+jobs:
+  salud:
+    name: vigilar-salud
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Obtener el script
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/scripts
+
+      - name: Preguntar a /api/salud
+        env:
+          URL_SALUD: ${{ vars.URL_SALUD }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash .github/scripts/vigilar.sh

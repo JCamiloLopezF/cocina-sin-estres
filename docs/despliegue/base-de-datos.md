@@ -146,7 +146,7 @@ RDS hace los respaldos solo; no hay que programar nada:
 
 - **Un respaldo automático completo al día**, entre las 08:00 y las 08:30 UTC (3:00 a. m. en Colombia).
 - **Retención de 1 día**: es el máximo que permite el plan gratuito de AWS. Se conserva el respaldo más reciente y el registro de transacciones, así que se puede **restaurar a cualquier minuto del último día**.
-- Para tener historial, Juan saca una **instantánea manual** cada semana (**RDS → Bases de datos → cocina-sin-estres-mysql → Acciones → Tomar instantánea**, nombre `semanal-AAAA-MM-DD`) y borra la de hace dos semanas. Ocupan poco y quedan como evidencia.
+- Para tener historial hay una **instantánea manual cada semana** (`semanal-AAAA-MM-DD`) y se borran las de más de 28 días: así siempre hay unas cuatro semanas para volver atrás (auditoría del 4 de noviembre: «respaldo de solo 1 día»). Ocupan poco, no vencen solas y quedan como evidencia. Ver «Instantánea semanal».
 - Los respaldos son de la instancia completa, así que cubren las dos bases.
 
 ### Evidencia para la sustentación
@@ -154,13 +154,46 @@ RDS hace los respaldos solo; no hay que programar nada:
 1. `bash infra/aws/verificar-base-datos.sh` muestra la retención (`RetencionRespaldoDias: 1`), hasta qué minuto se puede restaurar y el respaldo automático más reciente con su fecha, que cambia cada día.
 2. En la consola, **RDS → Bases de datos → cocina-sin-estres-mysql → Mantenimiento y copias de seguridad** muestra lo mismo. Toma una captura cada semana y súbela a KAN-9 en Jira.
 
-### Prueba de restauración (una vez, antes de la sustentación)
+### Instantánea semanal
 
-Comprobar que el respaldo sirve es mejor evidencia que mostrar que existe.
+`bash infra/aws/instantanea-semanal.sh` toma la instantánea de hoy y borra las de más de 28 días. Se puede correr a mano en CloudShell o dejarla automática cada domingo con `.github/workflows/respaldo-semanal.yml`:
 
-1. En la consola: **RDS → Bases de datos → cocina-sin-estres-mysql → Acciones → Restaurar a un momento dado**. Nombre de la instancia nueva: `cocina-sin-estres-prueba`, clase `db.t4g.micro`, mismo grupo de seguridad (la restauración siempre crea una instancia nueva y deja intacta la original).
-2. Cuando esté disponible, ábrele el puerto a tu IP y comprueba con MySQL Workbench que `cocina_produccion` tiene sus tablas y datos.
-3. Toma la captura y **borra la instancia de prueba en cuanto termines** (sin instantánea final): consume crédito por hora.
+1. En IAM, al rol de despliegue (`AWS_ROL_DESPLIEGUE`) agrégale esta política en línea, `respaldo-semanal`:
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [{
+       "Effect": "Allow",
+       "Action": ["rds:CreateDBSnapshot", "rds:DescribeDBSnapshots", "rds:DeleteDBSnapshot", "rds:AddTagsToResource"],
+       "Resource": [
+         "arn:aws:rds:us-east-1:<cuenta>:db:cocina-sin-estres-mysql",
+         "arn:aws:rds:us-east-1:<cuenta>:snapshot:semanal-*"
+       ]
+     }]
+   }
+   ```
+
+2. En GitHub, **Settings → Secrets and variables → Actions → Variables**, crea la variable del repositorio `RESPALDO_SEMANAL` con el valor `si`.
+3. Lánzalo una vez a mano (**Actions → Respaldo semanal → Run workflow**) y revisa que aparezca la instantánea en RDS.
+
+### Prueba de restauración (antes de la sustentación y una vez al mes)
+
+Comprobar que el respaldo sirve es mejor evidencia que mostrar que existe (auditoría del 4 de noviembre: «una restauración que nunca se probó»).
+
+1. En CloudShell: `bash infra/aws/probar-restauracion.sh`. Restaura producción al último minuto restaurable en una instancia nueva (`cocina-sin-estres-prueba-restauracion`), cuenta las filas de las tablas principales de `cocina_produccion` y muestra la última migración. Para probar una instantánea semanal: `INSTANTANEA=semanal-2026-11-08 bash infra/aws/probar-restauracion.sh`.
+2. Al terminar, el script **borra la instancia de prueba** aunque algo falle. La original no se toca.
+3. Guarda la salida completa (con las horas de inicio y fin) como evidencia del RNF-20 en el Plan de Calidad y en Jira.
+
+### Permisos mínimos
+
+Auditoría del 4 de noviembre: «usuario de aplicación con todos los permisos sobre su base». Desde este cambio, Flyway cambia el esquema con su propio usuario (`migra_produccion`) y la API corre con `app_produccion`, que solo puede leer y escribir datos.
+
+1. En **Elastic Beanstalk → cocina-sin-estres-api → Configuración → Actualizaciones, monitoreo y registros → Propiedades del entorno**, agrega `DB_MIGRACION_USUARIO = migra_produccion` y `DB_MIGRACION_CONTRASENA` con una contraseña nueva y larga. Aplica y espera a que el entorno vuelva a *Ok*.
+2. En CloudShell: `bash infra/aws/limitar-permisos-base-datos.sh`. Pide la contraseña del administrador y las de `migra_desarrollo` y `migra_produccion` (esta última, la misma del paso 1).
+3. Comprueba con `bash infra/aws/verificar-base-datos.sh` (responde `s` al final): `app_produccion` debe tener solo `SELECT, INSERT, UPDATE, DELETE`.
+
+El orden importa: si se quitan los permisos antes de poner las variables, el siguiente despliegue con una migración nueva falla porque Flyway seguiría usando `app_produccion`.
 
 ## Problemas comunes
 

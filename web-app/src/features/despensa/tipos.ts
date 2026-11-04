@@ -20,6 +20,8 @@ export interface ItemDespensa {
   cantidadMinima?: number
   nivelMinimo?: Nivel
   fechaVencimiento?: string
+  /** La fecha la calculó la app con la vida útil del producto (V19); se muestra como estimada. */
+  venceEstimado?: boolean
   diasParaVencer?: number
   estadoVencimiento: EstadoVencimiento
   bajoMinimo: boolean
@@ -59,4 +61,6 @@ export interface DatosItem {
   /** AAAA-MM-DD */
   fechaVencimiento?: string
   ubicacion?: string
+  /** La cantidad la pone la app (carga rápida), no la usuaria: se muestra como estimada. */
+  cantidadEstimada?: boolean
 }

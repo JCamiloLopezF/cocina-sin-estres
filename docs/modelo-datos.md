@@ -1,17 +1,20 @@
 # Modelo de datos
 
-Esquema de la base de datos de **Cocina sin estrés** (MySQL 8, InnoDB, utf8mb4). Lo crea la migración [`V1__esquema_inicial.sql`](../backend/src/main/resources/db/migration/V1__esquema_inicial.sql) (KAN-12) y responde a las decisiones ADR-13 a ADR-23.
+Esquema de la base de datos de **Cocina sin estrés** (MySQL 8, InnoDB, utf8mb4). Lo crea la migración [`V1__esquema_inicial.sql`](../backend/src/main/resources/db/migration/V1__esquema_inicial.sql) (KAN-12) y lo amplían las migraciones V2 a V19. Responde a las decisiones ADR-13 a ADR-25.
 
-17 tablas en 6 grupos:
+Actualizado al 4 de noviembre de 2026, hasta `V19__vencimiento_estimado.sql` (auditoría externa: «documentan unas 17 tablas, pero cuenta con 23»). **23 tablas en 7 grupos**, más `flyway_schema_history`, que es de Flyway:
 
 | Grupo | Tablas | Proceso |
 | --- | --- | --- |
 | Identidad | `usuario` | 1. Usuario y autenticación |
 | Perfil del hogar | `hogar`, `persona` | 1. Usuario y autenticación |
-| Catálogo | `restriccion`, `producto`, `producto_restriccion`, `receta`, `ingrediente_receta`, `auditoria_catalogo` | 2 y 3, curaduría |
+| Catálogo | `restriccion`, `producto`, `producto_restriccion`, `receta`, `ingrediente_receta`, `reemplazo_producto` (V8), `auditoria_catalogo` | 2 y 3, curaduría |
 | Despensa | `item_despensa`, `equivalencia_hogar` | 2. Despensa virtual |
-| Planificador | `plan_semanal`, `comida_plan`, `lista_compras`, `item_lista_compras` | 3. Planificador y recetario |
+| Planificador | `plan_semanal`, `comida_plan`, `lista_compras`, `item_lista_compras`, `tienda` (V13) | 3. Planificador y recetario |
 | Avisos | `aviso`, `hogar_preferencia_aviso` | 4. Notificaciones |
+| Medición (indicadores del Plan de Calidad) | `apertura_app` (V14), `uso_rescate` (V15), `preparacion` (V15), `inicio_sesion` (V16) | Panel de Análisis del administrador |
+
+Cuándo apareció cada cosa: V2 a V5 cargan el catálogo y las recetas; V6 alergias por persona; V7 plato fuerte y niños; V8 adaptar recetas a alergias; V9 despensa automática y vida útil; V10 video de la receta; V11 borrador de la semana y avisos con acción; V12 un tiempo por paso; V13 tiendas; V14 a V16 medición; V17 momentos del día y categorías cerradas; V18 recetario colombiano; V19 vencimiento estimado.
 
 ## Diagrama entidad-relación
 
@@ -40,6 +43,13 @@ erDiagram
     usuario ||--o{ producto : "modifica (curador)"
     usuario ||--o{ receta : "modifica (curador)"
     usuario ||--o{ auditoria_catalogo : "registra"
+    usuario ||--o{ inicio_sesion : "mide (V16)"
+    hogar ||--o{ tienda : "pide a (V13)"
+    hogar ||--o{ preparacion : "cocina (V15)"
+    receta ||--o{ preparacion : "se cocina en"
+    comida_plan |o--o{ preparacion : "del plan, si lo es"
+    hogar ||--o{ apertura_app : "abre (V14)"
+    hogar ||--o{ uso_rescate : "usa el rescate (V15)"
 
     usuario {
         bigint id PK
@@ -80,7 +90,7 @@ erDiagram
         bigint id PK
         bigint hogar_id FK "NULL = catalogo global"
         varchar nombre
-        varchar categoria
+        varchar categoria "lista cerrada (V17)"
         varchar tipo_cantidad "CONTABLE, GRANEL"
         varchar unidad_base "g, ml, unidad"
         smallint vida_util_dias "V9"
@@ -104,11 +114,13 @@ erDiagram
         boolean es_estimada
         decimal cantidad_minima
         date vence_en
+        boolean vence_estimado "V19"
         varchar ubicacion
     }
     receta {
         bigint id PK
         varchar nombre
+        varchar descripcion
         smallint tiempo_minutos
         tinyint porciones
         text pasos
@@ -119,6 +131,9 @@ erDiagram
         varchar video_youtube_id "V10"
         int video_inicio_seg "V10"
         int video_fin_seg "V10, máx. la mitad del tiempo"
+        boolean para_desayuno "V17"
+        boolean para_almuerzo "V17"
+        boolean para_cena "V17"
         bigint modificado_por FK
     }
     ingrediente_receta {
@@ -147,6 +162,8 @@ erDiagram
         bigint hogar_id FK
         date semana_inicio
         boolean borrador "V11"
+        datetime completado_en
+        int segundos_planificacion "V16"
     }
     comida_plan {
         bigint id PK
@@ -155,6 +172,7 @@ erDiagram
         varchar tipo_comida "DESAYUNO, ALMUERZO, CENA"
         bigint receta_id FK
         boolean preparada
+        datetime preparada_en
         varchar id_cambio_cliente UK
     }
     lista_compras {
@@ -168,6 +186,7 @@ erDiagram
         bigint producto_id FK
         decimal cantidad
         decimal costo_estimado
+        decimal costo_real "lo que pagó (KAN-26)"
         smallint prioridad
         boolean comprado
         varchar motivo "PLAN, REPONER, ALERGIA (V9)"
@@ -198,6 +217,38 @@ erDiagram
         datetime fecha
         json cambios
     }
+    tienda {
+        bigint id PK
+        bigint hogar_id FK
+        varchar nombre
+        varchar whatsapp
+    }
+    preparacion {
+        bigint id PK
+        bigint hogar_id FK
+        bigint receta_id FK
+        bigint comida_plan_id FK "NULL si fue fuera del plan"
+        datetime creada_en
+    }
+    apertura_app {
+        bigint id PK
+        bigint hogar_id FK
+        smallint avisos_vigentes
+        smallint avisos_mostrados
+        tinyint reglas_evaluadas
+        int duracion_ms
+    }
+    uso_rescate {
+        bigint id PK
+        bigint hogar_id FK
+        smallint opciones
+    }
+    inicio_sesion {
+        bigint id PK
+        bigint usuario_id FK
+        int duracion_ms
+        smallint fallidos_previos
+    }
 ```
 
 ## Reglas que aplica la base de datos
@@ -217,17 +268,27 @@ Además de llaves y tipos, el esquema rechaza estos datos inválidos con restric
 | Un cambio reenviado por el navegador no se aplica dos veces | `uk_comida_plan_id_cambio_cliente` | ADR-21, RNF-17 |
 | Un aviso repetido no se inserta | `uk_aviso_clave_idempotencia` | ADR-17 |
 | Un producto no es reemplazo de sí mismo ni aparece dos veces como reemplazo del mismo; lo que decide un curador queda a su nombre | `ck_reemplazo_producto_distintos`, `uk_reemplazo_producto_producto_id_reemplazo_id`, `ck_reemplazo_producto_curador` | ADR-24 |
+| La categoría de un producto es de la lista de la app (granos, legumbres, tubérculos, harinas, proteínas, lácteos, verduras, frutas, aceites, condimentos, bebidas u otros) | `ck_producto_categoria` (V17) | RNF-24 |
 | Todo cambio del catálogo tiene un curador identificable | `auditoria_catalogo.usuario_id NOT NULL` | ADR-23, RNF-24 |
 | Un curador con historia en el catálogo no se puede borrar, y un producto usado en una receta tampoco | Llaves foráneas sin cascada | ADR-23 |
 
+## Por qué hay dos registros de preparación
+
+La auditoría externa señaló una posible redundancia entre `comida_plan.preparada` y la tabla `preparacion`. No guardan lo mismo:
+
+- `comida_plan.preparada` y `preparada_en` dicen si **esa comida del plan** ya se cocinó. Es lo que pinta el plan del día y lo que evita descontar dos veces la despensa.
+- `preparacion` registra **cada vez que se cocina una receta**, esté o no en el plan (el Modo cocinar también se usa desde el recetario). De ahí sale el indicador «recetas más cocinadas» del panel de Análisis (KAN-54). Cuando la preparación viene del plan, `comida_plan_id` apunta a la comida, así que el dato no se contradice.
+
+Unirlas obligaría a crear una comida de plan falsa para lo que se cocina fuera del plan, o a perder ese uso en el indicador.
+
 ## Qué pasa al borrar
 
-- **Al eliminar una cuenta** (`usuario`), se borran en cascada su hogar y todo lo que depende de él: personas, despensa, productos adicionales, equivalencias, planes, comidas, listas de compras, avisos y preferencias.
+- **Al eliminar una cuenta** (`usuario`), se borran en cascada su hogar y todo lo que depende de él: personas, despensa, productos adicionales, equivalencias, planes, comidas, listas de compras, tiendas, avisos, preferencias y los registros de medición.
 - **El catálogo nunca se borra.** Productos, recetas y restricciones se desactivan (`activo = FALSE`), porque despensas, planes y la auditoría siguen apuntando a ellos.
 
 ## Lo que valida la aplicación, no la base de datos
 
-- `hogar.restricciones` y `hogar.otras_condiciones` llegan cifradas (ADR-20). Por eso la base no puede validar que los códigos existan en `restriccion`, y lo hace el servicio de perfil antes de cifrar.
+- `hogar.restricciones`, `hogar.otras_condiciones`, `persona.restricciones` y `persona.alergias_graves` llegan cifradas (ADR-20). Por eso la base no puede validar los códigos, y lo hace el servicio de perfil antes de cifrar. Además de los de `restriccion`, una persona puede tener `producto:<id>`: alergia a un ingrediente que no está en la lista (auditoría del 4 de noviembre, ADR-24).
 - Los ingredientes de una receta deben ser productos del catálogo global (`producto.hogar_id IS NULL`).
 - Los campos obligatorios del perfil (RNF-01) se exigen al terminar el onboarding, cuando se marca `usuario.perfil_completo`.
 - El nivel visible de un producto a granel (Lleno, Medio, Poco, Agotado) se calcula a partir de `cantidad / capacidad_referencia` en `domain/` (ADR-15). No se guarda.

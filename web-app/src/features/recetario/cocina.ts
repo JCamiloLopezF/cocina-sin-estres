@@ -1,7 +1,7 @@
 import { ErrorApi, pedir } from '../../api/cliente'
 import { catalogoDisponible, listarDespensa } from '../despensa/apiDespensa'
 import type { ProductoDisponible, UnidadBase } from '../despensa/tipos'
-import { ALERGIAS, esAlergia, nombreRestriccion } from '../perfil/restricciones'
+import { ALERGIAS, codigoIngrediente, esAlergia, nombreRestriccion, recordarIngredientes } from '../perfil/restricciones'
 import type { RecetaDetalle } from './tipos'
 
 /**
@@ -62,6 +62,7 @@ export async function cargarCocina(senal?: AbortSignal): Promise<Cocina> {
     if (item.estadoVencimiento === 'VENCIDO') vencidos.add(item.productoId)
     else existencias.set(item.productoId, (existencias.get(item.productoId) ?? 0) + item.cantidad)
   })
+  recordarIngredientes(productos)
   return { productos: new Map(productos.map((p) => [p.id, p])), existencias, vencidos, personas }
 }
 
@@ -195,7 +196,12 @@ function choques(
   receta: RecetaDetalle,
   personas: PersonaHogar[],
 ): Pick<RecetaVista, 'noAptaPara' | 'ajustePara' | 'precaucionPara'> {
-  const deLaReceta = new Set(receta.restricciones ?? [])
+  // Además de los alérgenos del catálogo, cada ingrediente obligatorio cuenta con su propio
+  // código: así se respeta la alergia a un ingrediente que no está en la lista (AlergiaIngrediente).
+  const deLaReceta = new Set([
+    ...(receta.restricciones ?? []),
+    ...receta.ingredientes.filter((i) => !i.opcional).map((i) => codigoIngrediente(i.productoId)),
+  ])
   const noAptaPara: Choque[] = []
   const ajustePara: Choque[] = []
   const precaucionPara: Choque[] = []

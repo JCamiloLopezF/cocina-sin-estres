@@ -67,6 +67,32 @@
   -webkit-text-size-adjust: 100%;
 }
 
+:root[data-letra='grande'] {
+  font-size: 112.5%;
+}
+
+:root[data-letra='muy-grande'] {
+  font-size: 125%;
+}
+
+/*
+ * Alto contraste (Perfil › Ver mejor): textos secundarios, bordes y fondos de apoyo pasan a
+ * tinta o blanco, y los bordes se engrosan. La tinta sobre blanco da 19:1.
+ */
+:root[data-contraste='alto'] {
+  --color-tenue: var(--color-tinta);
+  --color-linea: var(--color-tinta);
+  --color-linea-fuerte: var(--color-tinta);
+  --color-punteado: var(--color-tinta);
+  --color-beige: #ffffff;
+  --color-crema: #ffffff;
+  --borde: 3px;
+}
+
+:root[data-contraste='alto'] a {
+  text-decoration-thickness: 2px;
+}
+
 *,
 *::before,
 *::after {
