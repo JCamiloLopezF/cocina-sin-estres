@@ -67,7 +67,7 @@ public final class AdaptadorAlergias {
 
         ReglasAlergia reglas = contexto.alergias();
         List<Long> ofensores = receta.ingredientes().keySet().stream()
-            .filter(p -> !Collections.disjoint(reglas.alergenos().getOrDefault(p, Set.of()), persona.restricciones()))
+            .filter(p -> !Collections.disjoint(reglas.alergenosDe(p), persona.restricciones()))
             .sorted()
             .toList();
 
@@ -80,9 +80,9 @@ public final class AdaptadorAlergias {
 
         List<Cambio> cambios = new ArrayList<>();
         for (Long producto : ofensores) {
-            Set<String> motivo = interseccion(reglas.alergenos().getOrDefault(producto, Set.of()), persona.restricciones());
+            Set<String> motivo = interseccion(reglas.alergenosDe(producto), persona.restricciones());
             Optional<Long> reemplazo = reglas.reemplazos().getOrDefault(producto, Set.of()).stream()
-                .filter(r -> Collections.disjoint(reglas.alergenos().getOrDefault(r, Set.of()), persona.restricciones()))
+                .filter(r -> Collections.disjoint(reglas.alergenosDe(r), persona.restricciones()))
                 .min(Comparator
                     .comparing((Long r) -> !enDespensa(contexto, r))
                     .thenComparing(r -> r));

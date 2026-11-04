@@ -62,11 +62,17 @@ export function describirCantidad(item: ItemDespensa): string {
   return cantidadConUnidad(item.cantidad, item.unidadBase)
 }
 
-/** "vence hoy", "vence mañana", "vence en 5 días", "venció hace 2 días"; vacío sin fecha. */
-export function describirVencimiento(item: Pick<ItemDespensa, 'diasParaVencer'>): string {
+/**
+ * "vence hoy", "vence mañana", "vence en 5 días", "venció hace 2 días"; vacío sin fecha. Si la
+ * fecha la calculó la app, "vence en unos 5 días": no es la del empaque (auditoría).
+ */
+export function describirVencimiento(item: Pick<ItemDespensa, 'diasParaVencer' | 'venceEstimado'>): string {
   const dias = item.diasParaVencer
   if (dias === undefined || dias === null) {
     return ''
+  }
+  if (item.venceEstimado && dias > 1) {
+    return `vence en unos ${dias} días`
   }
   if (dias < 0) {
     return Math.abs(dias) === 1 ? 'venció ayer' : `venció hace ${Math.abs(dias)} días`
@@ -80,16 +86,20 @@ export function describirVencimiento(item: Pick<ItemDespensa, 'diasParaVencer'>)
   return `vence en ${dias} días`
 }
 
-/** Línea de detalle del listado: "6 unidades · vence en 2 días · bajo el mínimo". */
+/**
+ * Línea de detalle del listado: "6 unidades · vence en 2 días · bajo el mínimo". Lo que contó
+ * la app y no la usuaria (carga rápida) dice "aprox.".
+ */
 export function detalleItem(item: ItemDespensa): string {
-  return [describirCantidad(item), describirVencimiento(item), item.bajoMinimo ? 'bajo el mínimo' : '']
+  const cantidad = describirCantidad(item) + (item.esEstimada && item.tipoCantidad === 'CONTABLE' ? ' aprox.' : '')
+  return [cantidad, describirVencimiento(item), item.bajoMinimo ? 'bajo el mínimo' : '']
     .filter(Boolean)
     .join(' · ')
 }
 
-/** "Granel · $4.500 / bolsa" o "Contable · $18.000 / cubeta" (wireframe 16). */
+/** "Por nivel · $4.500 / bolsa" o "Por unidades · $18.000 / cubeta" (wireframe 16), sin palabras técnicas. */
 export function detalleProducto(producto: ProductoDisponible): string {
-  const tipo = producto.tipoCantidad === 'GRANEL' ? 'Granel' : 'Contable'
+  const tipo = producto.tipoCantidad === 'GRANEL' ? 'Por nivel' : 'Por unidades'
   if (producto.precioUnidadCompra == null || !producto.unidadCompra) {
     return tipo
   }

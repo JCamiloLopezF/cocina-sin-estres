@@ -114,7 +114,12 @@ export function PantallaItemDespensa() {
         </div>
         <div className="detalle__dato">
           <dt>Vencimiento</dt>
-          <dd>{item.fechaVencimiento ? fechaCorta(item.fechaVencimiento) : 'Sin fecha'}</dd>
+          <dd>
+            {item.fechaVencimiento ? fechaCorta(item.fechaVencimiento) : 'Sin fecha'}
+            {item.venceEstimado && (
+              <span className="detalle__nota"> (estimada con lo que suele durar; cámbiala por la del empaque)</span>
+            )}
+          </dd>
         </div>
         <div className="detalle__dato">
           <dt>Nivel mínimo</dt>

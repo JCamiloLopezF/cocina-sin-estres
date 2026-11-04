@@ -37,6 +37,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -204,10 +205,17 @@ public class DespensaService {
             throw productoRepetido();
         }
 
+        ItemDespensa nuevo = new ItemDespensa(hogarId, producto.id(), datos);
+        // Auditoría del 4 de noviembre: lo que pone la aplicación se muestra como estimado.
+        nuevo.marcarVencimientoEstimado(request.fechaVencimiento() == null);
+        if (Boolean.TRUE.equals(request.cantidadEstimada())) {
+            nuevo.marcarCantidadEstimada();
+        }
+
         ItemDespensa guardado;
 
         try {
-            guardado = itemRepository.saveAndFlush(new ItemDespensa(hogarId, producto.id(), datos));
+            guardado = itemRepository.saveAndFlush(nuevo);
         } catch (DataIntegrityViolationException e) {
             // Dos peticiones a la vez pasaron la comprobación de arriba: gana la primera
             // y la base rechaza la segunda con uk_item_despensa_hogar_id_producto_id.
@@ -316,7 +324,11 @@ public class DespensaService {
             request.ubicacion()
         );
 
+        // Si deja la fecha que habíamos estimado, sigue siendo estimada; si la cambia, es la suya.
+        boolean sigueEstimada = item.isVenceEstimado()
+            && Objects.equals(item.getVenceEn(), datos.fechaVencimiento());
         item.actualizar(datos);
+        item.marcarVencimientoEstimado(sigueEstimada);
 
         return aResponse(item, producto);
     }

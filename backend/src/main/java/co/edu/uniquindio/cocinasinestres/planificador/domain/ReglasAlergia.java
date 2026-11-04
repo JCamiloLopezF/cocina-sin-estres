@@ -26,6 +26,11 @@ public record ReglasAlergia(
         reemplazos = Map.copyOf(reemplazos);
     }
 
+    /** Alérgenos de un producto, incluido su propio código ({@link AlergiaIngrediente}). */
+    public Set<String> alergenosDe(Long producto) {
+        return AlergiaIngrediente.conElPropio(producto, alergenos.getOrDefault(producto, Set.of()));
+    }
+
     /** Hay al menos una persona con alergias o condiciones registradas. */
     public boolean tieneDetalle() {
         return comensales.stream().anyMatch(c -> !c.restricciones().isEmpty());

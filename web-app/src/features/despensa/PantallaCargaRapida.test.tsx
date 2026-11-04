@@ -38,7 +38,7 @@ describe('Carga rápida y Todo listo (pantallas 11 y 12)', () => {
     const enviados = llamadas.filter((l) => l.metodo === 'POST').map((l) => l.cuerpo)
     expect(enviados).toEqual(
       expect.arrayContaining([
-        { productoId: 3, cantidad: CATALOGO[2].cantidadUnidadCompra },
+        { productoId: 3, cantidad: CATALOGO[2].cantidadUnidadCompra, cantidadEstimada: true },
         { productoId: 4, nivel: 'MEDIO' },
       ]),
     )

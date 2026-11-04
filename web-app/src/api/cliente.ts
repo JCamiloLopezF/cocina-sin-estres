@@ -101,14 +101,26 @@ export async function pedir<T>(ruta: string, opciones: OpcionesPeticion = {}): P
     encabezados['Content-Type'] = 'application/json'
   }
 
-  let respuesta: Response
-  try {
-    respuesta = await fetch(`${urlBase}${ruta}`, {
-      method: opciones.metodo ?? 'GET',
+  const metodo = opciones.metodo ?? 'GET'
+  const enviar = () =>
+    fetch(`${urlBase}${ruta}`, {
+      method: metodo,
       headers: encabezados,
       body: opciones.cuerpo === undefined ? undefined : JSON.stringify(opciones.cuerpo),
       signal: opciones.senal,
     })
+
+  let respuesta: Response
+  try {
+    respuesta = await enviar()
+    // Auditoría del 4 de noviembre: el recetario mostró «Algo falló» cuando la API tardó en
+    // responder. Un 502, 503 o 504 viene de CloudFront o nginx mientras la API reinicia o
+    // está ocupada; una lectura (GET) se puede repetir sin riesgo, así que se reintenta.
+    for (const espera of metodo === 'GET' ? ESPERAS_REINTENTO : []) {
+      if (!ESTADOS_TRANSITORIOS.has(respuesta.status)) break
+      await esperar(espera, opciones.senal)
+      respuesta = await enviar()
+    }
   } catch (causa) {
     if (causa instanceof DOMException && causa.name === 'AbortError') {
       throw causa
@@ -155,6 +167,29 @@ async function leerError(respuesta: Response): Promise<ErrorApi> {
   // reconocen para mostrar el mensaje que corresponde.
   const codigoPorEstado = CODIGO_POR_ESTADO[respuesta.status] ?? RESPUESTA_INESPERADA
   return new ErrorApi(respuesta.status, codigoPorEstado, `El servidor respondió ${respuesta.status}.`)
+}
+
+/** Respuestas de la infraestructura que suelen pasar solas en uno o dos segundos. */
+const ESTADOS_TRANSITORIOS = new Set([502, 503, 504])
+/** Milisegundos antes de cada reintento de una lectura. */
+const ESPERAS_REINTENTO = [500, 1500]
+
+function esperar(ms: number, senal?: AbortSignal): Promise<void> {
+  return new Promise((resolver, rechazar) => {
+    if (senal?.aborted) {
+      rechazar(new DOMException('Cancelada', 'AbortError'))
+      return
+    }
+    const temporizador = setTimeout(resolver, ms)
+    senal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(temporizador)
+        rechazar(new DOMException('Cancelada', 'AbortError'))
+      },
+      { once: true },
+    )
+  })
 }
 
 const CODIGO_POR_ESTADO: Record<number, string> = {

@@ -145,7 +145,22 @@ class DespensaServiceTest {
         servicio().agregar(new ItemDespensaRequest(1L, new BigDecimal("30"), null, null, null, null, null));
 
         // 14 de octubre + 21 días
-        assertThat(capturarGuardado().getVenceEn()).isEqualTo(LocalDate.of(2026, 11, 4));
+        ItemDespensa guardado = capturarGuardado();
+        assertThat(guardado.getVenceEn()).isEqualTo(LocalDate.of(2026, 11, 4));
+        // Auditoría del 4 de noviembre: la usuaria ve que la fecha es un cálculo.
+        assertThat(guardado.isVenceEstimado()).isTrue();
+        assertThat(guardado.isEsEstimada()).isFalse();
+    }
+
+    @Test
+    void laCargaRapidaMarcaLaCantidadComoEstimada() {
+        guardarDevolviendoLoRecibido();
+
+        ItemDespensaResponse respuesta = servicio().agregar(
+            new ItemDespensaRequest(1L, new BigDecimal("30"), null, null, null, null, null, true));
+
+        assertThat(capturarGuardado().isEsEstimada()).isTrue();
+        assertThat(respuesta.esEstimada()).isTrue();
     }
 
     @Test
@@ -156,6 +171,7 @@ class DespensaServiceTest {
         servicio().agregar(new ItemDespensaRequest(1L, new BigDecimal("30"), null, null, null, LocalDate.of(2026, 10, 20), null));
 
         assertThat(capturarGuardado().getVenceEn()).isEqualTo(LocalDate.of(2026, 10, 20));
+        assertThat(capturarGuardado().isVenceEstimado()).isFalse();
     }
 
     @Test

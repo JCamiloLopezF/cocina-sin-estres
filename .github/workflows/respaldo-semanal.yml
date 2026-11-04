@@ -1,0 +1,45 @@
+# Auditoría del 4 de noviembre · Respaldo con más de un día de historia (RNF-20).
+#
+# El plan gratuito de RDS solo conserva 1 día de respaldos automáticos. Cada domingo este
+# workflow toma una instantánea manual «semanal-AAAA-MM-DD» y borra las de más de 28 días
+# (infra/aws/instantanea-semanal.sh).
+#
+# Se activa con la variable del repositorio RESPALDO_SEMANAL = si (no la del ambiente: el
+# "if" del job se evalúa antes de entrar al ambiente), después de
+# darle al rol de despliegue los permisos de docs/despliegue/base-de-datos.md («Instantánea
+# semanal»). Mientras no esté activo, el job se salta sin fallar.
+name: Respaldo semanal
+
+on:
+  schedule:
+    # Domingo 09:23 UTC (4:23 a. m. en Colombia), después del respaldo automático de las 08:00.
+    - cron: '23 9 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  instantanea:
+    name: instantanea-semanal
+    runs-on: ubuntu-latest
+    environment: produccion
+    if: ${{ vars.RESPALDO_SEMANAL == 'si' }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Obtener el script
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: infra/aws
+
+      - name: Credenciales de AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROL_DESPLIEGUE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Tomar la instantánea y borrar las viejas
+        run: bash infra/aws/instantanea-semanal.sh

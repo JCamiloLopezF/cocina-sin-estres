@@ -49,6 +49,13 @@ public class ItemDespensa {
     @Column(name = "vence_en")
     private LocalDate venceEn;
 
+    /**
+     * La fecha la calculó la aplicación con la vida útil del producto (V19): se muestra como
+     * estimada para que la usuaria la corrija con la del empaque.
+     */
+    @Column(name = "vence_estimado", nullable = false)
+    private boolean venceEstimado;
+
     @Column(name = "ubicacion", length = 40)
     private String ubicacion;
 
@@ -122,6 +129,20 @@ public class ItemDespensa {
 
     public LocalDate getVenceEn() {
         return venceEn;
+    }
+
+    public boolean isVenceEstimado() {
+        return venceEstimado;
+    }
+
+    /** Marca si la fecha de vencimiento la estimó la aplicación (auditoría del 4 de noviembre). */
+    public void marcarVencimientoEstimado(boolean estimado) {
+        this.venceEstimado = estimado && venceEn != null;
+    }
+
+    /** La cantidad la puso la aplicación (carga rápida), no la usuaria. */
+    public void marcarCantidadEstimada() {
+        this.esEstimada = true;
     }
 
     public String getUbicacion() {

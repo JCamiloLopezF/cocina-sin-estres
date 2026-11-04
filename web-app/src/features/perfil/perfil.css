@@ -278,3 +278,42 @@
   height: 1.25rem;
   accent-color: var(--color-primario-hondo);
 }
+
+/* Otro alimento que no come (alergia a un ingrediente, auditoría del 4 de noviembre). */
+.otros-alimentos {
+  display: grid;
+  gap: var(--espacio-2);
+  margin-top: var(--espacio-3);
+}
+
+.otros-alimentos__lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.otros-alimentos__elegido {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: 2.75rem;
+  padding: 0 0 0 var(--espacio-4);
+  border: var(--borde) solid var(--color-tinta);
+  border-radius: 999px;
+  background: var(--color-primario);
+  font-weight: 700;
+}
+
+.otros-alimentos__quitar {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font-size: var(--texto-l);
+  cursor: pointer;
+}

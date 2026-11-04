@@ -3,6 +3,7 @@ package co.edu.uniquindio.cocinasinestres.planificador.domain;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -15,7 +16,8 @@ import java.util.Set;
  * @param costo          costo de la receta completa con sus ingredientes obligatorios,
  *                       con la misma fórmula del costo del plan (ADR-14)
  * @param ingredientes   cantidad obligatoria por producto, en su unidad base
- * @param alergias       códigos de tipo ALERGIA de sus ingredientes obligatorios
+ * @param alergias       códigos de tipo ALERGIA de sus ingredientes obligatorios, más el
+ *                       código {@code producto:<id>} de cada uno ({@link AlergiaIngrediente})
  * @param condiciones    códigos de tipo CONDICION de sus ingredientes obligatorios
  * @param activa         sigue en el catálogo
  * @param platoFuerte    sirve como almuerzo o cena (V7)
@@ -44,7 +46,9 @@ public record RecetaCandidata(
     public RecetaCandidata {
         costo = costo == null ? BigDecimal.ZERO : costo;
         ingredientes = Map.copyOf(ingredientes);
-        alergias = Set.copyOf(alergias);
+        Set<String> conIngredientes = new HashSet<>(alergias);
+        ingredientes.keySet().forEach(p -> conIngredientes.add(AlergiaIngrediente.codigo(p)));
+        alergias = Set.copyOf(conIngredientes);
         condiciones = Set.copyOf(condiciones);
         principales = Set.copyOf(principales);
         momentos = Set.copyOf(momentos);

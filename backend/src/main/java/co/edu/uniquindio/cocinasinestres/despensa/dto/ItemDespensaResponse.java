@@ -26,6 +26,7 @@ import java.time.LocalDate;
  * @param cantidadMinima       mínimo en unidad base; ausente si no hay
  * @param nivelMinimo          nivel del mínimo; solo a granel y si hay mínimo
  * @param fechaVencimiento     fecha de vencimiento; ausente si no hay
+ * @param venceEstimado        {@code true} si la fecha la calculó la aplicación con la vida útil
  * @param diasParaVencer       días que faltan, negativo si ya venció; ausente sin fecha
  * @param estadoVencimiento    SIN_FECHA, VIGENTE, POR_VENCER o VENCIDO
  * @param bajoMinimo           {@code true} si llegó al mínimo o quedó por debajo
@@ -47,6 +48,7 @@ public record ItemDespensaResponse(
     BigDecimal cantidadMinima,
     NivelGranel nivelMinimo,
     LocalDate fechaVencimiento,
+    boolean venceEstimado,
     Integer diasParaVencer,
     EstadoVencimiento estadoVencimiento,
     boolean bajoMinimo,

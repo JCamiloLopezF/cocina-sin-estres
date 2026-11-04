@@ -9,6 +9,10 @@ import type { ServicioAuth } from './features/auth/servicioAuth'
 import { crearRutas } from './navegacion/rutas'
 import './shared/estilos/base.css'
 import './navegacion/diseno.css'
+import { aplicarPreferencias, leerPreferencias } from './shared/preferenciasVisuales'
+
+// Antes de pintar, para que la letra grande o el alto contraste no parpadeen al abrir.
+aplicarPreferencias(leerPreferencias())
 
 const raiz = createRoot(document.getElementById('root')!)
 
