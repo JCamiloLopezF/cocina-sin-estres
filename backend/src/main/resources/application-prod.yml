@@ -22,6 +22,12 @@ spring:
   flyway:
     # Las migraciones se aplican al desplegar; nadie toca el esquema a mano (ADR-07).
     validate-on-migrate: true
+    # Flyway cambia el esquema con un usuario propio; la API corre con uno que solo lee y
+    # escribe datos (auditoría del 4 de noviembre: «usuario de aplicación con todos los
+    # permisos»). Ver docs/despliegue/base-de-datos.md, «Permisos mínimos». Mientras no
+    # existan estas variables, Flyway usa el usuario de la aplicación, como antes.
+    user: ${DB_MIGRACION_USUARIO:${DB_USUARIO}}
+    password: ${DB_MIGRACION_CONTRASENA:${DB_CONTRASENA}}
 
 server:
   # Detrás de un proxy o balanceador: respeta los encabezados X-Forwarded-*

@@ -19,9 +19,19 @@ public class MovimientosDespensaJdbc implements MovimientosDespensa {
      * orden y necesita la cantidad que había.
      */
     private static final String SQL_AGREGAR = """
-        INSERT INTO item_despensa (hogar_id, producto_id, cantidad, es_estimada, vence_en)
-        VALUES (:hogar, :producto, :cantidad, FALSE, :vence) AS nuevo
+        INSERT INTO item_despensa (hogar_id, producto_id, cantidad, es_estimada, vence_en, vence_estimado)
+        VALUES (:hogar, :producto, :cantidad, FALSE, :vence, :vence IS NOT NULL) AS nuevo
         ON DUPLICATE KEY UPDATE
+            vence_estimado = CASE
+                WHEN item_despensa.cantidad > 0
+                     AND item_despensa.vence_en IS NOT NULL
+                     AND item_despensa.vence_en >= :hoy
+                     AND (nuevo.vence_en IS NULL OR item_despensa.vence_en < nuevo.vence_en)
+                    THEN item_despensa.vence_estimado
+                WHEN nuevo.vence_en IS NOT NULL THEN nuevo.vence_estimado
+                WHEN item_despensa.vence_en >= :hoy THEN item_despensa.vence_estimado
+                ELSE FALSE
+            END,
             vence_en = CASE
                 WHEN item_despensa.cantidad > 0
                      AND item_despensa.vence_en IS NOT NULL

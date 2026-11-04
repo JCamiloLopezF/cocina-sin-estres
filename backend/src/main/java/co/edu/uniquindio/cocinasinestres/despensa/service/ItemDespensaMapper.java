@@ -50,6 +50,7 @@ final class ItemDespensaMapper {
             item.getCantidadMinima(),
             nivelMinimo,
             item.getVenceEn(),
+            item.isVenceEstimado(),
             ReglasDespensa.diasParaVencer(item.getVenceEn(), hoy),
             estado,
             ReglasDespensa.estaBajoMinimo(item.getCantidad(), item.getCantidadMinima()),

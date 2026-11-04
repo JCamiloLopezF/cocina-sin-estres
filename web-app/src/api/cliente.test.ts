@@ -47,7 +47,42 @@ describe('cliente de la API', () => {
 
   it('marca como respuesta inesperada un error que no es Problem Details', async () => {
     fetchFalso.mockResolvedValue(new Response('<html>502</html>', { status: 502 }))
-    await expect(pedir('/yo')).rejects.toMatchObject({ status: 502, codigo: RESPUESTA_INESPERADA })
+    await expect(pedir('/algo', { metodo: 'POST' })).rejects.toMatchObject({ status: 502, codigo: RESPUESTA_INESPERADA })
+    // Una escritura no se repite: podría quedar hecha dos veces.
+    expect(fetchFalso).toHaveBeenCalledTimes(1)
+  })
+
+  it('reintenta una lectura cuando la infraestructura responde 502, 503 o 504', async () => {
+    vi.useFakeTimers()
+    try {
+      fetchFalso
+        .mockResolvedValueOnce(new Response('<html>503</html>', { status: 503 }))
+        .mockResolvedValueOnce(new Response('<html>504</html>', { status: 504 }))
+        .mockResolvedValueOnce(respuestaJson([{ id: 1 }]))
+
+      const promesa = pedir<{ id: number }[]>('/recetas/detalle')
+      await vi.advanceTimersByTimeAsync(2000)
+
+      await expect(promesa).resolves.toEqual([{ id: 1 }])
+      expect(fetchFalso).toHaveBeenCalledTimes(3)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('después de dos reintentos muestra el error', async () => {
+    vi.useFakeTimers()
+    try {
+      fetchFalso.mockImplementation(async () => new Response('<html>502</html>', { status: 502 }))
+
+      const promesa = pedir('/yo').catch((e: unknown) => e)
+      await vi.advanceTimersByTimeAsync(2000)
+
+      expect(await promesa).toMatchObject({ status: 502, codigo: RESPUESTA_INESPERADA })
+      expect(fetchFalso).toHaveBeenCalledTimes(3)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('avisa que hay que esperar cuando la API pone el límite de peticiones', async () => {

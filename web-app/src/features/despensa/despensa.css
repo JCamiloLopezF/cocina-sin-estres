@@ -315,6 +315,12 @@
   margin: 0 0 var(--espacio-4);
 }
 
+/* Aviso de que lo que pone la carga rápida es aproximado (auditoría del 4 de noviembre). */
+.carga__intro--nota {
+  color: var(--color-tenue);
+  font-size: var(--texto-s);
+}
+
 .carga__grupo {
   margin-bottom: var(--espacio-4);
 }

@@ -4,6 +4,7 @@ import { mensajeDeError } from '../../api/mensajesError'
 import { useConsulta } from '../../api/useConsulta'
 import { Alerta, Boton, Cargando, EncabezadoPagina, EstadoVacio } from '../../shared/componentes'
 import { useCuenta, useSesion } from '../auth/contextoSesion'
+import { VerMejor } from './VerMejor'
 import './perfil.css'
 
 /** Respuesta de `GET /api/perfil/hogar` (PerfilHogarResponse); solo lo que se muestra aquí. */
@@ -21,7 +22,7 @@ const PERIODICIDAD: Record<string, string> = {
 
 const pesos = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 
-/** Cuenta, resumen del hogar y salida. El formulario del perfil del hogar llega con su propia tarea. */
+/** Cuenta, resumen del hogar, tamaño de letra y contraste, y salida. */
 export function PantallaPerfil() {
   const { estado, salir } = useSesion()
   const cuenta = useCuenta()
@@ -88,6 +89,8 @@ export function PantallaPerfil() {
           </Link>
         )}
       </section>
+
+      <VerMejor />
 
       <Boton variante="secundario" ancho onClick={() => void salir()}>
         Cerrar sesión

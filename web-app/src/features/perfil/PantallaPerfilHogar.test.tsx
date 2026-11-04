@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { backendFalso, CUENTA_USUARIA } from '../../prueba/backendFalso'
 import { montarApp } from '../../prueba/montar'
 import { crearServicioFalso, LUISA, respuestaJson } from '../../prueba/servicioFalso'
@@ -162,5 +162,47 @@ describe('Perfil del hogar (asistente de 4 pasos)', () => {
     await usuario.click(await screen.findByRole('button', { name: 'Continuar' }))
     expect(within(screen.getByRole('region', { name: 'Salud de Luisa' })).getByRole('checkbox', { name: 'Gluten' })).toBeChecked()
     expect(within(screen.getByRole('region', { name: 'Salud de Samuel' })).getByRole('checkbox', { name: 'Gluten' })).not.toBeChecked()
+  })
+  it('deja marcar un alimento que no está en la lista, también como grave (auditoría del 4 de noviembre)', async () => {
+    const { llamadas } = backendFalso({
+      'GET /yo': () => respuestaJson(CUENTA_USUARIA),
+      'GET /recetas/ingredientes': () =>
+        respuestaJson([
+          { id: 31, nombre: 'Piña', categoria: 'FRUTAS' },
+          { id: 40, nombre: 'Pimentón', categoria: 'VERDURAS' },
+          { id: 7, nombre: 'Arroz', categoria: 'GRANOS' },
+        ]),
+      'GET /perfil/hogar': () =>
+        respuestaJson({
+          id: 1,
+          presupuestoMonto: 800000,
+          periodicidadIngreso: 'MENSUAL',
+          diaPago1: 30,
+          diasSinTiempo: [],
+          restricciones: [],
+          sinRestricciones: false,
+          consentimientoDatosEn: '2026-10-01T10:00:00',
+          personas: [{ id: 1, nombre: 'Samuel', edad: 9, restricciones: ['lactosa'] }],
+        }),
+      'PUT /perfil/hogar': (cuerpo) => respuestaJson({ id: 1, ...(cuerpo as object) }),
+    })
+    montarApp(crearServicioFalso(LUISA).servicio, '/perfil/hogar')
+    const usuario = userEvent.setup()
+
+    await usuario.click(await screen.findByRole('button', { name: 'Continuar' }))
+    const salud = within(screen.getByRole('region', { name: 'Salud de Samuel' }))
+    await usuario.type(salud.getByLabelText('Otro alimento que no puede comer'), 'pina')
+    await usuario.click(salud.getByRole('button', { name: '+ Piña' }))
+    expect(salud.getByRole('button', { name: 'Quitar Piña' })).toBeInTheDocument()
+    await usuario.click(salud.getByRole('checkbox', { name: 'Piña es grave: no puede ni tocarlo' }))
+
+    await usuario.click(screen.getByRole('button', { name: 'Continuar' }))
+    await usuario.click(screen.getByRole('button', { name: 'Continuar' }))
+    await usuario.click(screen.getByRole('button', { name: 'Guardar perfil' }))
+
+    await vi.waitFor(() => expect(llamadas.some((l) => l.metodo === 'PUT')).toBe(true))
+    expect(llamadas.find((l) => l.metodo === 'PUT')?.cuerpo).toMatchObject({
+      personas: [{ nombre: 'Samuel', restricciones: ['lactosa', 'producto:31'], alergiasGraves: ['producto:31'] }],
+    })
   })
 })
